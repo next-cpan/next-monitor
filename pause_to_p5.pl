@@ -331,10 +331,15 @@ sub update_p5_branch_from_PAUSE ($self) {
 
 sub determine_installer ( $self ) {
     my $build_json = $self->BUILD_json;
-    my $files      = $self->git->ls_files;
+    my $files      = $self->repo_files;
 
-    # assert we should never see xs files.
-    $build_json->{'XS'} = 1 if ( grep { $_ =~ m/\.xs$/ } keys %$files );
+    # Tag the BUILD file with whether this repo has XS.
+    if ( grep { $_ =~ m/\.xs$/ } keys %$files ) {
+        $build_json->{'XS'} = 1;
+    }
+    else {
+        $build_json->{'XS'} = 0;
+    }
 
     # There could be multiple reasons we're not going to use the new simplified builder.
     my $builder = 'play';
