@@ -17,9 +17,9 @@ use LWP::UserAgent     ();
 use File::Basename     ();
 use CPAN::Meta::YAML   ();
 use CPAN::DistnameInfo ();
-use POSIX ":sys_wait_h";
 use version ();
 use Net::GitHub::V3;
+BEGIN { $Net::GitHub::V3::Orgs::VERSION == '2.0' or die("Need custom version of Net::GitHub::V3::Orgs to work!") }
 use YAML::Syck      ();
 use Git::Repository ();
 
