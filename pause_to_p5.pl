@@ -58,6 +58,13 @@ sub _build_meta ($self) {
     die( 'No META data found in ' . $self->distro . "\n" . `ls -l` . "\n\n" . Carp::longmess );
 }
 
+sub do_the_do ($self) {
+    $self->check_if_dirty_and_die;
+    $self->checkout_p5_branch;
+    $self->fix_special_repos;
+    $self->update_p5_branch_from_PAUSE;
+}
+
 sub check_if_dirty_and_die ($self) {
     my $st = $self->git->status;
     return unless $st->is_dirty;
@@ -114,8 +121,10 @@ sub checkout_p5_branch ($self) {
     $git->push(qw{--set-upstream origin p5}) if $self->push_to_github;
 }
 
-sub fix_special_repos ( $self, $distro ) {
+sub fix_special_repos ( $self ) {
     return;    # Nothing is special case yet.
+
+    my $distro = $self->distro;
 
     #    my $meta = $self->dist_meta;
     #    my $name = $meta->{'name'} or return;
@@ -125,8 +134,9 @@ sub fix_special_repos ( $self, $distro ) {
 # We can assume we are checked out into the p5 branch but it is
 # Indeterminate if PAUSE has merged in or if the p5 branch has been
 # converted.
-sub update_p5_branch_from_PAUSE ( $self, $distro ) {
-    my $git = $self->git;
+sub update_p5_branch_from_PAUSE ($self) {
+    my $git    = $self->git;
+    my $distro = $self->distro;
 
     my @log = $git->log(qw/p5..PAUSE/);
 
@@ -236,9 +246,12 @@ sub update_p5_branch_from_PAUSE ( $self, $distro ) {
             delete $files{$todo};
         }
 
-        if ( $files{'Changes'} ) {
-            $git->mv( 'Changes', 'Changelog' );
-            delete $files{'Changes'};
+        foreach my $changes_variant (qw/CHANGES Changes/) {
+            if ( $files{$changes_variant} ) {
+                $git->mv( $changes_variant, 'Changelog' );
+                delete $files{$changes_variant};
+                last;    # We can't move 2 files to the same destination.
+            }
         }
 
         # Remove files which don't ship with p5.
@@ -258,14 +271,14 @@ sub update_p5_branch_from_PAUSE ( $self, $distro ) {
             delete $files{$file} if $file =~ m{^(eg|examples)/};
 
             # Wierd files for specific distros.
-            delete $files{$file} if $file =~ m{^fortune/} && $distro eq 'Acme';
-            delete $files{$file} if $file =~ m{^Roms/}    && $distro eq 'Acme-6502';
+            delete $files{$file} if $file =~ m{^fortune/} && $distro =~ m{^Acme/};
+            delete $files{$file} if $file =~ m{^Roms/} && $distro eq 'Acme-6502';
         }
 
         delete $files{$_} foreach grep { m{^lib/|^t/|^xt/} } keys %files;
 
         # Nothing was found.
-        %files and die( "Unexpected files found in repository:\n" . Dumper( \%files ) );
+        %files and die( "Unexpected files found in $distro:\n" . Dumper( \%files ) );
 
     }
 
@@ -312,8 +325,13 @@ sub generate_build_json ($self) {
     }
     ref $meta->{'license'} and die( "Unexpected meta license data: " . Dumper $meta);
 
-    # unknown isn't a valid license.
-    delete $meta->{'license'} if $meta->{'license'} eq 'unknown';
+    # unknown isn't a valid license except when it is.
+    # We have a few distros which truly don't have a meaningful license.
+    if ( $meta->{'license'} && $meta->{'license'} eq 'unknown' ) {
+        if ( $build_json->{'primary'} !~ m{^(ACL::Regex)$} ) {
+            delete $meta->{'license'};
+        }
+    }
 
     # Use the meta license preferentially if it's there.
     if ( $meta->{'license'} ) {
@@ -525,7 +543,7 @@ sub prune_ref ($var) {
 
 sub get_ppi_doc ( $self, $filename ) {
     return if ( $filename =~ m{^(Makefile\.PL|Build\.PL)$} );    # Skip common files we don't want parsed ever.
-    return if ( $filename =~ m{^inc/} );                         # Skip inc files we're going to skip.
+    return if ( $filename =~ m{^(inc|eg|examples)/} );           # Skip inc files we're going to skip.
 
     if ( -l $filename || -d _ || -z _ ) {
         warn("$filename isn't a normal file. Skipping PPI parse");
@@ -617,7 +635,7 @@ sub parse_pod ( $self, $filename ) {
                 while ( @pod_lines && $pod_lines[0] !~ m/^=/ ) {
                     my $line = shift @pod_lines;
                     next unless $line =~ m/\S/;
-                    $license_data .= $line;
+                    $license_data .= " $line";
                 }
             }
 
@@ -637,6 +655,10 @@ sub parse_pod ( $self, $filename ) {
                 elsif ( $license_data =~ m/MIT\s*License/msi ) {
                     $self->BUILD_json->{'license'} = 'MIT';
                 }
+
+                #else {
+                #    print "Unknown license: $license_data==\n";
+                #}
                 $license_data = '';    # Clear it for the next check.
             }
         }
@@ -822,10 +844,7 @@ sub run ($self) {
 
         my $distro = Perl::Distro->new( distro => $repo, repo_path => $repo_dir, git_binary => $self->git_binary, push_to_github => $self->push_to_github );
 
-        $distro->check_if_dirty_and_die;
-        $distro->checkout_p5_branch;
-        $distro->fix_special_repos($repo);
-        $distro->update_p5_branch_from_PAUSE($repo);
+        $distro->do_the_do($repo);
     }
 
     return 0;
