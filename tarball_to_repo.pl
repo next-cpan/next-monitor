@@ -17,11 +17,11 @@ use LWP::UserAgent     ();
 use File::Basename     ();
 use CPAN::Meta::YAML   ();
 use CPAN::DistnameInfo ();
-use version ();
+use version            ();
 use Net::GitHub::V3;
 BEGIN { $Net::GitHub::V3::Orgs::VERSION == '2.0' or die("Need custom version of Net::GitHub::V3::Orgs to work!") }
-use YAML::Syck      ();
-use Git::Repository ();
+use YAML::Syck   ();
+use Git::Wrapper ();
 
 use Parallel::ForkManager  ();
 use IO::Uncompress::Gunzip ();
@@ -36,6 +36,10 @@ has 'pause_cache_time'           => ( isa => 'Str',  is => 'ro', lazy => 1, defa
 has 'parallel_downloads'         => ( isa => 'Int',  is => 'ro', lazy => 1, default => 40,                                  documentation => 'How many downloads we are going to attempt at one time.' );                                                         # = 40
 has 'pause_base_url'             => ( isa => 'Str',  is => 'ro', lazy => 1, default => 'http://httpupdate.cpanel.net/CPAN', documentation => 'The base CPAN URL of upstream PAUSE. Defaults to http://httpupdate.cpanel.net/CPAN' );
 has 'validate_existing_archives' => ( isa => 'Bool', is => 'ro', lazy => 1, default => 0,                                   documentation => 'Do we need to validate the existing archives before we start? This takes a little while so is off by default.' );
+has 'git_binary'                 => ( isa => 'Str',  is => 'ro', lazy => 1, default => '/usr/bin/git',                      documentation => 'The location of the git binary that should be used.' );
+
+has 'repo_user_name' => ( isa => 'Str', is => 'ro', required => 1, documentation => 'The name that will be on commits for this repo.' );
+has 'repo_email'     => ( isa => 'Str', is => 'ro', required => 1, documentation => 'The email that will be on commits for this repo.' );
 
 has 'parsed_pause_archives_file' => ( isa => 'Str', is => 'ro', lazy => 1, default => sub { $_[0]->base_dir . '/parsed_pause_archives.txt' } );
 has 'tar_cache_dir'              => ( isa => 'Str', is => 'ro', lazy => 1, default => sub { my $d = $_[0]->base_dir . '/tar_cache'; -d $d or mkdir $d; return $d } );
@@ -44,12 +48,12 @@ has 'temp_repo_dir'              => ( isa => 'Str', is => 'ro', lazy => 1, defau
 
 has 'tarball_parsed_cache' => ( isa => 'HashRef', is => 'rw', lazy => 1, builder => '_build_tarball_parsed_cache' );
 
-has 'gh'      => ( isa => 'Object', is => 'rw', lazy => 1, default => sub { Net::GitHub::V3->new( version => 3, login => $_[0]->github_user, access_token => $_[0]->github_token ) } );
-has 'gh_org'  => ( isa => 'Object', is => 'rw', lazy => 1, default => sub { $_[0]->gh->org } );
-has 'gh_repo' => ( isa => 'Object', is => 'rw', lazy => 1, default => sub { $_[0]->gh->repo } );
+has 'gh'      => ( isa => 'Object', is => 'ro', lazy => 1, default => sub { Net::GitHub::V3->new( version => 3, login => $_[0]->github_user, access_token => $_[0]->github_token ) } );
+has 'gh_org'  => ( isa => 'Object', is => 'ro', lazy => 1, default => sub { $_[0]->gh->org } );
+has 'gh_repo' => ( isa => 'Object', is => 'ro', lazy => 1, default => sub { $_[0]->gh->repos } );
 
 has 'github_repos' => (
-    isa     => 'ArrayRef',
+    isa     => 'HashRef',
     is      => 'rw',
     lazy    => 1,
     default => sub {
@@ -239,12 +243,38 @@ sub process_updates ($self) {
         # If we have already processed the archive, then don't do it again.
         next if $self->archive_was_parsed($author_path);
 
+        DEBUG("Processing $author_path for $module");
         my $tarball_file = $self->path_to_tarball_cache_file($author_path);
 
         my $extracted_distro_name = $self->expand_distro( $tarball_file, $author_path );
 
+        $self->sleep_until_not_throttled();
     }
 
+    return 0;
+}
+
+my $loop;
+
+sub sleep_until_not_throttled ($self) {
+    my $rate_remaining;
+
+    $loop++;
+    my $gh = $self->gh;
+
+    while ( ( $rate_remaining = $gh->rate_limit_remaining() ) < 50 ) {
+        my $time_to_wait = time - $gh->rate_limit_reset() + 1;
+        $time_to_wait > 0 or die("time_remaining == $time_to_wait");
+        $time_to_wait = int( $time_to_wait / 2 );
+        DEBUG("Only $rate_remaining API queries are allowed for the next $time_to_wait seconds.");
+        DEBUG("Sleeping until we can send more API queries");
+        sleep 10;
+        $gh->update_rate_limit();
+    }
+
+    DEBUG( "        Rate remaining is $rate_remaining. Resets at " . $gh->rate_limit_reset() ) if $loop % 10 == 0;
+
+    return;
 }
 
 sub archive_was_parsed ( $self, $author_path ) {
@@ -285,30 +315,22 @@ sub expand_distro ( $self, $tarball_file, $author_path ) {
     }
 
     # Collapse all
-    my $dir = File::Basename::fileparse($tarball_file);
-    while ( $dir && !-d $dir ) {
-        chop $dir;
+    my @files = glob('*');
+    if ( scalar @files == 1 && -d $files[0] ) {
+        my $dir = $files[0];
+        $dir && $dir !~ m/^\./ or die("Unexpected dir $dir");
+
+        `find "$temp_dir" -name .git -exec /bin/rm -rf {} \\; 2>&1`;    # remove extracted .git dirs.
+        `mv $temp_dir/"$dir"/* $temp_dir 2>&1`;
+        `mv $temp_dir/"$dir"/.* $temp_dir 2>&1`;
+        rmdir "$temp_dir/$dir" or die("Files unexpectedly found in $temp_dir/$dir");
     }
-    if ( !$dir ) {
-        my @files = glob('*');
-        if ( scalar @files == 1 && -d $files[0] ) {
-            $dir = $files[0];
-            $dir && $dir !~ m/^\./ or die("Unexpected dir $dir");
-
-            `mv $temp_dir/$dir/* $temp_dir 2>&1`;
-            `/bin/rm -rf "$temp_dir/.git" 2>&1`;    # Just in case.
-            `mv $temp_dir/$dir/.* $temp_dir 2>&1`;
-            `find "$temp_dir" -name .git -exec /bin/rm -rf {} \\; 2>&1`;    # remove extracted .git dirs.
-            rmdir "$temp_dir/$dir" or die("Files unexpectedly found in $temp_dir/$dir");
-        }
-        elsif ( scalar @files ) {
-
-            #DEBUG("$tarball_file ($dir) had no base dir????");
-        }
-        else {
-            DEBUG("XXXX Could not find a dir ($dir) for $tarball_file");
-            die;
-        }
+    elsif ( scalar @files ) {
+        DEBUG("$tarball_file had no base dir????");
+    }
+    else {
+        DEBUG("XXXX Could not find any extracted files for $tarball_file");
+        die;
     }
 
     # Zero out the big files.
@@ -323,36 +345,94 @@ sub expand_distro ( $self, $tarball_file, $author_path ) {
     # Read the meta file we just extracted and try to determine the distro dir.
     my ( $distro, $version ) = $self->determine_distro_and_version( $temp_dir, $author_path );
     $distro or die "$distro -- $version -- $author_path";
-    my $existing_meta = $self->get_existing_distro_meta($distro);
 
     my $repo_dir = $self->repos_dir . '/' . $distro;
+    my ( undef, $existing_version ) = get_dist_version_from_meta_yaml("$repo_dir/META.yml");
 
     # If there's a repo dir there but we can't parse its META.yaml...
-    if ( !length $existing_meta->{'version'} && -d $repo_dir ) {
+    if ( !length $existing_version && -d $repo_dir ) {
         $repo_dir or die("Couldn't parse version for existing $repo_dir");
     }
 
     # If we don't have a distro with an older version of this tarball.
-    if ( compare( $existing_meta->{'version'} // 0, '<', $version ) ) {    # TODO: This is probably fragile. if version schemes change, this could lead to versions being skipped.
+    if ( compare( $existing_version // 0, '<', $version ) ) {    # TODO: This is probably fragile. if version schemes change, this could lead to versions being skipped.
         $self->add_extracted_tarball_from_tmp_to_repo( $distro, $version );
     }
     else {
-        DEBUG("Skipping parse of $distro version $version. We already have version $existing_meta->{version}");
+        DEBUG("Skipping parse of $distro version $version. We already have version $existing_version");
     }
-
-    die;
 
     $self->report_archive_parsed($author_path);
 
     return 0;
 }
 
+sub create_github_repo ( $self, $distro ) {
+    my $rp = $self->gh_repo->create(
+        {
+            org         => $self->github_org,
+            name        => $distro,
+            description => "The CPAN Distro $distro",
+            homepage    => "https://metacpan.org/release/$distro",
+            has_issues  => 0,
+        }
+    );
+
+    return if ( $rp && $rp->{'name'} eq $distro );
+    DEBUG("Unexpected failure creating github repo $distro:");
+    print Dumper $rp;
+    die;
+}
+
 sub add_extracted_tarball_from_tmp_to_repo ( $self, $distro, $version ) {
     my $temp_dir  = $self->temp_repo_dir;
     my $repo_path = $self->repos_dir . '/' . $distro;
 
-    die;
+    my $git = Git::Wrapper->new( { dir => $repo_path, git_binary => $self->git_binary } ) or die("Failed to create Git::Wrapper for $repo_path");
+    if ( !-d $repo_path ) {
+        if ( !$self->github_repos->{$distro} ) {
+            $self->create_github_repo($distro);
+        }
 
+        my $url = sprintf( "git\@github.com:%s/%s.git", $self->github_org, $distro );
+        my $got = $git->clone( $url, $repo_path );
+        $got and die("Unexpected exit code cloning $url to $repo_path");
+
+        $git->config( 'user.name',  $self->repo_user_name );
+        $git->config( 'user.email', $self->repo_email );
+    }
+    else {
+        $git->checkout('PAUSE');
+    }
+
+    -d $repo_path or die("Can't proceed without a $repo_path dir");
+
+    # Delete any old stuff.
+    my @files = eval { $git->ls_files };
+    if (@files) {
+        eval { $git->rm( '-f', @files ) };
+
+        # Just in case any files are remaining.
+        eval { @files = $git->ls_files };
+        if (@files) {
+            foreach my $file (@files) {
+                $git->rm( '-f', $file );
+            }
+            @files = $git->ls_files;
+        }
+        @files and die( "Unexpected files could not be deleted from $distro repo: " . Dumper \@files );
+    }
+
+    `/usr/bin/mv $temp_dir/* $repo_path/ 2>&1`;
+    `/usr/bin/mv $temp_dir/.* $repo_path/ 2>&1`;
+    rmdir $temp_dir or die( "Could not move all files from temp dir to $repo_path: " . `ls -al $temp_dir` );
+
+    eval { $git->add('.') };
+    eval { $git->commit( '-m', "Import $distro version $version from PAUSE" ) };
+    eval { $git->branch(qw/-m PAUSE/) };
+    eval { $git->push(qw/origin PAUSE/) };
+
+    return 1;
 }
 
 sub determine_distro_and_version ( $self, $extracted_dir, $author_path ) {
@@ -367,18 +447,8 @@ sub determine_distro_and_version ( $self, $extracted_dir, $author_path ) {
     }
 
     my $new_yaml = "$extracted_dir/META.yml";
-    open( my $fh, '<', $new_yaml ) or return ( $distro, $version );
-    my ( $meta_name, $meta_version );
-    while ( my $line = <$fh> ) {
-        chomp $line;
-        if ( $line =~ m/^name:\s*["']?(\S+)["']?\s*$/ ) {
-            $meta_name = $1;
-        }
-        if ( $line =~ m/^version:\s*["']?(\S+)["']?\s*$/ ) {
-            $meta_version = $1;
-        }
-        last if ( length $meta_name and length $meta_version );
-    }
+
+    my ( $meta_name, $meta_version ) = get_dist_version_from_meta_yaml($new_yaml);
 
     # Couldn't parse meta. Just fall back to CPAN::DistnameInfo
     $meta_name or return ( $distro, $version );
@@ -387,21 +457,12 @@ sub determine_distro_and_version ( $self, $extracted_dir, $author_path ) {
     return ( $meta_name, $meta_version );
 }
 
-sub get_existing_distro_meta ( $self, $distro ) {
-    $distro or die("No distro passed to get_stored_version_info");
+sub get_dist_version_from_meta_yaml ($file) {
+    open( my $fh, "<:utf8", $file ) or return ( '', 0 );
+    my $yaml_text = do { local $/; <$fh> };
+    my $yaml      = CPAN::Meta::YAML->read_string($yaml_text) or return ( '', 0 );
 
-    my $repo_dir = $self->repos_dir . '/' . $distro;
-
-    return {} unless ( -d $repo_dir && -d "$repo_dir/.git" );
-
-    my $meta_file = "$repo_dir/META.yaml";
-
-    return {} unless -f $meta_file;
-    return {} unless !-z _;
-
-    my $hash = eval { YAML::Syck::LoadFile($meta_file) };
-
-    return $hash ? $hash : {};
+    return ( $yaml->[0]->{'name'} // '', $yaml->[0]->{'version'} // 0 );
 }
 
 sub compare {
@@ -509,17 +570,6 @@ sub was_parsed {
     }
 
     return $tarball_parsed_cache{$author_path};
-}
-
-
-
-my %parallel_download_pids;
-my %tarball_requested;
-
-
-
-
-sub get_distro_meta_dir {
 }
 
 sub write_stored_version_info {
