@@ -210,6 +210,7 @@ sub update_p5_branch_from_PAUSE ( $self, $distro ) {
         foreach my $unwanted_file (
             qw/MANIFEST MANIFEST.SKIP SIGNATURE dist.ini README README.md Makefile.PL Build.PL
             META.yml META.json ignore.txt .gitignore Changes.PL cpanfile cpanfile.snapshot minil.toml
+            .project
             /
         ) {
             next unless $files{$unwanted_file};
@@ -256,11 +257,12 @@ sub update_p5_branch_from_PAUSE ( $self, $distro ) {
             # paths with example files we're going to ignore.
             delete $files{$file} if $file =~ m{^(eg|examples)/};
 
-            # Wierd files found in Acme
-            delete $files{$file} if $file =~ m{^fortune/};
+            # Wierd files for specific distros.
+            delete $files{$file} if $file =~ m{^fortune/} && $distro eq 'Acme';
+            delete $files{$file} if $file =~ m{^Roms/}    && $distro eq 'Acme-6502';
         }
 
-        delete $files{$_} foreach grep { m{^lib/|^t/} } keys %files;
+        delete $files{$_} foreach grep { m{^lib/|^t/|^xt/} } keys %files;
 
         # Nothing was found.
         %files and die( "Unexpected files found in repository:\n" . Dumper( \%files ) );
@@ -522,10 +524,17 @@ sub prune_ref ($var) {
 }
 
 sub get_ppi_doc ( $self, $filename ) {
-    return if -l $filename || -d _ || -z _;
+    return if ( $filename =~ m{^(Makefile\.PL|Build\.PL)$} );    # Skip common files we don't want parsed ever.
+    return if ( $filename =~ m{^inc/} );                         # Skip inc files we're going to skip.
+
+    if ( -l $filename || -d _ || -z _ ) {
+        warn("$filename isn't a normal file. Skipping PPI parse");
+        return;
+    }
 
     return $self->ppi_cache->{$filename} if $self->ppi_cache->{$filename};
 
+    print "PPI $filename\n";
     my $content = File::Slurper::read_binary($filename);
     if ( $content =~ m/use\s+utf8/ && $content !~ m/no utf8/ ) {
         $content = File::Slurper::read_text($filename);
@@ -548,7 +557,7 @@ sub parse_comments ( $self, $filename ) {
     my $primary_package = $self->BUILD_json->{'primary'};
     return unless $primary_package eq $self->_file_to_package($filename);
 
-    my $doc = $self->get_ppi_doc($filename);
+    my $doc = $self->get_ppi_doc($filename) or return;
 
     # remove pods
     my $comments = $doc->find('PPI::Token::Comment') || [];
@@ -563,7 +572,7 @@ sub parse_comments ( $self, $filename ) {
 sub parse_pod ( $self, $filename ) {
     return unless $filename =~ m/\.(?:pl|pm|pod)$/i;    # only perl files for pod.
 
-    my $doc = $self->get_ppi_doc($filename);
+    my $doc = $self->get_ppi_doc($filename) or return;
 
     my $primary_package = $self->BUILD_json->{'primary'};
 
@@ -641,8 +650,7 @@ sub parse_code ( $self, $filename ) {
     $requires_runtime_hash = $self->requires_runtime if $filename =~ m{\.pm$} && $filename !~ m/^(t|xt)/;
     return unless $requires_runtime_hash;    # Doesn't look like perl code we know about.
 
-    print "Reading $filename\n";
-    my $doc = $self->get_ppi_doc($filename);
+    my $doc = $self->get_ppi_doc($filename) or return;
 
     # find use/require statements and parse them.
     my $use_find = $doc->find('PPI::Statement::Include') || [];
@@ -762,7 +770,6 @@ use experimental 'signatures';
 
 use CPAN::DistnameInfo  ();
 use version             ();
-use YAML::Syck          ();
 use Config::INI::Reader ();
 use File::Slurper       ();
 
@@ -799,6 +806,7 @@ sub run ($self) {
     my @skip_list = qw{
       AAAA-Crypt-DH
       AAAAAAAAA
+      Acme-3mxA
     };
 
     my $repo_list = $self->repo_list;
