@@ -274,8 +274,6 @@ sub update_p5_branch_from_PAUSE ($self) {
     }
 
     my $files = $self->repo_files;
-    $build_json->{'XS'} = 1 if grep { $_ =~ m/\.xs$/ } keys %$files;
-
     foreach my $file ( sort { $a cmp $b } keys %$files ) {
         $self->parse_code($file);
         $self->parse_comments($file);
@@ -283,29 +281,27 @@ sub update_p5_branch_from_PAUSE ($self) {
     }
 
     {    #  Look for any unexpected files in the file list.
-            # Do we have local files?
-        if ( grep { m{^[^/]+\.pm$} } keys %$files ) {
-            ...;    # there is a lib file in the base directory and we need to re-locate it.
-        }
+        my %files_copy = %{ $self->repo_files };
+
+        #Anything in lib, t, xt is good. Just pass it through.
+        delete $files_copy{$_} foreach grep { m{^lib/|^t/|^xt/} } keys %$files;
 
         # Files we know are ok, we'll delete from the hash.
-        foreach my $file ( sort keys %$files ) {
+        foreach my $file ( sort keys %files_copy ) {
 
             # Explicit files we're going to ignore.
-            delete $files->{$file} if ( grep { $file eq $_ } qw/Changelog LICENSE CONTRIBUTING Todo/ );
+            delete $files_copy{$file} if ( grep { $file eq $_ } qw/Changelog LICENSE CONTRIBUTING Todo/ );
 
             # paths with example files we're going to ignore.
-            delete $files->{$file} if $file =~ m{^(eg|examples)/};
+            delete $files_copy{$file} if $file =~ m{^(eg|examples)/};
 
             # Wierd files for specific distros.
-            delete $files->{$file} if $file =~ m{^fortune/} && $distro =~ m{^Acme/};
-            delete $files->{$file} if $file =~ m{^Roms/} && $distro eq 'Acme-6502';
+            delete $files_copy{$file} if $file =~ m{^fortune/} && $distro =~ m{^Acme/};
+            delete $files_copy{$file} if $file =~ m{^Roms/} && $distro eq 'Acme-6502';
         }
 
-        delete $files->{$_} foreach grep { m{^lib/|^t/|^xt/} } keys %$files;
-
         # Nothing was found.
-        %$files and die( "Unexpected files found in $distro:\n" . Dumper($files) );
+        %files_copy and die( "Unexpected files found in $distro:\n" . Dumper( \%files_copy ) );
     }
 
     $self->generate_build_json;
@@ -337,21 +333,25 @@ sub update_p5_branch_from_PAUSE ($self) {
 }
 
 sub determine_installer ( $self, $repo ) {
-    my $git = $self->git;
+    my $git        = $self->git;
+    my $build_json = $self->BUILD_json;
+    my $files      = $git->ls_files;
 
-    my @files = $git->ls_files;
+    # assert we should never see xs files.
+    $build_json->{'XS'} = 1 if grep { $_ =~ m/\.xs$/ } keys %$files;
 
     # There could be multiple reasons we're not going to use the new simplified builder.
     my $builder = 'play';
-    $builder = 'legacy' if grep { $_ =~ m/\.xs$/i } @files;
+    $builder = 'legacy' if $build_json->{'XS'};
 
+    # Now we think it's play, set it and return;
     if ( $builder eq 'play' ) {
-        $self->BUILD_json->{'builder'} = 'play';
+        $build_json->{'builder'} = 'play';
         return;
     }
 
-    # Guess based on what files are there.
-    $self->BUILD_json->{'builder'} = -e 'Build.PL' ? 'Build.PL' : -e 'Makefile.PL' ? 'Makefile.PL' : die( "Can't determine builder for distro " . $self->distro );
+    # Guess based on what builder to use based on files in the repo.
+    $build_json->{'builder'} = $files->{'Build.PL'} ? 'Build.PL' : $files->{'Makefile.PL'} ? 'Makefile.PL' : die( "Can't determine builder for distro " . $self->distro );
     return;
 }
 
