@@ -33,6 +33,14 @@ has 'push_to_github' => ( isa => 'Bool', is => 'ro', required => 1 );
 
 has 'git'       => ( isa => 'Object',  lazy => 1,    is   => 'ro', lazy    => 1, builder => '_build_git' );
 has 'dist_meta' => ( isa => 'HashRef', is   => 'rw', lazy => 1,    builder => '_build_meta' );
+has 'repo_files' => (
+    isa     => 'HashRef',
+    is      => 'rw',
+    lazy    => 1,
+    default => sub {
+        return { map { ( $_ => 1 ) } shift->git->ls_files };
+    }
+);
 
 has 'requires_build'   => ( isa => 'HashRef', is => 'rw', default => sub { return {} } );
 has 'requires_runtime' => ( isa => 'HashRef', is => 'rw', default => sub { return {} } );
@@ -59,6 +67,10 @@ sub _build_meta ($self) {
     die( 'No META data found in ' . $self->distro . "\n" . `ls -l` . "\n\n" . Carp::longmess );
 }
 
+sub is_play ($self) {
+    return $self->BUILD_json->{'builder'} eq 'play';
+}
+
 sub do_the_do ($self) {
     $self->check_if_dirty_and_die;
     $self->checkout_p5_branch;
@@ -76,9 +88,18 @@ sub do_the_do ($self) {
         return;
     }
 
+    print Dumper $self->repo_files;
+    exit;
     $self->fix_special_repos;
-    $self->cleanup_junk_files;
-    $self->update_p5_branch_from_PAUSE;
+    $self->determine_installer;
+
+    if ( $self->is_play ) {
+        $self->cleanup_tree;
+        $self->update_p5_branch_from_PAUSE;
+    }
+    else {
+        ...;
+    }
 }
 
 sub check_if_dirty_and_die ($self) {
@@ -147,7 +168,60 @@ sub fix_special_repos ( $self ) {
     #    return unless grep {$_ eq $name} qw//;
 }
 
-sub cleanup_junk_files ($self) {
+sub cleanup_tree ($self) {
+    my $git   = $self->git;
+    my $files = $self->repo_files;
+
+    # Delete explicit files we don't want.
+    foreach my $unwanted_file (
+        qw{ MANIFEST MANIFEST.SKIP SIGNATURE dist.ini README README.md Makefile.PL Build.PL
+        META.yml META.json ignore.txt .gitignore Changes.PL cpanfile cpanfile.snapshot minil.toml
+        .project t/boilerplate.t }
+    ) {
+        next unless $files->{$unwanted_file};
+        delete $files->{$unwanted_file};
+        $git->rm($unwanted_file);
+    }
+
+    # Get rid of patterns we don't want.
+    foreach my $file ( keys %$files ) {
+        next unless $file =~ m{^(?:inc|proto)/};
+        delete $files->{$file};
+        $git->rm($file);
+    }
+
+    # Normalize all TODO files to 'Todo' and throw out the boilerplate ones.
+    my @todo = sort grep { $_ =~ m/^todo$/i } keys %$files;
+    if (@todo) {
+        scalar @todo == 1 or die( "Too many TODO files.\n" . Dumper($files) );
+        my $todo = shift @todo;
+        if ( $todo ne 'Todo' ) {
+            delete $files->{$todo};
+            $files->{'Todo'} = 1;
+            $git->mv( $todo, 'Todo' );
+        }
+
+        # See if the TODO is worthless.
+        my $content = File::Slurper::read_binary('Todo');
+        if ( $content =~ m/- Nothing yet/ms ) {
+            $git->rm( '-f', 'Todo' );
+            delete $files->{'Todo'};
+        }
+    }
+
+    # Normalize all Changelog files to a common 'Changelog'
+    foreach my $changes_variant (qw/CHANGES Changes/) {
+        if ( $files->{$changes_variant} ) {
+            $files->{'Changelog'} && die("Unexpectedly saw Changelog and $changes_variant in the same repo. I don't know what to do");
+
+            $git->mv( $changes_variant, 'Changelog' );
+            delete $files->{$changes_variant};
+            $files->{'Changelog'} = 1;
+            last;    # We can't move 2 files to the same destination so this will fail later.
+        }
+    }
+
+    return;
 }
 
 # We can assume we are checked out into the p5 branch but it is
@@ -160,40 +234,35 @@ sub update_p5_branch_from_PAUSE ($self) {
     my $build_json = $self->BUILD_json;
     my $meta       = $self->dist_meta;
 
-    $build_json->{'version'} = $meta->{'version'};
+    $build_json->{'XS'} and die("play doesn't support XS distros");
 
-    my $builder = $build_json->{'builder'} = $self->determine_installer($distro);
+    $build_json->{'version'} = $meta->{'version'};
 
     # Try to determine the primary package of this distro.
     # Let's make sure it matches the 'name' of the module.
-    if ( $builder eq 'play' ) {
-        $build_json->{'primary'} = $meta->{'name'};
-        $build_json->{'primary'} =~ s/-/::/g;
-        my @module      = split( '::', $build_json->{'primary'} );
-        my $module_path = join( '/', ( 'lib', @module ) ) . ".pm";
-        if ( !-f $module_path ) {
-            print "Primary module $module_path is in the wrong place\n";
 
-            my $filename = $module[-1] . ".pm";
-            if ( -f $filename ) {
-                mkpath($module_path);
-                rmdir $module_path;
-                $git->mv( $filename, $module_path );
-            }
+    $build_json->{'primary'} = $meta->{'name'};
+    $build_json->{'primary'} =~ s/-/::/g;
+    my @module      = split( '::', $build_json->{'primary'} );
+    my $module_path = join( '/', ( 'lib', @module ) ) . ".pm";
+    if ( !-f $module_path ) {
+        print "Primary module $module_path is in the wrong place\n";
 
-            if ( !-f $module_path ) {
-                $self->ppi_cache( {} );
-                die( "Can't find $module_path\n" . Dumper($self) );
-            }
+        my $filename = $module[-1] . ".pm";
+        if ( -f $filename ) {
+            mkpath($module_path);
+            rmdir $module_path;
+            $git->mv( $filename, $module_path );
         }
-        my $module_txt = File::Slurper::read_binary($module_path);
-        my ($package) = $module_txt =~ m{package\s+(\S+?)\s*;};
-        $build_json->{'primary'} eq $package or die("Unexpected distro name / primary mismatch in distro $distro");
+
+        if ( !-f $module_path ) {
+            $self->ppi_cache( {} );
+            die( "Can't find $module_path\n" . Dumper($self) );
+        }
     }
-    else {
-        $build_json->{'primary'} = $meta->{'name'};
-        $build_json->{'primary'} =~ s/-/::/g;
-    }
+    my $module_txt = File::Slurper::read_binary($module_path);
+    my ($package) = $module_txt =~ m{package\s+(\S+?)\s*;};
+    $build_json->{'primary'} eq $package or die("Unexpected distro name / primary mismatch in distro $distro");
 
     # If test paths are specified in META, transfer that unless they're just t/* or t/*.t.
     if ( $meta->{'tests'} ) {
@@ -204,93 +273,44 @@ sub update_p5_branch_from_PAUSE ($self) {
         }
     }
 
-    my %files = map { ( $_ => 1 ) } $git->ls_files;
-    $build_json->{'XS'} = 1 if grep { $_ =~ m/\.xs$/ } keys %files;
+    my $files = $self->repo_files;
+    $build_json->{'XS'} = 1 if grep { $_ =~ m/\.xs$/ } keys %$files;
 
-    foreach my $file ( sort { $a cmp $b } keys %files ) {
+    foreach my $file ( sort { $a cmp $b } keys %$files ) {
         $self->parse_code($file);
         $self->parse_comments($file);
         $self->parse_pod($file);
     }
 
-    # Re-work the file tree.
-    if ( $builder eq 'play' ) {
-
-        $build_json->{'XS'} and die("play doesn't support XS distros");
-
-        # Do we have local files?
-        if ( grep { m{^[^/]+\.pm$} } keys %files ) {
+    {    #  Look for any unexpected files in the file list.
+            # Do we have local files?
+        if ( grep { m{^[^/]+\.pm$} } keys %$files ) {
             ...;    # there is a lib file in the base directory and we need to re-locate it.
         }
 
-        foreach my $unwanted_file (
-            qw/MANIFEST MANIFEST.SKIP SIGNATURE dist.ini README README.md Makefile.PL Build.PL
-            META.yml META.json ignore.txt .gitignore Changes.PL cpanfile cpanfile.snapshot minil.toml
-            .project
-            /
-        ) {
-            next unless $files{$unwanted_file};
-            delete $files{$unwanted_file};
-            $git->rm($unwanted_file);
-        }
-
-        # Normalize all TODO Todo files to be named Todo
-        my @todo = sort grep { $_ =~ m/^todo$/i } keys %files;
-        if (@todo) {
-            scalar @todo == 1 or die( "Too many TODO files.\n" . Dumper( \%files ) );
-            my $todo = shift @todo;
-            if ( $todo ne 'Todo' ) {
-                $git->mv( $todo, 'Todo' );
-            }
-
-            # See if the TODO is worthless.
-            my $content = File::Slurper::read_binary('Todo');
-            if ( $content =~ m/- Nothing yet/ms ) {
-                $git->rm( '-f', 'Todo' );
-            }
-
-            delete $files{$todo};
-        }
-
-        foreach my $changes_variant (qw/CHANGES Changes/) {
-            if ( $files{$changes_variant} ) {
-                $git->mv( $changes_variant, 'Changelog' );
-                delete $files{$changes_variant};
-                last;    # We can't move 2 files to the same destination.
-            }
-        }
-
-        # Remove files which don't ship with p5.
-        foreach my $file ( keys %files ) {
-            next unless $file =~ m{^(?:inc|proto)/};
-            delete $files{$file};
-            $git->rm($file);
-        }
-
         # Files we know are ok, we'll delete from the hash.
-        foreach my $file ( sort keys %files ) {
+        foreach my $file ( sort keys %$files ) {
 
             # Explicit files we're going to ignore.
-            delete $files{$file} if ( grep { $file eq $_ } qw/Changelog LICENSE proto CONTRIBUTING/ );
+            delete $files->{$file} if ( grep { $file eq $_ } qw/Changelog LICENSE CONTRIBUTING Todo/ );
 
             # paths with example files we're going to ignore.
-            delete $files{$file} if $file =~ m{^(eg|examples)/};
+            delete $files->{$file} if $file =~ m{^(eg|examples)/};
 
             # Wierd files for specific distros.
-            delete $files{$file} if $file =~ m{^fortune/} && $distro =~ m{^Acme/};
-            delete $files{$file} if $file =~ m{^Roms/} && $distro eq 'Acme-6502';
+            delete $files->{$file} if $file =~ m{^fortune/} && $distro =~ m{^Acme/};
+            delete $files->{$file} if $file =~ m{^Roms/} && $distro eq 'Acme-6502';
         }
 
-        delete $files{$_} foreach grep { m{^lib/|^t/|^xt/} } keys %files;
+        delete $files->{$_} foreach grep { m{^lib/|^t/|^xt/} } keys %$files;
 
         # Nothing was found.
-        %files and die( "Unexpected files found in $distro:\n" . Dumper( \%files ) );
-
+        %$files and die( "Unexpected files found in $distro:\n" . Dumper($files) );
     }
 
     $self->generate_build_json;
 
-    if ( $builder eq 'play' ) {    # Generate README.md from the primary module.
+    {    # Generate README.md from the primary module.
         $self->BUILD_json->{'provides'}->{ $self->BUILD_json->{'primary'} }->{'file'} or die( "Unexpected primary file location not found:\n" . Dumper $self->BUILD_json );
         my $primary_file = $self->BUILD_json->{'provides'}->{ $self->BUILD_json->{'primary'} }->{'file'};
 
@@ -321,10 +341,18 @@ sub determine_installer ( $self, $repo ) {
 
     my @files = $git->ls_files;
 
-    return 'play' unless grep { $_ =~ m/\.xs$/i } @files;
+    # There could be multiple reasons we're not going to use the new simplified builder.
+    my $builder = 'play';
+    $builder = 'legacy' if grep { $_ =~ m/\.xs$/i } @files;
+
+    if ( $builder eq 'play' ) {
+        $self->BUILD_json->{'builder'} = 'play';
+        return;
+    }
 
     # Guess based on what files are there.
-    return -e 'Build.PL' ? 'Build.PL' : -e 'Makefile.PL' ? 'Makefile.PL' : die( "Can't determine builder for distro " . $self->distro );
+    $self->BUILD_json->{'builder'} = -e 'Build.PL' ? 'Build.PL' : -e 'Makefile.PL' ? 'Makefile.PL' : die( "Can't determine builder for distro " . $self->distro );
+    return;
 }
 
 sub generate_build_json ($self) {
