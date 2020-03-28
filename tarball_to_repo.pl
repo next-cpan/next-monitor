@@ -79,7 +79,7 @@ sub run ($self) {
 
     mkdir $self->base_dir;    # Make sure the base data dir is there.
 
-    #$self->stage_tarballs();
+    $self->stage_tarballs();
     $self->process_updates();
 
     return 0;
@@ -98,6 +98,7 @@ sub stage_tarballs ($self) {
 
         # The legacy pm files we're just going to ignore.
         next if $author_path =~ m/\.(?:pm|pm.gz)$/i;
+        next if $self->archive_was_parsed($author_path);    # Skip download if we have already parsed the tarball.
 
         my $url          = $self->pause_base_url . "/authors/id/$author_path";
         my $tarball_file = $self->path_to_tarball_cache_file($author_path);
@@ -388,7 +389,8 @@ sub add_extracted_tarball_from_tmp_to_repo ( $self, $distro, $version ) {
     my $temp_dir  = $self->temp_repo_dir;
     my $repo_path = $self->repos_dir . '/' . $distro;
 
-    my $git = Git::Wrapper->new( { dir => $repo_path, git_binary => $self->git_binary } ) or die("Failed to create Git::Wrapper for $repo_path");
+    my $git         = Git::Wrapper->new( { dir => $repo_path, git_binary => $self->git_binary } ) or die("Failed to create Git::Wrapper for $repo_path");
+    my $just_cloned = 0;
     if ( !-d $repo_path ) {
         if ( !$self->github_repos->{$distro} ) {
             $self->create_github_repo($distro);
@@ -398,6 +400,7 @@ sub add_extracted_tarball_from_tmp_to_repo ( $self, $distro, $version ) {
         my $got = $git->clone( $url, $repo_path );
         $got and die("Unexpected exit code cloning $url to $repo_path");
 
+        $just_cloned = 1;
         $git->config( 'user.name',  $self->repo_user_name );
         $git->config( 'user.email', $self->repo_email );
     }
@@ -429,7 +432,14 @@ sub add_extracted_tarball_from_tmp_to_repo ( $self, $distro, $version ) {
 
     eval { $git->add('.') };
     eval { $git->commit( '-m', "Import $distro version $version from PAUSE" ) };
-    eval { $git->branch(qw/-m PAUSE/) };
+
+    # We only need to do this the first time since we couldn't create a branch and set upstream until we make our first commit.
+    if ($just_cloned) {
+        eval { $git->branch(qw/-m PAUSE/) };
+        eval { $git->branch(qw/--unset-upstream/) };
+        eval { $git->branch(qw/--track origin PAUSE/) };
+    }
+
     eval { $git->push(qw/origin PAUSE/) };
 
     return 1;
