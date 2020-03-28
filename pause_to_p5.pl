@@ -10,6 +10,7 @@ use Moose;
 
 use experimental 'signatures';
 
+use version          ();
 use Git::Wrapper     ();
 use File::Slurper    ();
 use Cwd::Guard       ();
@@ -33,6 +34,7 @@ has 'git'       => ( isa => 'Object',  lazy => 1,    is   => 'ro', lazy    => 1,
 has 'dist_meta' => ( isa => 'HashRef', is   => 'rw', lazy => 1,    builder => '_build_meta' );
 
 has 'requires_runtime' => ( isa => 'HashRef', is => 'rw', default => sub { return {} } );
+has 'requires_develop' => ( isa => 'HashRef', is => 'rw', default => sub { return {} } );
 has 'provides'         => ( isa => 'HashRef', is => 'rw', default => sub { return {} } );
 has 'requires_build'   => ( isa => 'HashRef', is => 'rw', default => sub { return {} } );
 has 'ppi_cache'        => ( isa => 'HashRef', is => 'rw', default => sub { return {} } );
@@ -205,7 +207,11 @@ sub update_p5_branch_from_PAUSE ( $self, $distro ) {
             ...;    # there is a lib file in the base directory and we need to re-locate it.
         }
 
-        foreach my $unwanted_file (qw/MANIFEST MANIFEST.SKIP SIGNATURE dist.ini README Makefile.PL Build.PL META.yml META.json ignore.txt .gitignore Changes.PL/) {
+        foreach my $unwanted_file (
+            qw/MANIFEST MANIFEST.SKIP SIGNATURE dist.ini README README.md Makefile.PL Build.PL
+            META.yml META.json ignore.txt .gitignore Changes.PL cpanfile cpanfile.snapshot minil.toml
+            /
+        ) {
             next unless $files{$unwanted_file};
             delete $files{$unwanted_file};
             $git->rm($unwanted_file);
@@ -247,8 +253,11 @@ sub update_p5_branch_from_PAUSE ( $self, $distro ) {
             # Explicit files we're going to ignore.
             delete $files{$file} if ( grep { $file eq $_ } qw/Changelog LICENSE proto CONTRIBUTING/ );
 
-            # paths we're going to ignore.
+            # paths with example files we're going to ignore.
             delete $files{$file} if $file =~ m{^(eg|examples)/};
+
+            # Wierd files found in Acme
+            delete $files{$file} if $file =~ m{^fortune/};
         }
 
         delete $files{$_} foreach grep { m{^lib/|^t/} } keys %files;
@@ -325,7 +334,7 @@ sub generate_build_json ($self) {
         qw/dynamic_config generated_by meta-spec x_generated_by_perl x_serialization_backend license resources
         release_status x_Dist_Zilla x_authority distribution_type installdirs version_from no_index/
     );
-    foreach my $prereq_key (qw/configure build runtime test/) {
+    foreach my $prereq_key (qw/configure build runtime test develop/) {
         next unless $meta->{'prereqs'};
         next unless $meta->{'prereqs'}->{$prereq_key};
         next unless $meta->{'prereqs'}->{$prereq_key}->{'requires'};
@@ -342,6 +351,10 @@ sub generate_build_json ($self) {
             $meta->{'build_requires'} ||= {};
             merge_dep_into_hash( $meta->{'prereqs'}->{$prereq_key}->{'requires'}, $meta->{'build_requires'} );
         }
+        if ( $prereq_key eq 'develop' ) {
+            $meta->{'develop_requires'} ||= {};
+            merge_dep_into_hash( $meta->{'prereqs'}->{$prereq_key}->{'requires'}, $meta->{'develop_requires'} );
+        }
 
         delete $meta->{'prereqs'}->{$prereq_key}->{'requires'};
         keys %{ $meta->{'prereqs'}->{$prereq_key} } and die( "Unexpected prereqs found in $prereq_key:\n" . Dumper $meta);
@@ -357,11 +370,12 @@ sub generate_build_json ($self) {
     }
 
     # Merge in detected requires_runtime into BUILD.yaml. Validate against META as we go.
-    foreach my $req (qw/requires build_requires configure_requires/) {
+    foreach my $req (qw/requires build_requires configure_requires develop_requires /) {
         my $build_req_name =
             $req eq 'requires'           ? 'requires_runtime'
           : $req eq 'build_requires'     ? 'requires_build'
           : $req eq 'configure_requires' ? 'requires_build'
+          : $req eq 'develop_requires'   ? 'requires_develop'
           :                                die("Unknown req $req");
 
         my $build_req = $self->$build_req_name;
@@ -386,12 +400,19 @@ sub generate_build_json ($self) {
                 delete $meta->{$req}->{$module};
                 next;
             }
-            exists $build_req->{$module} or die( "META specified requirement '$module' for '$req' was not detected.\n" . Dumper( $build_req, $meta ) );
+            if ( !exists $build_req->{$module} ) {
+                if ( $module !~ m{^(Test::Pod|Test::MinimumVersion::Fast|Test::PAUSE::Permissions|Test::Spellunker|Test::CPAN::Meta)$} ) {    # Ignore stuff that's probably release testing.
+                    die( "META specified requirement '$module' for '$req' was not detected.\n" . Dumper( $build_req, $meta ) );
+                }
+            }
 
             # Upgrade the version required if some META specified a version.
-            if ( $meta->{$req}->{$module} && $meta->{$req}->{$module} > 0 ) {
-                if ( $build_req->{$module} && $build_req->{$module} < $meta->{$req}->{$module} ) {
-                    $build_req->{$module} = $meta->{$req}->{$module};
+            if ( $meta->{$req}->{$module} ) {
+                my $meta_version = version->parse( $meta->{$req}->{$module} );
+                if ( $meta_version > 0 ) {
+                    if ( $build_req->{$module} && version->parse( $build_req->{$module} ) < $meta_version ) {
+                        $build_req->{$module} = $meta->{$req}->{$module};
+                    }
                 }
             }
             delete $meta->{$req}->{$module};
@@ -664,7 +685,6 @@ sub get_package_provided ($element) {
     $token = $token->snext_sibling;
     $token and $token->class eq 'PPI::Token::Word' or die( dump_tree($element) );
 
-    print Dumper $token;
     return $token->content;
 }
 
@@ -763,7 +783,7 @@ sub run ($self) {
             print "Skipping $repo\n";
             next;
         }
-        print "Processing $repo/PAUSE\n";
+        print "Processing repos/$repo\n";
 
         my $repo_dir = $self->repos_dir . '/' . $repo;
         my $cd       = Cwd::Guard->new($repo_dir);
