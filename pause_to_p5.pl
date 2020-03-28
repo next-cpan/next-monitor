@@ -88,8 +88,6 @@ sub do_the_do ($self) {
         return;
     }
 
-    print Dumper $self->repo_files;
-    exit;
     $self->fix_special_repos;
     $self->determine_installer;
 
@@ -214,6 +212,7 @@ sub cleanup_tree ($self) {
         if ( $files->{$changes_variant} ) {
             $files->{'Changelog'} && die("Unexpectedly saw Changelog and $changes_variant in the same repo. I don't know what to do");
 
+            print "Renaming $changes_variant to Changelog\n";
             $git->mv( $changes_variant, 'Changelog' );
             delete $files->{$changes_variant};
             $files->{'Changelog'} = 1;
@@ -325,20 +324,17 @@ sub update_p5_branch_from_PAUSE ($self) {
         $git->add('README.md');
     }
 
-    $git->add( $self->BUILD_file );
-
     $git->commit( '-m', sprintf( "Update %s version %s to play.", $distro, $self->BUILD_json->{'version'} ) );
     $self->push_to_github and die("Publishing to github should be off");
     $git->push if $self->push_to_github;
 }
 
-sub determine_installer ( $self, $repo ) {
-    my $git        = $self->git;
+sub determine_installer ( $self ) {
     my $build_json = $self->BUILD_json;
-    my $files      = $git->ls_files;
+    my $files      = $self->git->ls_files;
 
     # assert we should never see xs files.
-    $build_json->{'XS'} = 1 if grep { $_ =~ m/\.xs$/ } keys %$files;
+    $build_json->{'XS'} = 1 if ( grep { $_ =~ m/\.xs$/ } keys %$files );
 
     # There could be multiple reasons we're not going to use the new simplified builder.
     my $builder = 'play';
@@ -557,6 +553,9 @@ sub generate_build_json ($self) {
     }
 
     File::Slurper::write_text( $self->BUILD_file, Cpanel::JSON::XS->new->pretty->canonical( [1] )->encode($build_json) );
+    $self->git->add( $self->BUILD_file );
+
+    return;
 }
 
 sub merge_dep_into_hash ( $from, $to ) {
