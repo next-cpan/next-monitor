@@ -17,6 +17,7 @@ use Cwd::Guard       ();
 use Cpanel::JSON::XS ();
 use CPAN::Meta::YAML ();
 use File::Path qw/mkpath/;
+use Pod::Markdown::Github ();
 
 use PPI::Document ();
 use PPI::Dumper   ();
@@ -33,10 +34,10 @@ has 'push_to_github' => ( isa => 'Bool', is => 'ro', required => 1 );
 has 'git'       => ( isa => 'Object',  lazy => 1,    is   => 'ro', lazy    => 1, builder => '_build_git' );
 has 'dist_meta' => ( isa => 'HashRef', is   => 'rw', lazy => 1,    builder => '_build_meta' );
 
+has 'requires_build'   => ( isa => 'HashRef', is => 'rw', default => sub { return {} } );
 has 'requires_runtime' => ( isa => 'HashRef', is => 'rw', default => sub { return {} } );
 has 'requires_develop' => ( isa => 'HashRef', is => 'rw', default => sub { return {} } );
 has 'provides'         => ( isa => 'HashRef', is => 'rw', default => sub { return {} } );
-has 'requires_build'   => ( isa => 'HashRef', is => 'rw', default => sub { return {} } );
 has 'ppi_cache'        => ( isa => 'HashRef', is => 'rw', default => sub { return {} } );
 has 'BUILD_json'       => ( isa => 'HashRef', is => 'rw', default => sub { return {} } );
 has 'BUILD_file'       => ( isa => 'Str',     is => 'rw', default => 'BUILD.json' );
@@ -61,7 +62,22 @@ sub _build_meta ($self) {
 sub do_the_do ($self) {
     $self->check_if_dirty_and_die;
     $self->checkout_p5_branch;
+
+    my @log = $self->git->log(qw/p5..PAUSE/);
+
+    # Has the PAUSE branch been updated since p5 was last merged from it?
+    if (@log) {
+        die(q{We need to determine how we're going to merge from PAUSE once we've updated p5 once.});
+    }
+    elsif ( -e $self->BUILD_file ) {
+        print "Nothing to update\n";
+
+        # There are no new changes and BUILD.yaml has already been created.
+        return;
+    }
+
     $self->fix_special_repos;
+    $self->cleanup_junk_files;
     $self->update_p5_branch_from_PAUSE;
 }
 
@@ -131,26 +147,16 @@ sub fix_special_repos ( $self ) {
     #    return unless grep {$_ eq $name} qw//;
 }
 
+sub cleanup_junk_files ($self) {
+}
+
 # We can assume we are checked out into the p5 branch but it is
 # Indeterminate if PAUSE has merged in or if the p5 branch has been
 # converted.
 sub update_p5_branch_from_PAUSE ($self) {
-    my $git    = $self->git;
-    my $distro = $self->distro;
 
-    my @log = $git->log(qw/p5..PAUSE/);
-
-    # Has the PAUSE branch been updated since p5 was last merged from it?
-    if (@log) {
-        die(q{We need to determine how we're going to merge from PAUSE once we've updated p5 once.});
-    }
-    elsif ( -e $self->BUILD_file ) {
-        print "Nothing to update\n";
-
-        # There are no new changes and BUILD.yaml has already been created.
-        return;
-    }
-
+    my $git        = $self->git;
+    my $distro     = $self->distro;
     my $build_json = $self->BUILD_json;
     my $meta       = $self->dist_meta;
 
@@ -194,7 +200,7 @@ sub update_p5_branch_from_PAUSE ($self) {
         my $tests = $meta->{'tests'};
         delete $meta->{'tests'};
         if ( $tests !~ m{^t/*\S+$} ) {
-            $build_json->{'tests'} = $tests;
+            $build_json->{'tests'} = [ split( " ", $tests ) ];
         }
     }
 
@@ -287,8 +293,18 @@ sub update_p5_branch_from_PAUSE ($self) {
     if ( $builder eq 'play' ) {    # Generate README.md from the primary module.
         $self->BUILD_json->{'provides'}->{ $self->BUILD_json->{'primary'} }->{'file'} or die( "Unexpected primary file location not found:\n" . Dumper $self->BUILD_json );
         my $primary_file = $self->BUILD_json->{'provides'}->{ $self->BUILD_json->{'primary'} }->{'file'};
-        my $got          = `pod2markdown '$primary_file' README.md 2>&1`;
-        -f 'README.md' && !-z _ or die("Couldn't generate README.md: $got");
+
+        my $primary_file_stem = $primary_file;
+        $primary_file_stem =~ s/\.pm$//;
+        $primary_file = -e "$primary_file_stem.pod" ? "$primary_file_stem.pod" : $primary_file;
+
+        my $markdown;
+        my $parser = Pod::Markdown::Github->new;
+        $parser->unaccept_targets(qw( html ));
+        $parser->output_string( \$markdown );
+        $parser->parse_string_document( File::Slurper::read_binary($primary_file) );
+        File::Slurper::write_binary( 'README.md', $markdown );
+        -f 'README.md' && !-z _ or die("Couldn't generate README.md");
 
         $git->add('README.md');
     }
@@ -512,7 +528,7 @@ sub generate_build_json ($self) {
         die( "Unparsed information still exists in dist_meta. Please review.\n" . Dumper($self) );
     }
 
-    File::Slurper::write_binary( $self->BUILD_file, Cpanel::JSON::XS->new->pretty->canonical( [1] )->encode($build_json) );
+    File::Slurper::write_text( $self->BUILD_file, Cpanel::JSON::XS->new->pretty->canonical( [1] )->encode($build_json) );
 }
 
 sub merge_dep_into_hash ( $from, $to ) {
@@ -844,7 +860,7 @@ sub run ($self) {
 
         my $distro = Perl::Distro->new( distro => $repo, repo_path => $repo_dir, git_binary => $self->git_binary, push_to_github => $self->push_to_github );
 
-        $distro->do_the_do($repo);
+        $distro->do_the_do;
     }
 
     return 0;
