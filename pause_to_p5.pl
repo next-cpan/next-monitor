@@ -303,6 +303,17 @@ sub generate_build_json ($self) {
 
     # copy the license across.
     #    $build_json->{'license'}     = $meta->{'license'};
+
+    # Sometimes the meta license isn't just a string. Let's normalize it.
+    if ( ref $meta->{'license'} eq 'ARRAY' ) {
+        $meta->{'license'} = join( ", ", @{ $meta->{'license'} } );
+    }
+    ref $meta->{'license'} and die( "Unexpected meta license data: " . Dumper $meta);
+
+    # unknown isn't a valid license.
+    delete $meta->{'license'} if $meta->{'license'} eq 'unknown';
+
+    # Use the meta license preferentially if it's there.
     if ( $meta->{'license'} ) {
         $build_json->{'license'} = $meta->{'license'};
     }
@@ -456,6 +467,16 @@ sub generate_build_json ($self) {
         delete $meta->{'abstract'};
     }
 
+    if ( $meta->{'provides'} ) {
+        foreach my $module ( sort { $a cmp $b } keys %{ $meta->{'provides'} } ) {
+            $provides->{$module}                                                             or die( "Meta provides $module but it was not detected: " . Dumper( $meta, $provides ) );
+            $meta->{'provides'}->{$module}->{'file'} eq $provides->{$module}->{'file'}       or die( "Meta provides $module file is not the same as was detected: " . Dumper( $meta, $provides ) );
+            $meta->{'provides'}->{$module}->{'version'} eq $provides->{$module}->{'version'} or die( "Meta provides $module version is not the same as was detected: " . Dumper( $meta, $provides ) );
+            delete $meta->{'provides'}->{$module};
+        }
+        prune_ref($meta);
+    }
+
     # Validate name detection worked.
     $meta->{'name'} or die( "No name for distro?\n" . Dumper($meta) );
     $build_json->{'name'} eq $meta->{'name'} or die( "Bad detection of name?\n" . Dumper( $meta, $build_json ) );
@@ -583,7 +604,7 @@ sub parse_pod ( $self, $filename ) {
                     push @author, $line;
                 }
             }
-            if ( $line =~ m{^=head1 COPYRIGHT}i ) {
+            if ( $line =~ m{^=head1 (COPYRIGHT|LICENSE)}i ) {
                 while ( @pod_lines && $pod_lines[0] !~ m/^=/ ) {
                     my $line = shift @pod_lines;
                     next unless $line =~ m/\S/;
@@ -603,6 +624,9 @@ sub parse_pod ( $self, $filename ) {
                 }
                 elsif ( $license_data =~ m/under\s*the\s*terms\s*of\s*GNU\s*General\s*Public\s*License\s*3/msi ) {
                     $self->BUILD_json->{'license'} = 'GPLv3+';
+                }
+                elsif ( $license_data =~ m/MIT\s*License/msi ) {
+                    $self->BUILD_json->{'license'} = 'MIT';
                 }
                 $license_data = '';    # Clear it for the next check.
             }
