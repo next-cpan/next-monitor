@@ -157,18 +157,24 @@ sub checkout_p5_branch ($self) {
 }
 
 sub fix_special_repos ( $self ) {
-    return;    # Nothing is special case yet.
 
     my $distro = $self->distro;
 
-    #    my $meta = $self->dist_meta;
-    #    my $name = $meta->{'name'} or return;
-    #    return unless grep {$_ eq $name} qw//;
+    return unless grep { $distro eq $_ } qw/Acme-Aheui/;
+
+    my $git = $self->git;
+
+    if ( $distro eq 'Acme-Aheui' ) {
+        print "CLEANUP!!!\n";
+        $git->rm('bin/aheui');    # Was never installed.
+    }
 }
 
 sub cleanup_tree ($self) {
     my $git   = $self->git;
     my $files = $self->repo_files;
+
+    $self->dist_meta;             # Initialize META data in memory before removing it.
 
     # Delete explicit files we don't want.
     foreach my $unwanted_file (
@@ -218,6 +224,20 @@ sub cleanup_tree ($self) {
             $files->{'Changelog'} = 1;
             last;    # We can't move 2 files to the same destination so this will fail later.
         }
+    }
+
+    foreach my $file ( sort { $a cmp $b } keys %$files ) {
+        next unless $self->is_xt_test($file);
+
+        print "Moving $file to xt/\n";
+
+        mkdir('xt');
+        $git->mv( $file, 'xt/' );
+
+        # update the files hash.
+        delete $files->{$file};
+        $file =~ s{^t/}{xt/};
+        $files->{$file} = 1;
     }
 
     return;
@@ -295,8 +315,8 @@ sub update_p5_branch_from_PAUSE ($self) {
             delete $files_copy{$file} if $file =~ m{^(eg|examples)/};
 
             # Wierd files for specific distros.
-            delete $files_copy{$file} if $file =~ m{^fortune/} && $distro =~ m{^Acme/};
-            delete $files_copy{$file} if $file =~ m{^Roms/} && $distro eq 'Acme-6502';
+            delete $files_copy{$file} if $file =~ m{^fortune/} && $distro eq 'Acme-24';
+            delete $files_copy{$file} if $file =~ m{^Roms/}    && $distro eq 'Acme-6502';
         }
 
         # Nothing was found.
@@ -317,8 +337,8 @@ sub update_p5_branch_from_PAUSE ($self) {
         my $parser = Pod::Markdown::Github->new;
         $parser->unaccept_targets(qw( html ));
         $parser->output_string( \$markdown );
-        $parser->parse_string_document( File::Slurper::read_binary($primary_file) );
-        File::Slurper::write_binary( 'README.md', $markdown );
+        $parser->parse_string_document( File::Slurper::read_text($primary_file) );
+        File::Slurper::write_text( 'README.md', $markdown );
         -f 'README.md' && !-z _ or die("Couldn't generate README.md");
 
         $git->add('README.md');
@@ -439,7 +459,7 @@ sub generate_build_json ($self) {
     $meta->{'prereqs'} and die( "Unexpected prereqs found:\n" . Dumper $meta);
 
     my $provides = $self->provides;
-    foreach my $req ( $self->requires_build, $self->requires_runtime ) {
+    foreach my $req ( $self->requires_build, $self->requires_runtime, $self->requires_develop ) {
         foreach my $module ( keys %$req ) {
             delete $req->{$module} if $provides->{$module};
         }
@@ -470,15 +490,22 @@ sub generate_build_json ($self) {
                 next;
             }
 
+            if ( $module eq 'perl' ) {
+                $build_req->{$req} = $meta->{$req}->{$module};
+                delete $meta->{$req}->{$module};
+                next;
+            }
+
             # Add a recommends section.
             if ( !exists $build_req->{$module} && $req eq 'requires' ) {
-                $build_json->{'recommends'}->{$module} = $meta->{$req}->{$module};
+                $build_req->{$module} = $meta->{$req}->{$module};
+                print Dumper $build_req;
                 delete $meta->{$req}->{$module};
                 next;
             }
             if ( !exists $build_req->{$module} ) {
-                if ( $module !~ m{^(Test::Pod|Test::MinimumVersion::Fast|Test::PAUSE::Permissions|Test::Spellunker|Test::CPAN::Meta)$} ) {    # Ignore stuff that's probably release testing.
-                    die( "META specified requirement '$module' for '$req' was not detected.\n" . Dumper( $build_req, $meta ) );
+                if ( $module !~ m{^(CPAN::Meta|CPAN::Meta::Prereqs|Test::Pod|Test::MinimumVersion|Test::MinimumVersion::Fast|Test::PAUSE::Permissions|Test::Spellunker|Test::CPAN::Meta)$} ) {    # Ignore stuff that's probably release testing.
+                    die( "META specified requirement '$module' for '$req' was not detected.\n" . Dumper( $self->requires_develop, $self->requires_build, $meta ) );
                 }
             }
 
@@ -534,9 +561,9 @@ sub generate_build_json ($self) {
 
     if ( $meta->{'provides'} ) {
         foreach my $module ( sort { $a cmp $b } keys %{ $meta->{'provides'} } ) {
-            $provides->{$module}                                                             or die( "Meta provides $module but it was not detected: " . Dumper( $meta, $provides ) );
-            $meta->{'provides'}->{$module}->{'file'} eq $provides->{$module}->{'file'}       or die( "Meta provides $module file is not the same as was detected: " . Dumper( $meta, $provides ) );
-            $meta->{'provides'}->{$module}->{'version'} eq $provides->{$module}->{'version'} or die( "Meta provides $module version is not the same as was detected: " . Dumper( $meta, $provides ) );
+            $provides->{$module}                                                                  or die( "Meta provides $module but it was not detected: " . Dumper( $meta, $provides ) );
+            $meta->{'provides'}->{$module}->{'file'} eq $provides->{$module}->{'file'}            or die( "Meta provides $module file is not the same as was detected: " . Dumper( $meta, $provides ) );
+            $meta->{'provides'}->{$module}->{'version'} // 0 eq $provides->{$module}->{'version'} or die( "Meta provides $module version is not the same as was detected: " . Dumper( $meta, $provides ) );
             delete $meta->{'provides'}->{$module};
         }
         prune_ref($meta);
@@ -591,7 +618,7 @@ sub prune_ref ($var) {
 
 sub get_ppi_doc ( $self, $filename ) {
     return if ( $filename =~ m{^(Makefile\.PL|Build\.PL)$} );    # Skip common files we don't want parsed ever.
-    return if ( $filename =~ m{^(inc|eg|examples)/} );           # Skip inc files we're going to skip.
+    return if ( $filename =~ m{^(inc|eg|examples)/} );           # Skip files not relevant to build or install.
 
     if ( -l $filename || -d _ || -z _ ) {
         warn("$filename isn't a normal file. Skipping PPI parse");
@@ -611,27 +638,46 @@ sub get_ppi_doc ( $self, $filename ) {
 sub _file_to_package ( $self, $filename ) {
     $filename or die;
     $filename =~ s{^lib/}{};
-    $filename =~ s{\.pm$}{};
+    $filename =~ s{\.(pm|pod)$}{};
     $filename =~ s{/}{::}g;
     return $filename;
 }
 
-sub parse_comments ( $self, $filename ) {
-    return unless $filename =~ m/\.(?:pm)$/i;    # only perl files for pod.
-    return if $self->BUILD_json->{'abstract'};   # We don't look for anything but this right now.
+sub is_xt_test ( $self, $filename ) {
+    return 0 unless $filename =~ m{^t/.+\.t$};
 
-    my $primary_package = $self->BUILD_json->{'primary'};
-    return unless $primary_package eq $self->_file_to_package($filename);
+    my $doc = $self->get_ppi_doc($filename) or return 0;
+    print "TTT - $filename\n";
+
+    # remove pods
+    my $quotes = $doc->find( sub { $_[1]->class =~ m/^PPI::Token::Quote::/ } ) || [];
+
+    # Look for comments about this being an author test.
+    foreach my $quote (@$quotes) {
+        my $content = $quote->content;
+        return 1 if $content =~ m{SKIP these tests are for testing by the author};
+    }
+
+    return 0;
+}
+
+sub parse_comments ( $self, $filename ) {
 
     my $doc = $self->get_ppi_doc($filename) or return;
 
     # remove pods
     my $comments = $doc->find('PPI::Token::Comment') || [];
-    foreach my $comment (@$comments) {
-        next unless $comment->content =~ m/^# ABSTRACT:\s+(\S.+$)/;
-        $self->BUILD_json->{'abstract'} = "$1";
-        chomp $self->BUILD_json->{'abstract'};
-        last;
+
+    # Search for abstract if the file is the primary package
+    my $primary_package = $self->BUILD_json->{'primary'};
+    if ( $primary_package eq $self->_file_to_package($filename) ) {
+        foreach my $comment (@$comments) {
+            next unless $primary_package eq $self->_file_to_package($filename);
+            next unless $comment->content =~ m/^# ABSTRACT:\s+(\S.+$)/;
+            $self->BUILD_json->{'abstract'} = "$1";
+            chomp $self->BUILD_json->{'abstract'};
+            last;
+        }
     }
 }
 
@@ -688,19 +734,25 @@ sub parse_pod ( $self, $filename ) {
             }
 
             if ( $license_data && !$self->BUILD_json->{'license'} ) {
-                if ( $license_data =~ m/or\s*the\s*Artistic\s*License/msi ) {
+                $license_data =~ s/\s\s+/ /msg;    # Strip double spaces to make parsing the text easier.
+                $license_data =~ s/\s/ /msg;       # Convert all white space to a single space.
+
+                if ( $license_data =~ m/or the Artistic License/msi ) {
                     $self->BUILD_json->{'license'} = 'perl';
                 }
-                elsif ( $license_data =~ m/Terms\s*(of|as)\s*Perl\s*itself/msi ) {
+                elsif ( $license_data =~ m/Terms (of|as) Perl itself/msi ) {
                     $self->BUILD_json->{'license'} = 'perl';
                 }
-                elsif ( $license_data =~ m/under\s*the\s*terms\s*of\s*GNU\s*General\s*Public\s*License\s*\(GPL\)/msi ) {
+                elsif ( $license_data =~ m/same as Perl itself/msi ) {
+                    $self->BUILD_json->{'license'} = 'perl';
+                }
+                elsif ( $license_data =~ m/under the terms of GNU General Public License \(GPL\)/msi ) {
                     $self->BUILD_json->{'license'} = 'GPL';
                 }
-                elsif ( $license_data =~ m/under\s*the\s*terms\s*of\s*GNU\s*General\s*Public\s*License\s*3/msi ) {
+                elsif ( $license_data =~ m/under the terms of GNU General Public License 3/msi ) {
                     $self->BUILD_json->{'license'} = 'GPLv3+';
                 }
-                elsif ( $license_data =~ m/MIT\s*License/msi ) {
+                elsif ( $license_data =~ m/MIT License/msi ) {
                     $self->BUILD_json->{'license'} = 'MIT';
                 }
 
@@ -717,7 +769,8 @@ sub parse_code ( $self, $filename ) {
 
     my $requires_runtime_hash;
     $requires_runtime_hash = $self->requires_build   if $filename =~ m{^t/.+\.(pl|pm|t)$}i;
-    $requires_runtime_hash = $self->requires_runtime if $filename =~ m{\.pm$} && $filename !~ m/^(t|xt)/;
+    $requires_runtime_hash = $self->requires_runtime if $filename =~ m{\.pm$} && $filename !~ m{^t/};
+    $requires_runtime_hash = $self->requires_develop if $filename =~ m{^xt/.+\.t$};
     return unless $requires_runtime_hash;    # Doesn't look like perl code we know about.
 
     my $doc = $self->get_ppi_doc($filename) or return;
@@ -885,7 +938,7 @@ sub run ($self) {
             print "Skipping $repo\n";
             next;
         }
-        print "Processing repos/$repo\n";
+        print "--- Processing repos/$repo\n";
 
         my $repo_dir = $self->repos_dir . '/' . $repo;
         my $cd       = Cwd::Guard->new($repo_dir);
