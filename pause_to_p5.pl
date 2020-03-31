@@ -308,6 +308,7 @@ sub is_extra_files_we_ship ( $self, $file ) {
     # Wierd files for specific distros.
     return 1 if $file =~ m{^fortune/} && $self->distro eq 'Acme-24';
     return 1 if $file =~ m{^Roms/}    && $self->distro eq 'Acme-6502';
+    return 1 if $file =~ m{^share/}   && $self->distro eq 'Acme-AllThePerlIsAStage';
 
     return 0;
 }
@@ -811,7 +812,7 @@ sub parse_pod ( $self, $filename ) {
                     push @author, $line;
                 }
             }
-            if ( $line =~ m{^=head1 (COPYRIGHT|LICENSE)}i ) {
+            if ( $line =~ m{^=head1 (COPYRIGHT|LICENSE|LICENCE)}i ) {
                 while ( @pod_lines && $pod_lines[0] !~ m/^=/ ) {
                     my $line = shift @pod_lines;
                     next unless $line =~ m/\S/;
