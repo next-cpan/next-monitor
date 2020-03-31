@@ -428,7 +428,7 @@ sub generate_build_json ($self) {
     # unused vars in meta.
     delete $meta->{$_} foreach (
         qw/dynamic_config generated_by meta-spec x_generated_by_perl x_serialization_backend license resources
-        release_status x_Dist_Zilla x_authority distribution_type installdirs version_from no_index/
+        release_status x_Dist_Zilla x_authority distribution_type installdirs version_from no_index x_contributors/
     );
     foreach my $prereq_key (qw/configure build runtime test develop/) {
         next unless $meta->{'prereqs'};
@@ -546,6 +546,7 @@ sub generate_build_json ($self) {
         }
         delete $meta->{'author'};
     }
+
     $build_json->{'maintainers'} or die("Could not determine maintainers for this repo");
 
     # Verify everything we think we figured out matches META.
