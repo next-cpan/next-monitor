@@ -98,6 +98,7 @@ sub do_the_do ($self) {
         $self->update_p5_branch_from_PAUSE;
     }
     else {
+        $self->generate_build_json;
         ...;
     }
 }
@@ -192,7 +193,7 @@ sub cleanup_tree ($self) {
 
     # Throw out maint/cip- files. Not sure what they are.
     foreach my $file ( keys %$files ) {
-        next unless $file =~ m{^maint/cip-};
+        next unless $file =~ m{^maint/(cip-|release)};
         delete $files->{$file};
         $git->rm($file);
     }
@@ -253,23 +254,14 @@ sub cleanup_tree ($self) {
     return;
 }
 
-# We can assume we are checked out into the p5 branch but it is
-# Indeterminate if PAUSE has merged in or if the p5 branch has been
-# converted.
-sub update_p5_branch_from_PAUSE ($self) {
-
+sub determine_primary_module ($self) {
     my $git        = $self->git;
     my $distro     = $self->distro;
     my $build_json = $self->BUILD_json;
     my $meta       = $self->dist_meta;
 
-    $build_json->{'XS'} and die("play doesn't support XS distros");
-
-    $build_json->{'version'} = $meta->{'version'};
-
     # Try to determine the primary package of this distro.
     # Let's make sure it matches the 'name' of the module.
-
     $build_json->{'primary'} = $meta->{'name'};
     $build_json->{'primary'} =~ s/-/::/g;
     my @module      = split( '::', $build_json->{'primary'} );
@@ -293,12 +285,37 @@ sub update_p5_branch_from_PAUSE ($self) {
     my ($package) = $module_txt =~ m{package\s+(\S+?)\s*;};
     $build_json->{'primary'} eq $package or die("Unexpected distro name / primary mismatch in distro $distro");
 
+    return;
+}
+
+sub update_p5_branch_to_not_play ($self) {
+    my $build_json = $self->BUILD_json;
+    my $meta       = $self->dist_meta;
+    $build_json->{'version'} = $meta->{'version'};
+    $self->determine_primary_module;
+}
+
+# We can assume we are checked out into the p5 branch but it is
+# Indeterminate if PAUSE has merged in or if the p5 branch has been
+# converted.
+sub update_p5_branch_from_PAUSE ($self) {
+    my $git        = $self->git;
+    my $distro     = $self->distro;
+    my $build_json = $self->BUILD_json;
+    my $meta       = $self->dist_meta;
+
+    $build_json->{'XS'} and die("play doesn't support XS distros");
+
+    $build_json->{'version'} = $meta->{'version'};
+
+    $self->determine_primary_module;
+
     # If test paths are specified in META, transfer that unless they're just t/* or t/*.t.
     if ( $meta->{'tests'} ) {
         my $tests = $meta->{'tests'};
         delete $meta->{'tests'};
         if ( $tests !~ m{^t/*\S+$} ) {
-            $build_json->{'tests'} = [ split( " ", $tests ) ];
+            $build_json->{'tests'} = [ map { $_ .= ".t" if m/\*$/; $_ } split( " ", $tests ) ];
         }
     }
 
@@ -370,19 +387,28 @@ sub determine_installer ( $self ) {
     my $build_json = $self->BUILD_json;
     my $files      = $self->repo_files;
 
+    my $builder = 'play';
+
     # Tag the BUILD file with whether this repo has XS.
     if ( grep { $_ =~ m/\.xs$/ } keys %$files ) {
         $build_json->{'XS'} = 1;
+        $builder = 'legacy';
     }
     else {
         $build_json->{'XS'} = 0;
     }
 
-    # There could be multiple reasons we're not going to use the new simplified builder.
-    my $builder = 'play';
-    $builder = 'legacy' if $build_json->{'XS'};
+    # We can't support Alien modules yet.
+    my $meta = $self->dist_meta;
+    if ( $meta->{'prereqs'} && ref $meta->{'prereqs'} eq 'HASH' ) {
+        foreach my $prereq ( values %{ $meta->{'prereqs'} } ) {
+            next unless defined $prereq->{'requires'}->{'Alien::Base'};
+            $builder = 'legacy';
+            last;
+        }
+    }
 
-    # Now we think it's play, set it and return;
+    # If the builder is play, then set it and return.
     if ( $builder eq 'play' ) {
         $build_json->{'builder'} = 'play';
         return;
@@ -682,7 +708,7 @@ sub parse_maker ($self) {
         my $doc = $self->get_ppi_doc('Makefile.PL');
 
         my $quotes = $doc->find( sub { $_[1]->class =~ m/^PPI::Token::Quote::/ && $_[1]->content =~ m{^['"]?EXE_FILES['"]$} } ) || [];
-        @$quotes or die;
+        @$quotes or return;
 
         my $node = $quotes->[0];
         $node = $node->snext_sibling();
@@ -967,7 +993,7 @@ sub _build_repo_list ($self) {
     return \@repos;
 }
 
-sub run ($self) {
+sub run ( $self, @optional_repos ) {
 
     my @skip_list = qw{
       AAAA-Crypt-DH
@@ -976,6 +1002,10 @@ sub run ($self) {
     };
 
     my $repo_list = $self->repo_list;
+    if (@optional_repos) {
+        $repo_list = \@optional_repos;
+    }
+
     foreach my $repo (@$repo_list) {
         if ( grep { $repo eq $_ } @skip_list ) {
             print "Skipping $repo\n";
@@ -1032,5 +1062,5 @@ package main;
 
 my $o = PauseTop5->new_with_options( configfile => "${FindBin::Bin}/settings.ini" );
 
-exit( $o->run );
+exit( $o->run(@ARGV) );
 
