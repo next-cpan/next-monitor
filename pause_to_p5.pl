@@ -207,6 +207,13 @@ sub cleanup_tree ($self) {
         $git->rm($file);
     }
 
+    # *~ or /#file#
+    foreach my $file ( keys %$files ) {
+        next unless $file =~ m{~$|/#.+#$};
+        delete $files->{$file};
+        $git->rm($file);
+    }
+
     # Normalize all TODO files to 'Todo' and throw out the boilerplate ones.
     my @todo = sort grep { $_ =~ m/^todo$/i } keys %$files;
     if (@todo) {
