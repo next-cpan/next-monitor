@@ -98,9 +98,11 @@ sub do_the_do ($self) {
         $self->update_p5_branch_from_PAUSE;
     }
     else {
+        $self->determine_primary_module;
         $self->generate_build_json;
-        ...;
     }
+
+    $self->git_commit;
 }
 
 sub check_if_dirty_and_die ($self) {
@@ -321,8 +323,6 @@ sub update_p5_branch_from_PAUSE ($self) {
 
     $build_json->{'XS'} and die("play doesn't support XS distros");
 
-    $build_json->{'version'} = $meta->{'version'};
-
     $self->determine_primary_module;
 
     # If test paths are specified in META, transfer that unless they're just t/* or t/*.t.
@@ -384,9 +384,17 @@ sub update_p5_branch_from_PAUSE ($self) {
         $git->add('README.md');
     }
 
-    $git->commit( '-m', sprintf( "Update %s version %s to play.", $distro, $self->BUILD_json->{'version'} ) );
+    return;
+}
+
+sub git_commit ($self) {
+    my $git = $self->git;
+
+    $git->commit( '-m', sprintf( "Update %s version %s to play.", $self->distro, $self->BUILD_json->{'version'} ) );
     $self->push_to_github and die("Publishing to github should be off");
     $git->push if $self->push_to_github;
+
+    return;
 }
 
 sub determine_installer ( $self ) {
@@ -413,6 +421,8 @@ sub determine_installer ( $self ) {
             last;
         }
     }
+    $builder = 'legacy' if defined $meta->{'requires'}->{'Alien::Base'};
+    $builder = 'legacy' if defined $meta->{'configure_requires'}->{'Alien::Base'};
 
     # If the builder is play, then set it and return.
     if ( $builder eq 'play' ) {
@@ -426,12 +436,10 @@ sub determine_installer ( $self ) {
 }
 
 sub generate_build_json ($self) {
-
     my $build_json = $self->BUILD_json;
     my $meta       = $self->dist_meta;
 
-    # copy the license across.
-    #    $build_json->{'license'}     = $meta->{'license'};
+    $build_json->{'version'} = $meta->{'version'};
 
     # Sometimes the meta license isn't just a string. Let's normalize it.
     if ( ref $meta->{'license'} eq 'ARRAY' ) {
@@ -551,8 +559,14 @@ sub generate_build_json ($self) {
                 delete $meta->{$req}->{$module};
                 next;
             }
+
             if ( !exists $build_req->{$module} ) {
-                if ( $module !~ m{^(CPAN::Meta|CPAN::Meta::Prereqs|Test::Pod|Test::MinimumVersion|Test::MinimumVersion::Fast|Test::PAUSE::Permissions|Test::Spellunker|Test::CPAN::Meta)$} ) {    # Ignore stuff that's probably release testing.
+                if ( !$self->is_play ) {
+                    $build_req->{$module} = $meta->{$req}->{$module};
+                    delete $meta->{$req}->{$module};
+                    next;
+                }
+                elsif ( $module !~ m{^(CPAN::Meta|CPAN::Meta::Prereqs|Test::Pod|Test::MinimumVersion|Test::MinimumVersion::Fast|Test::PAUSE::Permissions|Test::Spellunker|Test::CPAN::Meta)$} ) {    # Ignore stuff that's probably release testing.
                     die( "META specified requirement '$module' for '$req' was not detected.\n" . Dumper( $self->requires_develop, $self->requires_build, $meta ) );
                 }
             }
