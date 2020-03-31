@@ -42,13 +42,14 @@ has 'repo_files' => (
     }
 );
 
-has 'requires_build'   => ( isa => 'HashRef', is => 'rw', default => sub { return {} } );
-has 'requires_runtime' => ( isa => 'HashRef', is => 'rw', default => sub { return {} } );
-has 'requires_develop' => ( isa => 'HashRef', is => 'rw', default => sub { return {} } );
-has 'provides'         => ( isa => 'HashRef', is => 'rw', default => sub { return {} } );
-has 'ppi_cache'        => ( isa => 'HashRef', is => 'rw', default => sub { return {} } );
-has 'BUILD_json'       => ( isa => 'HashRef', is => 'rw', default => sub { return {} } );
-has 'BUILD_file'       => ( isa => 'Str',     is => 'rw', default => 'BUILD.json' );
+has 'scripts'          => ( isa => 'ArrayRef', is => 'rw', default => sub { return [] } );
+has 'requires_build'   => ( isa => 'HashRef',  is => 'rw', default => sub { return {} } );
+has 'requires_runtime' => ( isa => 'HashRef',  is => 'rw', default => sub { return {} } );
+has 'requires_develop' => ( isa => 'HashRef',  is => 'rw', default => sub { return {} } );
+has 'provides'         => ( isa => 'HashRef',  is => 'rw', default => sub { return {} } );
+has 'ppi_cache'        => ( isa => 'HashRef',  is => 'rw', default => sub { return {} } );
+has 'BUILD_json'       => ( isa => 'HashRef',  is => 'rw', default => sub { return {} } );
+has 'BUILD_file'       => ( isa => 'Str',      is => 'rw', default => 'BUILD.json' );
 
 sub _build_git ($self) {
     return Git::Wrapper->new( { 'dir' => $self->repo_path, 'git_binary' => $self->git_binary } ) || die( 'Failed to create Git::Wrapper for ' . $self->repo_path );
@@ -92,6 +93,7 @@ sub do_the_do ($self) {
     $self->determine_installer;
 
     if ( $self->is_play ) {
+        $self->parse_maker;
         $self->cleanup_tree;
         $self->update_p5_branch_from_PAUSE;
     }
@@ -178,16 +180,24 @@ sub cleanup_tree ($self) {
 
     # Delete explicit files we don't want.
     foreach my $unwanted_file (
-        qw{ MANIFEST MANIFEST.SKIP SIGNATURE dist.ini README README.md Makefile.PL Build.PL
+        qw{ MANIFEST MANIFEST.SKIP MANIFEST.bak INSTALL SIGNATURE dist.ini README README.md Makefile.PL Build.PL
         META.yml META.json ignore.txt .gitignore Changes.PL cpanfile cpanfile.snapshot minil.toml
-        .project t/boilerplate.t }
+        .project t/boilerplate.t
+        }
     ) {
         next unless $files->{$unwanted_file};
         delete $files->{$unwanted_file};
         $git->rm($unwanted_file);
     }
 
-    # Get rid of patterns we don't want.
+    # Throw out maint/cip- files. Not sure what they are.
+    foreach my $file ( keys %$files ) {
+        next unless $file =~ m{^maint/cip-};
+        delete $files->{$file};
+        $git->rm($file);
+    }
+
+    # Get rid of directories we don't want.
     foreach my $file ( keys %$files ) {
         next unless $file =~ m{^(?:inc|proto)/};
         delete $files->{$file};
@@ -302,6 +312,13 @@ sub update_p5_branch_from_PAUSE ($self) {
     {    #  Look for any unexpected files in the file list.
         my %files_copy = %{ $self->repo_files };
 
+        foreach my $script ( @{ $self->scripts } ) {
+            $build_json->{'scripts'} ||= [];
+
+            push @{ $build_json->{'scripts'} }, $script;
+            delete $files_copy{$script};
+        }
+
         #Anything in lib, t, xt is good. Just pass it through.
         delete $files_copy{$_} foreach grep { m{^lib/|^t/|^xt/} } keys %$files;
 
@@ -309,7 +326,7 @@ sub update_p5_branch_from_PAUSE ($self) {
         foreach my $file ( sort keys %files_copy ) {
 
             # Explicit files we're going to ignore.
-            delete $files_copy{$file} if ( grep { $file eq $_ } qw/Changelog LICENSE CONTRIBUTING Todo/ );
+            delete $files_copy{$file} if ( grep { $file eq $_ } qw/Changelog LICENSE CONTRIBUTING Todo author.yml/ );
 
             # paths with example files we're going to ignore.
             delete $files_copy{$file} if $file =~ m{^(eg|examples)/};
@@ -618,8 +635,7 @@ sub prune_ref ($var) {
 }
 
 sub get_ppi_doc ( $self, $filename ) {
-    return if ( $filename =~ m{^(Makefile\.PL|Build\.PL)$} );    # Skip common files we don't want parsed ever.
-    return if ( $filename =~ m{^(inc|eg|examples)/} );           # Skip files not relevant to build or install.
+    return if $filename =~ m{\.(bak|yml|json|yaml)$}i;
 
     if ( -l $filename || -d _ || -z _ ) {
         warn("$filename isn't a normal file. Skipping PPI parse");
@@ -648,7 +664,6 @@ sub is_xt_test ( $self, $filename ) {
     return 0 unless $filename =~ m{^t/.+\.t$};
 
     my $doc = $self->get_ppi_doc($filename) or return 0;
-    print "TTT - $filename\n";
 
     # remove pods
     my $quotes = $doc->find( sub { $_[1]->class =~ m/^PPI::Token::Quote::/ } ) || [];
@@ -660,6 +675,30 @@ sub is_xt_test ( $self, $filename ) {
     }
 
     return 0;
+}
+
+sub parse_maker ($self) {
+    if ( -e 'Makefile.PL' ) {
+        my $doc = $self->get_ppi_doc('Makefile.PL');
+
+        my $quotes = $doc->find( sub { $_[1]->class =~ m/^PPI::Token::Quote::/ && $_[1]->content =~ m{^['"]?EXE_FILES['"]$} } ) || [];
+        @$quotes or die;
+
+        my $node = $quotes->[0];
+        $node = $node->snext_sibling();
+        $node->content eq '=>' or die( "Unexpected sibling to EXE_FILES: " . dump_tree( $quotes->[0] ) );
+
+        $node = $node->snext_sibling();
+        $node->class eq 'PPI::Structure::Constructor' or die( "Unexpected sibling value EXE_FILES: " . dump_tree($node) );
+
+        foreach my $child ( $node->schildren ) {
+            my $child_node = $child->schild(0);
+            $child_node->class =~ m{^PPI::Token::Quote::} or die( "Unexpected child node parsing EXE_FILES: " . Dumper($child) );
+            my $bin = eval $child_node->content;
+            push @{ $self->scripts }, $bin;
+
+        }
+    }
 }
 
 sub parse_comments ( $self, $filename ) {
@@ -855,8 +894,11 @@ sub get_package_usage ($element) {
 
     $token = $token->snext_sibling;
 
-    return if ( $token->content =~ m/^5\.\d+/ );                     # skip use 5.xx
-    die( $element->content ) if ( $token->content =~ m/^\s*\$/ );    # Dynamic require can't be parsed.
+    return if ( $token->content =~ m/^5\.\d+/ );    # skip use 5.xx
+    if ( $token->content =~ m/^\s*\$/ ) {           # Dynamic require can't be parsed.
+        printf( "Failed to parse require: %s\n", $token->content );
+        return;
+    }
 
     my $module = $token->content;
 
