@@ -295,6 +295,21 @@ sub update_p5_branch_to_not_play ($self) {
     $self->determine_primary_module;
 }
 
+sub is_extra_files_we_ship ( $self, $file ) {
+
+    # Explicit files we're going to ignore.
+    return 1 if ( grep { $file eq $_ } qw/Changelog LICENSE CONTRIBUTING Todo author.yml/ );
+
+    # paths with example files we're going to ignore.
+    return 1 if $file =~ m{^(eg|examples)/};
+
+    # Wierd files for specific distros.
+    return 1 if $file =~ m{^fortune/} && $self->distro eq 'Acme-24';
+    return 1 if $file =~ m{^Roms/}    && $self->distro eq 'Acme-6502';
+
+    return 0;
+}
+
 # We can assume we are checked out into the p5 branch but it is
 # Indeterminate if PAUSE has merged in or if the p5 branch has been
 # converted.
@@ -341,16 +356,7 @@ sub update_p5_branch_from_PAUSE ($self) {
 
         # Files we know are ok, we'll delete from the hash.
         foreach my $file ( sort keys %files_copy ) {
-
-            # Explicit files we're going to ignore.
-            delete $files_copy{$file} if ( grep { $file eq $_ } qw/Changelog LICENSE CONTRIBUTING Todo author.yml/ );
-
-            # paths with example files we're going to ignore.
-            delete $files_copy{$file} if $file =~ m{^(eg|examples)/};
-
-            # Wierd files for specific distros.
-            delete $files_copy{$file} if $file =~ m{^fortune/} && $distro eq 'Acme-24';
-            delete $files_copy{$file} if $file =~ m{^Roms/}    && $distro eq 'Acme-6502';
+            delete $files_copy{$file} if $self->is_extra_files_we_ship($file);
         }
 
         # Nothing was found.
@@ -534,7 +540,7 @@ sub generate_build_json ($self) {
             }
 
             if ( $module eq 'perl' ) {
-                $build_req->{$req} = $meta->{$req}->{$module};
+                $build_req->{$module} = $meta->{$req}->{$module};
                 delete $meta->{$req}->{$module};
                 next;
             }
@@ -542,7 +548,6 @@ sub generate_build_json ($self) {
             # Add a recommends section.
             if ( !exists $build_req->{$module} && $req eq 'requires' ) {
                 $build_req->{$module} = $meta->{$req}->{$module};
-                print Dumper $build_req;
                 delete $meta->{$req}->{$module};
                 next;
             }
@@ -662,6 +667,7 @@ sub prune_ref ($var) {
 
 sub get_ppi_doc ( $self, $filename ) {
     return if $filename =~ m{\.(bak|yml|json|yaml)$}i;
+    return if $self->is_extra_files_we_ship($filename);
 
     if ( -l $filename || -d _ || -z _ ) {
         warn("$filename isn't a normal file. Skipping PPI parse");
