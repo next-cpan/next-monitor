@@ -64,6 +64,14 @@ sub _build_meta ($self) {
         my $yaml = CPAN::Meta::YAML->read_string($txt);
         return $yaml->[0] if $yaml && ref $yaml eq 'CPAN::Meta::YAML';
     }
+    if ( -f 'Makefile.PL' ) {    # Generate MYMETA.json?
+        `$^X Makefile.PL`;
+        if ( -e 'MYMETA.json' ) {
+            my $json = Cpanel::JSON::XS::decode_json( File::Slurper::read_binary('MYMETA.json') );
+            unlink(qw/MYMETA.json MYMETA.yml Makefile/);
+            return $json;
+        }
+    }
 
     die( 'No META data found in ' . $self->distro . "\n" . `ls -l` . "\n\n" . Carp::longmess );
 }
@@ -165,13 +173,14 @@ sub fix_special_repos ( $self ) {
 
     my $distro = $self->distro;
 
-    return unless grep { $distro eq $_ } qw/Acme-Aheui/;
-
-    my $git = $self->git;
-
     if ( $distro eq 'Acme-Aheui' ) {
-        print "CLEANUP!!!\n";
-        $git->rm('bin/aheui');    # Was never installed.
+        $self->git->rm('bin/aheui');    # Was never installed.
+    }
+    elsif ( $distro eq 'Acme-BeCool' ) {
+        $self->git->rm('example.pm');    # Was never installed.
+    }
+    elsif ( $distro eq 'Acme-Beatnik' ) {
+        $self->git->rm(qw/example.pl findwords.pl generate.pl/);    # Was never installed.
     }
 }
 
@@ -179,13 +188,13 @@ sub cleanup_tree ($self) {
     my $git   = $self->git;
     my $files = $self->repo_files;
 
-    $self->dist_meta;             # Initialize META data in memory before removing it.
+    $self->dist_meta;                                               # Initialize META data in memory before removing it.
 
     # Delete explicit files we don't want.
     foreach my $unwanted_file (
-        qw{ MANIFEST MANIFEST.SKIP MANIFEST.bak INSTALL SIGNATURE dist.ini README README.md Makefile.PL Build.PL
-        META.yml META.json ignore.txt .gitignore Changes.PL cpanfile cpanfile.snapshot minil.toml
-        .project t/boilerplate.t
+        qw{ MANIFEST MANIFEST.SKIP MANIFEST.bak INSTALL SIGNATURE dist.ini README README.md README.pod Makefile.PL Build.PL weaver.ini
+        META.yml META.json ignore.txt .gitignore Changes.PL cpanfile cpanfile.snapshot minil.toml .cvsignore
+        .project t/boilerplate.t MYMETA.json MYMETA.yml Makefile Makefile.old maint/Makefile.PL.include metamerge.json
         }
     ) {
         next unless $files->{$unwanted_file};
@@ -234,7 +243,7 @@ sub cleanup_tree ($self) {
     }
 
     # Normalize all Changelog files to a common 'Changelog'
-    foreach my $changes_variant (qw/CHANGES Changes/) {
+    foreach my $changes_variant (qw/CHANGES Changes ChangeLog/) {
         if ( $files->{$changes_variant} ) {
             $files->{'Changelog'} && die("Unexpectedly saw Changelog and $changes_variant in the same repo. I don't know what to do");
 
@@ -260,6 +269,14 @@ sub cleanup_tree ($self) {
         $files->{$file} = 1;
     }
 
+    if ( -f 'test.pl' ) {
+        mkdir 't';
+        -e 't/test_pl.t' and die("Unexpected test.pl / test_pl.t combo??");
+        $git->mv( 'test.pl', 't/test_pl.t' );
+        delete $files->{'test.pl'};
+        $files->{'t/test_pl.t'} = 1;
+    }
+
     return;
 }
 
@@ -283,6 +300,9 @@ sub determine_primary_module ($self) {
             mkpath($module_path);
             rmdir $module_path;
             $git->mv( $filename, $module_path );
+
+            delete $self->repo_files->{$filename};
+            $self->repo_files->{$module_path} = 1;
         }
 
         if ( !-f $module_path ) {
@@ -313,9 +333,10 @@ sub is_extra_files_we_ship ( $self, $file ) {
     return 1 if $file =~ m{^(eg|examples)/};
 
     # Wierd files for specific distros.
-    return 1 if $file =~ m{^fortune/} && $self->distro eq 'Acme-24';
-    return 1 if $file =~ m{^Roms/}    && $self->distro eq 'Acme-6502';
-    return 1 if $file =~ m{^share/}   && $self->distro eq 'Acme-AllThePerlIsAStage';
+    return 1 if $file =~ m{^fortune/}       && $self->distro eq 'Acme-24';
+    return 1 if $file =~ m{^Roms/}          && $self->distro eq 'Acme-6502';
+    return 1 if $file =~ m{^share/}         && $self->distro eq 'Acme-AllThePerlIsAStage';
+    return 1 if $file =~ m{^ascii-art\.pl$} && $self->distro eq 'Acme-AsciiArtinator';
 
     return 0;
 }
@@ -431,6 +452,17 @@ sub determine_installer ( $self ) {
     }
     $builder = 'legacy' if defined $meta->{'requires'}->{'Alien::Base'};
     $builder = 'legacy' if defined $meta->{'configure_requires'}->{'Alien::Base'};
+
+    # Validate x_static_install matches our own decision.
+    if ( defined $meta->{'x_static_install'} ) {
+        if ( $meta->{'x_static_install'} ) {
+            $builder eq 'play' or die('x_static_install says this distro is static but I detected things that might make it legacy');
+        }
+        else {
+            $builder eq 'legacy' or die(q{x_static_install says this distro isn't static but I don't know why it is play at this point?});
+        }
+        delete $meta->{'x_static_install'};
+    }
 
     # If the builder is play, then set it and return.
     if ( $builder eq 'play' ) {
@@ -550,7 +582,7 @@ sub generate_build_json ($self) {
             }
 
             # These requirements never move over to p5.
-            if ( $module =~ m/^(?:ExtUtils::MakeMaker|Module::Build|Module::Build::Tiny|Module::Install|strict|warnings)$/ ) {
+            if ( $module =~ m/^(?:ExtUtils::MakeMaker|Module::Build|App::ModuleBuildTiny|Module::Build::Tiny|Module::Build::Pluggable(?:::.+)?|Module::Install|strict|warnings)$/ ) {
                 delete $meta->{$req}->{$module};
                 next;
             }
@@ -574,7 +606,7 @@ sub generate_build_json ($self) {
                     delete $meta->{$req}->{$module};
                     next;
                 }
-                elsif ( $module !~ m{^(CPAN::Meta|CPAN::Meta::Prereqs|Test::Pod|Test::MinimumVersion|Test::MinimumVersion::Fast|Test::PAUSE::Permissions|Test::Spellunker|Test::CPAN::Meta)$} ) {    # Ignore stuff that's probably release testing.
+                elsif ( $module !~ m{^(CPAN::Meta|CPAN::Meta::Prereqs|Test::Pod|Test::MinimumVersion|Test::MinimumVersion::Fast|Test::PAUSE::Permissions|Test::Spellunker|Test::CPAN::Meta|Software::License)$} ) {    # Ignore stuff that's probably release testing.
                     die( "META specified requirement '$module' for '$req' was not detected.\n" . Dumper( $self->requires_develop, $self->requires_build, $meta ) );
                 }
             }
@@ -620,13 +652,17 @@ sub generate_build_json ($self) {
     $build_json->{'maintainers'} or die("Could not determine maintainers for this repo");
 
     # Verify everything we think we figured out matches META.
-    if ( $meta->{'abstract'} ) {
+    if ( length $meta->{'abstract'} ) {
+
         if ( $build_json->{'abstract'} ) {
             $build_json->{'abstract'} eq $meta->{'abstract'} or die( "Bad detection of abstract?\n" . Dumper( $meta, $build_json ) );
         }
         else {
             $build_json->{'abstract'} = $meta->{'abstract'};
         }
+        delete $meta->{'abstract'};
+    }
+    elsif ( exists $meta->{'abstract'} ) {
         delete $meta->{'abstract'};
     }
 
@@ -735,7 +771,7 @@ sub parse_maker ($self) {
     if ( -e 'Makefile.PL' ) {
         my $doc = $self->get_ppi_doc('Makefile.PL');
 
-        my $quotes = $doc->find( sub { $_[1]->class =~ m/^PPI::Token::Quote::/ && $_[1]->content =~ m{^['"]?EXE_FILES['"]$} } ) || [];
+        my $quotes = $doc->find( sub { $_[1]->class =~ m/^PPI::Token::Quote::|^PPI::Token::Word$/ && $_[1]->content =~ m{^['"]?EXE_FILES['"]?$} } ) || [];
         @$quotes or return;
 
         my $node = $quotes->[0];
@@ -745,11 +781,14 @@ sub parse_maker ($self) {
         $node = $node->snext_sibling();
         $node->class eq 'PPI::Structure::Constructor' or die( "Unexpected sibling value EXE_FILES: " . dump_tree($node) );
 
-        foreach my $child ( $node->schildren ) {
-            my $child_node = $child->schild(0);
-            $child_node->class =~ m{^PPI::Token::Quote::} or die( "Unexpected child node parsing EXE_FILES: " . Dumper($child) );
-            my $bin = eval $child_node->content;
-            push @{ $self->scripts }, $bin;
+        my ($script_nodes) = $node->schildren;
+        $script_nodes or return;    # No EXE_FILES in the list.
+        foreach my $script_node ( $script_nodes->children ) {
+            next if $script_node->class eq 'PPI::Token::Operator';
+            next if $script_node->class eq 'PPI::Token::Whitespace';
+            $script_node->class =~ m{^PPI::Token::Quote::} or die( "Unexpected child node parsing EXE_FILES: " . Dumper($script_node) );
+
+            push @{ $self->scripts }, eval $script_node->content;
 
         }
     }
@@ -796,9 +835,10 @@ sub parse_pod ( $self, $filename ) {
             if ( $line =~ m{^=head1 NAME} ) {
                 while ( @pod_lines && $pod_lines[0] !~ m/^=/ ) {
                     my $line = shift @pod_lines;
-                    next unless $line =~ m/^\s*\Q$primary_package(?:.pm)?\E\s+-\s+(.+)/;    # Skip empt
+                    next unless $line =~ m/^\s*\Q$primary_package\E(?:.pm)?\s+-\s+(.+)/;    # Skip empt
                     $abstract = $1;
                     $abstract =~ s/\s+$//;                                                  # Strip off trailing white space.
+
                     $self->BUILD_json->{'abstract'} = $abstract;
                     last;
                 }
@@ -819,7 +859,7 @@ sub parse_pod ( $self, $filename ) {
                     push @author, $line;
                 }
             }
-            if ( $line =~ m{^=head1 (COPYRIGHT|LICENSE|LICENCE)}i ) {
+            if ( $line =~ m{^=head1 (COPYRIGHT|LICENSE|LICENCE)|^=head1 .+ E COPYRIGHT}i ) {
                 while ( @pod_lines && $pod_lines[0] !~ m/^=/ ) {
                     my $line = shift @pod_lines;
                     next unless $line =~ m/\S/;
@@ -838,6 +878,9 @@ sub parse_pod ( $self, $filename ) {
                     $self->BUILD_json->{'license'} = 'perl';
                 }
                 elsif ( $license_data =~ m/same as Perl itself/msi ) {
+                    $self->BUILD_json->{'license'} = 'perl';
+                }
+                elsif ( $license_data =~ m/L<perlartistic>/msi ) {
                     $self->BUILD_json->{'license'} = 'perl';
                 }
                 elsif ( $license_data =~ m/under the terms of GNU General Public License \(GPL\)/msi ) {
@@ -905,11 +948,24 @@ sub parse_code ( $self, $filename ) {
                     $version = $node->content;
                     $version =~ s/['"]//g;
                 }
+                elsif ( $node->class eq 'PPI::Token::Word' && $node->content eq 'qv' ) {
+                    $node = $node->snext_sibling;
+                    $node->class eq 'PPI::Structure::List' or die dump_tree($node);
+
+                    $node = $node->schild(0);
+                    $node->class eq 'PPI::Statement::Expression' or die dump_tree($node);
+
+                    $node = $node->schild(0);
+                    $node->class =~ m/^PPI::Token::Quote::/ or die dump_tree($node);
+
+                    $version = $node->content;
+                    $version =~ s/^\s*['"](.+)['"]\s*$/v$1/;    # Make it a v-string since that's what they were going for.
+                }
                 else {
                     my $str = $pkg_token->content;
                     my ($version) = $str =~ m/sprintf.+Revision: ([0-9]+\.[0-9]+)/;
 
-                    $version or die $pkg_token->content . "\n" . dump_tree( $pkg_token, "Unexpected content in VERSION statement" );
+                    $version or die "TOKEN: " . $pkg_token->content . "--\n" . dump_tree( $pkg_token, "Unexpected content in VERSION statement" );
                 }
 
                 $self->provides->{$module}->{'version'} = $version;
@@ -1028,6 +1084,7 @@ sub run ( $self, @optional_repos ) {
       AAAAAAAAA
       Acme-3mxA
     };
+    push @skip_list, 'Acme-BOPE';    # latin1
 
     my $repo_list = $self->repo_list;
     if (@optional_repos) {
