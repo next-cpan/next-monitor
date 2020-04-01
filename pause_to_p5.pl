@@ -9,6 +9,7 @@ use FindBin;
 use Moose;
 
 use experimental 'signatures';
+use experimental 'state';
 
 use version          ();
 use Git::Wrapper     ();
@@ -42,20 +43,22 @@ has 'repo_files' => (
     }
 );
 
-has 'scripts'          => ( isa => 'ArrayRef', is => 'rw', default => sub { return [] } );
-has 'requires_build'   => ( isa => 'HashRef',  is => 'rw', default => sub { return {} } );
-has 'requires_runtime' => ( isa => 'HashRef',  is => 'rw', default => sub { return {} } );
-has 'requires_develop' => ( isa => 'HashRef',  is => 'rw', default => sub { return {} } );
-has 'provides'         => ( isa => 'HashRef',  is => 'rw', default => sub { return {} } );
-has 'ppi_cache'        => ( isa => 'HashRef',  is => 'rw', default => sub { return {} } );
-has 'BUILD_json'       => ( isa => 'HashRef',  is => 'rw', default => sub { return {} } );
-has 'BUILD_file'       => ( isa => 'Str',      is => 'rw', default => 'BUILD.json' );
+has 'scripts'            => ( isa => 'ArrayRef', is => 'rw', default => sub { return [] } );
+has 'requires_build'     => ( isa => 'HashRef',  is => 'rw', default => sub { return {} } );
+has 'requires_runtime'   => ( isa => 'HashRef',  is => 'rw', default => sub { return {} } );
+has 'requires_develop'   => ( isa => 'HashRef',  is => 'rw', default => sub { return {} } );
+has 'recommends_runtime' => ( isa => 'HashRef',  is => 'rw', default => sub { return {} } );
+has 'provides'           => ( isa => 'HashRef',  is => 'rw', default => sub { return {} } );
+has 'ppi_cache'          => ( isa => 'HashRef',  is => 'rw', default => sub { return {} } );
+has 'BUILD_json'         => ( isa => 'HashRef',  is => 'rw', default => sub { return {} } );
+has 'BUILD_file'         => ( isa => 'Str',      is => 'rw', default => 'BUILD.json' );
 
 sub _build_git ($self) {
     return Git::Wrapper->new( { 'dir' => $self->repo_path, 'git_binary' => $self->git_binary } ) || die( 'Failed to create Git::Wrapper for ' . $self->repo_path );
 }
 
 sub _build_meta ($self) {
+
     if ( -f 'META.json' ) {
         return Cpanel::JSON::XS::decode_json( File::Slurper::read_binary('META.json') );
     }
@@ -173,22 +176,25 @@ sub fix_special_repos ( $self ) {
 
     my $distro = $self->distro;
 
-    if ( $distro eq 'Acme-Aheui' ) {
-        $self->git->rm('bin/aheui');    # Was never installed.
-    }
-    elsif ( $distro eq 'Acme-BeCool' ) {
-        $self->git->rm('example.pm');    # Was never installed.
-    }
-    elsif ( $distro eq 'Acme-Beatnik' ) {
-        $self->git->rm(qw/example.pl findwords.pl generate.pl/);    # Was never installed.
-    }
+    state $files_to_delete = {
+        'Acme-Aheui'                  => [qw{bin/aheui}],
+        'Acme-BeCool'                 => [qw{example.pm}],
+        'Acme-Beatnik'                => [qw{example.pl findwords.pl generate.pl}],
+        'Acme-Blarghy-McBlarghBlargh' => [qw{blarghymcblarghblargh.pl}],
+        'Acme-Buckaroo'               => [qw{retest.txt}],
+        'Acme-Buffy'                  => [qw{buffy}],
+        'Acme-CPAN-Testers-UNKNOWN'   => [qw{messup.PL}],
+    };
+
+    return unless $files_to_delete->{ $self->distro };
+    $self->git->rm( @{ $files_to_delete->{ $self->distro } } );
 }
 
 sub cleanup_tree ($self) {
     my $git   = $self->git;
     my $files = $self->repo_files;
 
-    $self->dist_meta;                                               # Initialize META data in memory before removing it.
+    $self->dist_meta;    # Initialize META data in memory before removing it.
 
     # Delete explicit files we don't want.
     foreach my $unwanted_file (
@@ -211,7 +217,7 @@ sub cleanup_tree ($self) {
 
     # Get rid of directories we don't want.
     foreach my $file ( keys %$files ) {
-        next unless $file =~ m{^(?:inc|proto)/};
+        next unless $file =~ m{^(?:inc|proto|debian)/};
         delete $files->{$file};
         $git->rm($file);
     }
@@ -333,10 +339,11 @@ sub is_extra_files_we_ship ( $self, $file ) {
     return 1 if $file =~ m{^(eg|examples)/};
 
     # Wierd files for specific distros.
-    return 1 if $file =~ m{^fortune/}       && $self->distro eq 'Acme-24';
-    return 1 if $file =~ m{^Roms/}          && $self->distro eq 'Acme-6502';
-    return 1 if $file =~ m{^share/}         && $self->distro eq 'Acme-AllThePerlIsAStage';
-    return 1 if $file =~ m{^ascii-art\.pl$} && $self->distro eq 'Acme-AsciiArtinator';
+    return 1 if $file =~ m{^fortune/}          && $self->distro eq 'Acme-24';
+    return 1 if $file =~ m{^Roms/}             && $self->distro eq 'Acme-6502';
+    return 1 if $file =~ m{^share/}            && $self->distro eq 'Acme-AllThePerlIsAStage';
+    return 1 if $file =~ m{^ascii-art\.pl$}    && $self->distro eq 'Acme-AsciiArtinator';
+    return 1 if $file =~ m{^demo/|unbleach.pl} && $self->distro eq 'Acme-Bleach';
 
     return 0;
 }
@@ -539,6 +546,11 @@ sub generate_build_json ($self) {
         if ( $prereq_key eq 'runtime' ) {
             $meta->{'requires'} ||= {};
             merge_dep_into_hash( $meta->{'prereqs'}->{$prereq_key}->{'requires'}, $meta->{'requires'} );
+
+            if ( $meta->{'prereqs'}->{$prereq_key}->{'recommends'} ) {
+                merge_dep_into_hash( $meta->{'prereqs'}->{$prereq_key}->{'recommends'}, $self->recommends_runtime );
+                delete $meta->{'prereqs'}->{$prereq_key}->{'recommends'};
+            }
         }
         if ( $prereq_key eq 'test' || $prereq_key eq 'build' ) {
             $meta->{'build_requires'} ||= {};
@@ -582,12 +594,21 @@ sub generate_build_json ($self) {
             }
 
             # These requirements never move over to p5.
-            if ( $module =~ m/^(?:ExtUtils::MakeMaker|Module::Build|App::ModuleBuildTiny|Module::Build::Tiny|Module::Build::Pluggable(?:::.+)?|Module::Install|strict|warnings)$/ ) {
+            if ( $module =~ m/^(?:ExtUtils::MakeMaker|Module::Build|App::ModuleBuildTiny|Module::Build::Tiny|Module::Build::Pluggable(?:::.+)?|ExtUtils::MakeMaker::CPANfile|Module::Install|strict|warnings|version|lib)$/ ) {
                 delete $meta->{$req}->{$module};
                 next;
             }
 
+            # special handling for minimum perl version.
             if ( $module eq 'perl' ) {
+                $build_req->{$module} = $meta->{$req}->{$module};
+                delete $meta->{$req}->{$module};
+                next;
+            }
+
+            # Let's not be so strict on develop requires. Maybe they know what they're talking about.
+            # Also who cares? play doesn't use develop_requires right now.
+            if ( !exists $build_req->{$module} && $req eq 'develop_requires' ) {
                 $build_req->{$module} = $meta->{$req}->{$module};
                 delete $meta->{$req}->{$module};
                 next;
@@ -629,6 +650,9 @@ sub generate_build_json ($self) {
         delete $meta->{$req};
     }
 
+    # Sometimes we detect a recommends runtime we want to process.
+    $build_json->{'recommends_runtime'} = $self->recommends_runtime if %{ $self->recommends_runtime };
+
     # Where this branch got its data from.
     $build_json->{'source'} = 'PAUSE';
 
@@ -652,14 +676,12 @@ sub generate_build_json ($self) {
     $build_json->{'maintainers'} or die("Could not determine maintainers for this repo");
 
     # Verify everything we think we figured out matches META.
-    if ( length $meta->{'abstract'} ) {
+    if ( length $meta->{'abstract'} && $meta->{'abstract'} ne 'unknown' ) {
 
         if ( $build_json->{'abstract'} ) {
-            $build_json->{'abstract'} eq $meta->{'abstract'} or die( "Bad detection of abstract?\n" . Dumper( $meta, $build_json ) );
+            $build_json->{'abstract'} eq $meta->{'abstract'} or warn( sprintf( "META abstract does not match what's in the module. I'm going to trust what is in META. meta=%s lib=%s\n", $meta->{'abstract'}, $build_json->{'abstract'} ) );
         }
-        else {
-            $build_json->{'abstract'} = $meta->{'abstract'};
-        }
+        $build_json->{'abstract'} = $meta->{'abstract'};
         delete $meta->{'abstract'};
     }
     elsif ( exists $meta->{'abstract'} ) {
@@ -772,24 +794,38 @@ sub parse_maker ($self) {
         my $doc = $self->get_ppi_doc('Makefile.PL');
 
         my $quotes = $doc->find( sub { $_[1]->class =~ m/^PPI::Token::Quote::|^PPI::Token::Word$/ && $_[1]->content =~ m{^['"]?EXE_FILES['"]?$} } ) || [];
-        @$quotes or return;
 
-        my $node = $quotes->[0];
-        $node = $node->snext_sibling();
-        $node->content eq '=>' or die( "Unexpected sibling to EXE_FILES: " . dump_tree( $quotes->[0] ) );
+        if (@$quotes) {    # EU::MM Format.
+            my $node = $quotes->[0];
+            $node = $node->snext_sibling();
+            $node->content eq '=>' or die( "Unexpected sibling to EXE_FILES: " . dump_tree( $quotes->[0] ) );
 
-        $node = $node->snext_sibling();
-        $node->class eq 'PPI::Structure::Constructor' or die( "Unexpected sibling value EXE_FILES: " . dump_tree($node) );
+            $node = $node->snext_sibling();
+            $node->class eq 'PPI::Structure::Constructor' or die( "Unexpected sibling value EXE_FILES: " . dump_tree($node) );
 
-        my ($script_nodes) = $node->schildren;
-        $script_nodes or return;    # No EXE_FILES in the list.
-        foreach my $script_node ( $script_nodes->children ) {
-            next if $script_node->class eq 'PPI::Token::Operator';
-            next if $script_node->class eq 'PPI::Token::Whitespace';
-            $script_node->class =~ m{^PPI::Token::Quote::} or die( "Unexpected child node parsing EXE_FILES: " . Dumper($script_node) );
+            my ($script_nodes) = $node->schildren;
+            $script_nodes or return;    # No EXE_FILES in the list.
+            foreach my $script_node ( $script_nodes->children ) {
+                next if $script_node->class eq 'PPI::Token::Operator';
+                next if $script_node->class eq 'PPI::Token::Whitespace';
+                $script_node->class =~ m{^PPI::Token::Quote::} or die( "Unexpected child node parsing EXE_FILES: " . Dumper($script_node) );
 
-            push @{ $self->scripts }, eval $script_node->content;
+                push @{ $self->scripts }, eval $script_node->content;
 
+            }
+        }
+        return if @{ $self->scripts };    # Found Scripts!
+
+        # Look for Module::Install stuff.
+        my $statements = $doc->find( sub { $_[1]->class eq 'PPI::Statement' } ) || [];
+        foreach my $statement_node (@$statements) {
+            my $node = $statement_node->schild(0);
+            $node->class eq 'PPI::Token::Word' && $node->content eq 'install_script' or next;
+            $node = $node->snext_sibling;
+            $node->class =~ m/^PPI::Token::Quote/ or die( "Unexpected token after install_script: " . Dumper($node) );
+            my $script = $node->content;
+            $script =~ s/^\s*['"](.+)['"]\s*$/$1/;
+            push @{ $self->scripts }, $script;
         }
     }
 }
@@ -883,6 +919,9 @@ sub parse_pod ( $self, $filename ) {
                 elsif ( $license_data =~ m/L<perlartistic>/msi ) {
                     $self->BUILD_json->{'license'} = 'perl';
                 }
+                elsif ( $license_data =~ m/under the terms of the Perl Artistic License/msi ) {
+                    $self->BUILD_json->{'license'} = 'perl';
+                }
                 elsif ( $license_data =~ m/under the terms of GNU General Public License \(GPL\)/msi ) {
                     $self->BUILD_json->{'license'} = 'GPL';
                 }
@@ -891,6 +930,9 @@ sub parse_pod ( $self, $filename ) {
                 }
                 elsif ( $license_data =~ m/MIT License/msi ) {
                     $self->BUILD_json->{'license'} = 'MIT';
+                }
+                elsif ( $license_data =~ m/L<Software::License::(\S+)>/msi ) {
+                    $self->BUILD_json->{'license'} = "$1";
                 }
 
                 #else {
