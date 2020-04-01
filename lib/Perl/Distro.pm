@@ -45,6 +45,7 @@ has 'scripts'            => ( isa => 'ArrayRef', is => 'rw', default => sub { re
 has 'requires_build'     => ( isa => 'HashRef',  is => 'rw', default => sub { return {} } );
 has 'requires_runtime'   => ( isa => 'HashRef',  is => 'rw', default => sub { return {} } );
 has 'requires_develop'   => ( isa => 'HashRef',  is => 'rw', default => sub { return {} } );
+has 'recommends_build'   => ( isa => 'HashRef',  is => 'rw', default => sub { return {} } );
 has 'recommends_runtime' => ( isa => 'HashRef',  is => 'rw', default => sub { return {} } );
 has 'provides'           => ( isa => 'HashRef',  is => 'rw', default => sub { return {} } );
 has 'ppi_cache'          => ( isa => 'HashRef',  is => 'rw', default => sub { return {} } );
@@ -58,18 +59,18 @@ sub _build_git ($self) {
 sub _build_meta ($self) {
 
     if ( -f 'META.json' ) {
-        return Cpanel::JSON::XS::decode_json( File::Slurper::read_binary('META.json') );
+        return Cpanel::JSON::XS::decode_json( $self->try_to_read_file('META.json') );
     }
     if ( -f 'META.yml' ) {
-        my $txt  = File::Slurper::read_binary('META.yml');
+        my $txt  = $self->try_to_read_file('META.yml');
         my $yaml = CPAN::Meta::YAML->read_string($txt);
         return $yaml->[0] if $yaml && ref $yaml eq 'CPAN::Meta::YAML';
     }
     if ( -f 'Makefile.PL' ) {    # Generate MYMETA.json?
         `$^X Makefile.PL`;
         if ( -e 'MYMETA.json' ) {
-            my $json = Cpanel::JSON::XS::decode_json( File::Slurper::read_binary('MYMETA.json') );
-            unlink(qw/MYMETA.json MYMETA.yml Makefile/);
+            my $json = Cpanel::JSON::XS::decode_json( $self->try_to_read_file('MYMETA.json') );
+            $self->git->clean('-dxf');
             return $json;
         }
     }
@@ -111,12 +112,25 @@ sub do_the_do ($self) {
 
         # Try to parse the POD
         my $primary = $self->find_non_play_primary;
+        $self->gather_non_play_provides_from_meta;
         $self->parse_pod($primary) if $primary;
 
         $self->generate_build_json;
     }
 
     $self->git_commit;
+}
+
+sub gather_non_play_provides_from_meta ($self) {
+    my $meta = $self->dist_meta;
+    return unless $meta->{'provides'};
+
+    my $provides = $self->provides;
+
+    foreach my $module ( sort { $a cmp $b } keys %{ $meta->{'provides'} } ) {
+        $provides->{$module}->{'file'}    = $meta->{'provides'}->{$module}->{'file'};
+        $provides->{$module}->{'version'} = $meta->{'provides'}->{$module}->{'version'} // 0;
+    }
 }
 
 # This is only done in the event the module isn't play and we need to look around for it.
@@ -209,6 +223,8 @@ sub fix_special_repos ( $self ) {
         'Acme-Buffy'                                => [qw{buffy}],
         'Acme-CPAN-Testers-UNKNOWN'                 => [qw{messup.PL}],
         'Acme-CPANAuthors-Acme-CPANAuthors-Authors' => [qw{scripts/author_info.pl scripts/basic_info.pl}],
+        'Acme-Cow-Interpreter'                      => ['bin/*'],
+        'Test-Unit'                                 => [ 'TestRunner.pl', 'TkTestRunner.pl' ],
     };
 
     return unless $files_to_delete->{ $self->distro };
@@ -225,7 +241,8 @@ sub cleanup_tree ($self) {
     foreach my $unwanted_file (
         qw{ MANIFEST MANIFEST.SKIP MANIFEST.bak INSTALL SIGNATURE dist.ini README README.md README.pod Makefile.PL Build.PL weaver.ini
         META.yml META.json ignore.txt .gitignore Changes.PL cpanfile cpanfile.snapshot minil.toml .cvsignore .travis.yml travis.yml
-        .project t/boilerplate.t MYMETA.json MYMETA.yml Makefile Makefile.old maint/Makefile.PL.include metamerge.json
+        .project t/boilerplate.t MYMETA.json MYMETA.yml Makefile Makefile.old maint/Makefile.PL.include metamerge.json README.bak dist.ini.bak
+        CREDITS doap.ttl
         }
     ) {
         next unless $files->{$unwanted_file};
@@ -242,7 +259,7 @@ sub cleanup_tree ($self) {
 
     # Get rid of directories we don't want.
     foreach my $file ( keys %$files ) {
-        next unless $file =~ m{^(?:inc|debian)/};
+        next unless $file =~ m{^(?:inc|debian|ubuntu-[^/]+)/};
         delete $files->{$file};
         $git->rm($file);
     }
@@ -266,11 +283,21 @@ sub cleanup_tree ($self) {
         }
 
         # See if the TODO is worthless.
-        my $content = File::Slurper::read_binary('Todo');
+        my $content = $self->try_to_read_file('Todo');
         if ( $content =~ m/- Nothing yet/ms ) {
             $git->rm( '-f', 'Todo' );
             delete $files->{'Todo'};
         }
+    }
+
+    # Alternative license files.
+    if ( -f 'COPYRIGHT' ) {
+        if ( !-f 'LICENSE' ) {
+            $git->mv( 'COPYRIGHT', 'LICENSE' );
+            $files->{'LICENSE'} = 1;
+        }
+        $git->rm('COPYRIGHT');
+        delete $files->{'COPYRIGHT'};
     }
 
     # Normalize all Changelog files to a common 'Changelog'
@@ -345,7 +372,7 @@ sub determine_primary_module ($self) {
             die( "Can't find $module_path\n" . Dumper($self) );
         }
     }
-    my $module_txt = File::Slurper::read_binary($module_path);
+    my $module_txt = $self->try_to_read_file($module_path);
     my ($package) = $module_txt =~ m{package\s+(\S+?)\s*;};
     $package =~ s/'/::/g;    # Acme::Can't
     $build_json->{'primary'} eq $package or die("Unexpected distro name / primary mismatch in distro $distro");
@@ -446,7 +473,7 @@ sub update_p5_branch_from_PAUSE ($self) {
         my $parser = Pod::Markdown::Github->new;
         $parser->unaccept_targets(qw( html ));
         $parser->output_string( \$markdown );
-        $parser->parse_string_document( File::Slurper::read_text($primary_file) );
+        $parser->parse_string_document( $self->try_to_read_file($primary_file) );
         File::Slurper::write_text( 'README.md', $markdown );
         -f 'README.md' && !-z _ or die("Couldn't generate README.md");
 
@@ -454,6 +481,17 @@ sub update_p5_branch_from_PAUSE ($self) {
     }
 
     return;
+}
+
+sub try_to_read_file ( $self, $filename ) {
+    -f $filename or return;
+    -z _ and return '';
+
+    local $@;
+    my $contents;
+    eval { $contents = File::Slurper::read_text($filename);   1 } and return $contents;
+    eval { $contents = File::Slurper::read_binary($filename); 1 } and return $contents;
+    die("Could not parse $filename: $@");
 }
 
 sub git_commit ($self) {
@@ -500,7 +538,8 @@ sub determine_installer ( $self ) {
             $builder eq 'play' or die('x_static_install says this distro is static but I detected things that might make it legacy');
         }
         else {
-            $builder eq 'legacy' or die(q{x_static_install says this distro isn't static but I don't know why it is play at this point?});
+            $builder eq 'legacy' or warn(q{x_static_install says this distro isn't static but I don't know why it is play at this point?});
+            $builder = 'legacy';
         }
         delete $meta->{'x_static_install'};
     }
@@ -542,7 +581,7 @@ sub generate_build_json ($self) {
     }
     if ( !$build_json->{'license'} ) {
         if ( -e 'LICENSE' ) {
-            my $lic = File::Slurper::read_binary('LICENSE');
+            my $lic = $self->try_to_read_file('LICENSE');
             $build_json->{'license'} = 'perl' if $lic =~ m/Terms\s*(of|as)\s*Perl\s*itself/msi;
         }
         $build_json->{'license'} or die("Missing license for distro");
@@ -565,7 +604,7 @@ sub generate_build_json ($self) {
 
     # unused vars in meta.
     delete $meta->{$_} foreach (
-        qw/dynamic_config generated_by meta-spec x_generated_by_perl x_serialization_backend license resources
+        qw/dynamic_config generated_by meta-spec x_generated_by_perl x_serialization_backend license resources x_deprecated
         release_status x_Dist_Zilla x_authority distribution_type installdirs version_from no_index x_contributors/
     );
     foreach my $prereq_key (qw/configure build runtime test develop/) {
@@ -589,6 +628,10 @@ sub generate_build_json ($self) {
         if ( $prereq_key eq 'test' || $prereq_key eq 'build' ) {
             $meta->{'build_requires'} ||= {};
             merge_dep_into_hash( $meta->{'prereqs'}->{$prereq_key}->{'requires'}, $meta->{'build_requires'} );
+            if ( $meta->{'prereqs'}->{$prereq_key}->{'recommends'} ) {
+                merge_dep_into_hash( $meta->{'prereqs'}->{$prereq_key}->{'recommends'}, $self->recommends_build );
+                delete $meta->{'prereqs'}->{$prereq_key}->{'recommends'};
+            }
         }
         if ( $prereq_key eq 'develop' ) {
             $meta->{'develop_requires'} ||= {};
@@ -628,7 +671,7 @@ sub generate_build_json ($self) {
             }
 
             # These requirements never move over to p5.
-            if ( $module =~ m/^(?:ExtUtils::MakeMaker|Module::Build|App::ModuleBuildTiny|Module::Build::Tiny|Module::Build::Pluggable(?:::.+)?|ExtUtils::MakeMaker::CPANfile|Module::Install|strict|warnings|version|lib)$/ ) {
+            if ( $module =~ m/^(?:ExtUtils::MakeMaker|Module::Build|App::ModuleBuildTiny|Module::Build::Tiny|(inc::)?Module::Install|Module::Build::Pluggable(?:::.+)?|ExtUtils::MakeMaker::CPANfile|Module::Install|strict|warnings|version|lib)$/ ) {
                 delete $meta->{$req}->{$module};
                 next;
             }
@@ -661,7 +704,7 @@ sub generate_build_json ($self) {
                     delete $meta->{$req}->{$module};
                     next;
                 }
-                elsif ( $module !~ m{^(CPAN::Meta|CPAN::Meta::Prereqs|Test::Pod|Test::MinimumVersion|Test::MinimumVersion::Fast|Test::PAUSE::Permissions|Test::Spellunker|Test::CPAN::Meta|Software::License)$} ) {    # Ignore stuff that's probably release testing.
+                elsif ( $module !~ m{^(CPAN::Meta|CPAN::Meta::Prereqs|Test::Pod|Test::MinimumVersion|Test::MinimumVersion::Fast|Test::PAUSE::Permissions|Test::Spellunker|Test::CPAN::Meta|Software::License|Catalyst)$} ) {    # Ignore stuff that's probably release testing.
                     die( "META specified requirement '$module' for '$req' was not detected.\n" . Dumper( $self->requires_develop, $self->requires_build, $meta ) );
                 }
             }
@@ -686,6 +729,7 @@ sub generate_build_json ($self) {
 
     # Sometimes we detect a recommends runtime we want to process.
     $build_json->{'recommends_runtime'} = $self->recommends_runtime if %{ $self->recommends_runtime };
+    $build_json->{'recommends_build'}   = $self->recommends_build   if %{ $self->recommends_build };
 
     # Where this branch got its data from.
     $build_json->{'source'} = 'PAUSE';
@@ -792,10 +836,8 @@ sub get_ppi_doc ( $self, $filename ) {
     return $self->ppi_cache->{$filename} if $self->ppi_cache->{$filename};
 
     print "PPI $filename\n";
-    my $content = File::Slurper::read_binary($filename);
-    if ( $content =~ m/use\s+utf8/ && $content !~ m/no utf8/ ) {
-        $content = File::Slurper::read_text($filename);
-    }
+    my $content = $self->try_to_read_file($filename);
+
     return $self->ppi_cache->{$filename} = PPI::Document->new( \$content );
 }
 
@@ -841,15 +883,17 @@ sub parse_maker ($self) {
             my ($script_nodes) = $node->schildren;
             $script_nodes or return;    # No EXE_FILES in the list.
             foreach my $script_node ( $script_nodes->children ) {
-                next if $script_node->class eq 'PPI::Token::Operator';
-                next if $script_node->class eq 'PPI::Token::Whitespace';
+                next   if $script_node->class eq 'PPI::Token::Operator';
+                next   if $script_node->class eq 'PPI::Token::Whitespace';
+                return if $script_node->class eq 'PPI::Token::Word';         # Looks like code not a list. Forget it!
                 $script_node->class =~ m{^PPI::Token::Quote::} or die( "Unexpected child node parsing EXE_FILES: " . Dumper($script_node) );
 
-                push @{ $self->scripts }, eval $script_node->content;
+                my ($script) = $script_node->content =~ m/^\s*['"](.+)['"]\s*$/;
+                push @{ $self->scripts }, $script || $script_node->content;
 
             }
         }
-        return if @{ $self->scripts };    # Found Scripts!
+        return if @{ $self->scripts };                                       # Found Scripts!
 
         # Look for Module::Install stuff.
         my $statements = $doc->find( sub { $_[1]->class eq 'PPI::Statement' } ) || [];
@@ -897,7 +941,8 @@ sub parse_pod ( $self, $filename ) {
 
     my $abstract;
     my @author;
-    my $license_data = '';
+    my $license_data     = '';
+    my $copyright_author = '';
 
     foreach my $pod (@$pods) {
         my @pod_lines = split( "\n", $pod->content );
@@ -918,7 +963,7 @@ sub parse_pod ( $self, $filename ) {
                 while ( @pod_lines && $pod_lines[0] !~ m/^=/ ) {
                     my $line = shift @pod_lines;
                     next unless $line =~ m/\S/;
-                    if ( $line =~ m/copyright|terms|disclaimers of warranty|free software/i ) {
+                    if ( $line =~ m/copyright|terms|disclaimers of warranty|free software|redistribute|itself/i ) {
                         $license_data .= $line;
                         next;
                     }
@@ -966,6 +1011,9 @@ sub parse_pod ( $self, $filename ) {
                 elsif ( $license_data =~ m/MIT License/msi ) {
                     $self->BUILD_json->{'license'} = 'MIT';
                 }
+                elsif ( $license_data =~ m/under the terms of the Apache 2.0 license/msi ) {
+                    $self->BUILD_json->{'license'} = 'Apache_2_0';
+                }
                 elsif ( $license_data =~ m/L<Software::License::(\S+)>/msi ) {
                     $self->BUILD_json->{'license'} = "$1";
                 }
@@ -973,9 +1021,9 @@ sub parse_pod ( $self, $filename ) {
                     $self->BUILD_json->{'license'} = "PublicDomain";
                 }
 
-                #else {
-                #    print "Unknown license: $license_data==\n";
-                #}
+                else {
+                    1    #die "Unknown license: $license_data==\n";
+                }
                 $license_data = '';    # Clear it for the next check.
             }
         }

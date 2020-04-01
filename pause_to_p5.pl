@@ -55,8 +55,8 @@ sub run ( $self, @optional_repos ) {
       AAAAAAAAA
       Acme-3mxA
     };
-    push @skip_list, 'Acme-BOPE';                    # latin1
     push @skip_list, 'Acme-CatalystX-ILoveDebug';    # incorrect deps @nico
+    push @skip_list, 'Apache-FastForward';           # Perl Makefile.PL && detect author.
 
     my $repo_list = $self->repo_list;
     if (@optional_repos) {
