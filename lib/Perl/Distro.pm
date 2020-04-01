@@ -198,6 +198,8 @@ sub fix_special_repos ( $self ) {
     # Distro doesn't match the file.
     $self->parse_pod('Ace.pm') if $distro eq 'AcePerl';
 
+    $self->BUILD_json->{'license'} = 'unknown' if $distro eq 'Acme-Code-FreedomFighter';
+
     state $files_to_delete = {
         'Acme-Aheui'                                => [qw{bin/aheui}],
         'Acme-BeCool'                               => [qw{example.pm}],
@@ -222,7 +224,7 @@ sub cleanup_tree ($self) {
     # Delete explicit files we don't want.
     foreach my $unwanted_file (
         qw{ MANIFEST MANIFEST.SKIP MANIFEST.bak INSTALL SIGNATURE dist.ini README README.md README.pod Makefile.PL Build.PL weaver.ini
-        META.yml META.json ignore.txt .gitignore Changes.PL cpanfile cpanfile.snapshot minil.toml .cvsignore
+        META.yml META.json ignore.txt .gitignore Changes.PL cpanfile cpanfile.snapshot minil.toml .cvsignore .travis.yml travis.yml
         .project t/boilerplate.t MYMETA.json MYMETA.yml Makefile Makefile.old maint/Makefile.PL.include metamerge.json
         }
     ) {
