@@ -110,10 +110,31 @@ sub do_the_do ($self) {
     }
     else {
         $self->determine_primary_module;
+
+        # Try to parse the POD
+        my $primary = $self->find_non_play_primary;
+        $self->parse_pod($primary) if $primary;
+
         $self->generate_build_json;
     }
 
     $self->git_commit;
+}
+
+# This is only done in the event the module isn't play and we need to look around for it.
+sub find_non_play_primary ($self) {
+    my @parts    = split( "::", $self->BUILD_json->{'primary'} );
+    my $lib_path = join( "/", 'lib', @parts ) . ".pm";
+    return $lib_path if -f $lib_path;
+
+    print "no $lib_path\n";
+
+    my $no_lib = $parts[-1] . ".pm";
+    return $no_lib if -f $no_lib;
+
+    print "no $no_lib\n";
+
+    return;
 }
 
 sub check_if_dirty_and_die ($self) {
@@ -176,14 +197,18 @@ sub fix_special_repos ( $self ) {
 
     my $distro = $self->distro;
 
+    # Distro doesn't match the file.
+    $self->parse_pod('Ace.pm') if $distro eq 'AcePerl';
+
     state $files_to_delete = {
-        'Acme-Aheui'                  => [qw{bin/aheui}],
-        'Acme-BeCool'                 => [qw{example.pm}],
-        'Acme-Beatnik'                => [qw{example.pl findwords.pl generate.pl}],
-        'Acme-Blarghy-McBlarghBlargh' => [qw{blarghymcblarghblargh.pl}],
-        'Acme-Buckaroo'               => [qw{retest.txt}],
-        'Acme-Buffy'                  => [qw{buffy}],
-        'Acme-CPAN-Testers-UNKNOWN'   => [qw{messup.PL}],
+        'Acme-Aheui'                                => [qw{bin/aheui}],
+        'Acme-BeCool'                               => [qw{example.pm}],
+        'Acme-Beatnik'                              => [qw{example.pl findwords.pl generate.pl}],
+        'Acme-Blarghy-McBlarghBlargh'               => [qw{blarghymcblarghblargh.pl}],
+        'Acme-Buckaroo'                             => [qw{retest.txt}],
+        'Acme-Buffy'                                => [qw{buffy}],
+        'Acme-CPAN-Testers-UNKNOWN'                 => [qw{messup.PL}],
+        'Acme-CPANAuthors-Acme-CPANAuthors-Authors' => [qw{scripts/author_info.pl scripts/basic_info.pl}],
     };
 
     return unless $files_to_delete->{ $self->distro };
@@ -217,7 +242,7 @@ sub cleanup_tree ($self) {
 
     # Get rid of directories we don't want.
     foreach my $file ( keys %$files ) {
-        next unless $file =~ m{^(?:inc|proto|debian)/};
+        next unless $file =~ m{^(?:inc|debian)/};
         delete $files->{$file};
         $git->rm($file);
     }
@@ -296,6 +321,10 @@ sub determine_primary_module ($self) {
     # Let's make sure it matches the 'name' of the module.
     $build_json->{'primary'} = $meta->{'name'};
     $build_json->{'primary'} =~ s/-/::/g;
+    $build_json->{'primary'} =~ s/\\?'/::/g;    # Acme::Can't
+
+    return unless $self->is_play;               # We shouldn't alter the location of the module if we're not a play module.
+
     my @module      = split( '::', $build_json->{'primary'} );
     my $module_path = join( '/', ( 'lib', @module ) ) . ".pm";
     if ( !-f $module_path ) {
@@ -318,6 +347,7 @@ sub determine_primary_module ($self) {
     }
     my $module_txt = File::Slurper::read_binary($module_path);
     my ($package) = $module_txt =~ m{package\s+(\S+?)\s*;};
+    $package =~ s/'/::/g;    # Acme::Can't
     $build_json->{'primary'} eq $package or die("Unexpected distro name / primary mismatch in distro $distro");
 
     return;
@@ -338,12 +368,15 @@ sub is_extra_files_we_ship ( $self, $file ) {
     # paths with example files we're going to ignore.
     return 1 if $file =~ m{^(eg|examples)/};
 
+    my $distro = $self->distro;
+
     # Wierd files for specific distros.
-    return 1 if $file =~ m{^fortune/}          && $self->distro eq 'Acme-24';
-    return 1 if $file =~ m{^Roms/}             && $self->distro eq 'Acme-6502';
-    return 1 if $file =~ m{^share/}            && $self->distro eq 'Acme-AllThePerlIsAStage';
-    return 1 if $file =~ m{^ascii-art\.pl$}    && $self->distro eq 'Acme-AsciiArtinator';
-    return 1 if $file =~ m{^demo/|unbleach.pl} && $self->distro eq 'Acme-Bleach';
+    return 1 if $file =~ m{^proto\b} && $distro =~ m/^AC-/;
+    return 1 if $file =~ m{^fortune/}          && $distro eq 'Acme-24';
+    return 1 if $file =~ m{^Roms/}             && $distro eq 'Acme-6502';
+    return 1 if $file =~ m{^share/}            && $distro eq 'Acme-AllThePerlIsAStage';
+    return 1 if $file =~ m{^ascii-art\.pl$}    && $distro eq 'Acme-AsciiArtinator';
+    return 1 if $file =~ m{^demo/|unbleach.pl} && $distro eq 'Acme-Bleach';
 
     return 0;
 }
@@ -427,7 +460,8 @@ sub git_commit ($self) {
     my $git = $self->git;
 
     $git->commit( '-m', sprintf( "Update %s version %s to play.", $self->distro, $self->BUILD_json->{'version'} ) );
-    $self->push_to_github and die("Publishing to github should be off");
+
+    #$self->push_to_github and die("Publishing to github should be off");
     $git->push if $self->push_to_github;
 
     return;
@@ -700,6 +734,7 @@ sub generate_build_json ($self) {
 
     # Validate name detection worked.
     $meta->{'name'} or die( "No name for distro?\n" . Dumper($meta) );
+    $meta->{'name'} =~ s/\\?'/-/g;    # Acme::Can't
     $build_json->{'name'} eq $meta->{'name'} or die( "Bad detection of name?\n" . Dumper( $meta, $build_json ) );
     delete $meta->{'name'};
 
@@ -869,7 +904,7 @@ sub parse_pod ( $self, $filename ) {
         while (@pod_lines) {
             my $line = shift @pod_lines;
             if ( $line =~ m{^=head1 NAME} ) {
-                while ( @pod_lines && $pod_lines[0] !~ m/^=/ ) {
+                while ( @pod_lines && $pod_lines[0] && $pod_lines[0] !~ m/^=/ ) {
                     my $line = shift @pod_lines;
                     next unless $line =~ m/^\s*\Q$primary_package\E(?:.pm)?\s+-\s+(.+)/;    # Skip empt
                     $abstract = $1;
@@ -933,6 +968,9 @@ sub parse_pod ( $self, $filename ) {
                 }
                 elsif ( $license_data =~ m/L<Software::License::(\S+)>/msi ) {
                     $self->BUILD_json->{'license'} = "$1";
+                }
+                elsif ( $license_data =~ m/into the public domain/msi ) {
+                    $self->BUILD_json->{'license'} = "PublicDomain";
                 }
 
                 #else {
@@ -1003,6 +1041,25 @@ sub parse_code ( $self, $filename ) {
                     $version = $node->content;
                     $version =~ s/^\s*['"](.+)['"]\s*$/v$1/;    # Make it a v-string since that's what they were going for.
                 }
+                elsif ( $node->class eq 'PPI::Token::Word' && $node->content eq 'version' ) {
+                    $node = $node->snext_sibling;               # ->
+                    $node->class eq 'PPI::Token::Operator' or die dump_tree($node);
+
+                    $node = $node->snext_sibling;               # declare
+                    $node->class eq 'PPI::Token::Word' && $node->content eq 'declare' or die dump_tree($node);
+
+                    $node = $node->snext_sibling;               # ( ... )
+                    $node->class eq 'PPI::Structure::List' or die dump_tree($node);
+
+                    $node = $node->schild(0);
+                    $node->class eq 'PPI::Statement::Expression' or die dump_tree($node);
+
+                    $node = $node->schild(0);
+                    $node->class =~ m/^PPI::Token::Quote::/ or die dump_tree($node);
+
+                    $version = $node->content;
+                    $version =~ s/^\s*['"](.+)['"]\s*$/v$1/;    # Make it a v-string since that's what they were going for.
+                }
                 else {
                     my $str = $pkg_token->content;
                     my ($version) = $str =~ m/sprintf.+Revision: ([0-9]+\.[0-9]+)/;
@@ -1032,7 +1089,9 @@ sub get_package_provided ($element) {
     $token = $token->snext_sibling;
     $token and $token->class eq 'PPI::Token::Word' or die( dump_tree($element) );
 
-    return $token->content;
+    my $package = $token->content;
+    $package =~ s/\\?'/::/g;    # Acme::Can't
+    return $package;
 }
 
 sub get_package_usage ($element) {
@@ -1053,6 +1112,7 @@ sub get_package_usage ($element) {
     }
 
     my $module = $token->content;
+    $module =~ s/'/::/g;                            # Acme::Can't
 
     # no imports for require.
     return $module if ( $is_use ne 'use' );
