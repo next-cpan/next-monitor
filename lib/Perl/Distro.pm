@@ -79,6 +79,11 @@ sub _build_meta ($self) {
     die( 'No META data found in ' . $self->distro . "\n" . `ls -l` . "\n\n" . Carp::longmess );
 }
 
+sub dump_self ($self) {
+    $self->ppi_cache( {} );
+    print Dumper $self;
+}
+
 sub is_play ($self) {
     return $self->BUILD_json->{'builder'} eq 'play';
 }
@@ -253,7 +258,7 @@ sub cleanup_tree ($self) {
         qw{ MANIFEST MANIFEST.SKIP MANIFEST.bak INSTALL SIGNATURE dist.ini README README.md README.pod Makefile.PL Build.PL weaver.ini
         META.yml META.json ignore.txt .gitignore Changes.PL cpanfile cpanfile.snapshot minil.toml .cvsignore .travis.yml travis.yml
         .project t/boilerplate.t MYMETA.json MYMETA.yml Makefile Makefile.old maint/Makefile.PL.include metamerge.json README.bak dist.ini.bak
-        CREDITS doap.ttl
+        CREDITS doap.ttl author_test.sh cpants.pl makeall.sh
         }
     ) {
         next unless $files->{$unwanted_file};
@@ -380,8 +385,8 @@ sub determine_primary_module ($self) {
         }
 
         if ( !-f $module_path ) {
-            $self->ppi_cache( {} );
-            die( "Can't find $module_path\n" . Dumper($self) );
+            $self->dump_self;
+            die("Can't find $module_path");
         }
     }
 
@@ -661,9 +666,10 @@ sub generate_build_json ($self) {
     }
 
     # Merge in detected requires_runtime into BUILD.yaml. Validate against META as we go.
-    foreach my $req (qw/requires build_requires configure_requires develop_requires /) {
+    foreach my $req (qw/requires recommends build_requires configure_requires develop_requires /) {
         my $build_req_name =
             $req eq 'requires'           ? 'requires_runtime'
+          : $req eq 'recommends'         ? 'recommends_runtime'
           : $req eq 'build_requires'     ? 'requires_build'
           : $req eq 'configure_requires' ? 'requires_build'
           : $req eq 'develop_requires'   ? 'requires_develop'
@@ -708,7 +714,7 @@ sub generate_build_json ($self) {
             }
 
             if ( !exists $build_req->{$module} ) {
-                if ( !$self->is_play ) {
+                if ( !$self->is_play or $req eq 'recommends' ) {    # Just pass it through.
                     $build_req->{$module} = $meta->{$req}->{$module};
                     delete $meta->{$req}->{$module};
                     next;
@@ -797,8 +803,8 @@ sub generate_build_json ($self) {
     delete $meta->{'version'};
 
     if ( $build_json->{'builder'} eq 'play' && %$meta ) {
-        $self->ppi_cache( {} );
-        die( "Unparsed information still exists in dist_meta. Please review.\n" . Dumper($self) );
+        $self->dump_self;
+        die("Unparsed information still exists in dist_meta. Please review.");
     }
 
     File::Slurper::write_text( $self->BUILD_file, Cpanel::JSON::XS->new->pretty->canonical( [1] )->encode($build_json) );
@@ -1056,6 +1062,8 @@ sub parse_code ( $self, $filename ) {
         $requires_runtime_hash->{$module} = 0;
     }
 
+    my $primary_module = $self->BUILD_json->{'primary'};
+
     # Find packages that are provides.
     if ( $filename =~ m{\.pm$} ) {
         my $packages_find = $doc->find('PPI::Statement::Package') || [];
@@ -1117,11 +1125,18 @@ sub parse_code ( $self, $filename ) {
                     $version = $node->content;
                     $version =~ s/^\s*['"](.+)['"]\s*$/v$1/;                                     # Make it a v-string since that's what they were going for.
                 }
+                elsif ( $node->class eq 'PPI::Token::Symbol' && $node->content =~ m/"?\$\Q$primary_module\E::VERSION"?$/ ) {    # our $VERSION = $accessors::fast::VERSION;
+                    if ( !$self->provides->{$primary_module} ) {
+                        ...;
+                    }
+                    $version = $self->provides->{$primary_module}->{'version'};
+                }
                 else {
-                    my $str = $pkg_token->content;
-                    my ($version) = $str =~ m/sprintf.+Revision: ([0-9]+\.[0-9]+)/;
+                    #                    my $str = $pkg_token->content;
+                    #                    my ($version) = $str =~ m/sprintf.+Revision: ([0-9]+\.[0-9]+)/;
 
-                    $version or die "TOKEN: " . $pkg_token->content . "--\n" . dump_tree( $pkg_token, "Unexpected content in VERSION statement" );
+                    $self->dump_self;
+                    $version or die sprintf( "TOKEN (%s=%s): %s--\n", $node->class, $node->content, $pkg_token->content ) . dump_tree( $pkg_token, "Unexpected content in VERSION statement" );
                 }
 
                 $self->provides->{$module}->{'version'} = $version;
@@ -1174,6 +1189,14 @@ sub get_package_usage ($element) {
     return if $module eq 'main';                    # Main is not a legal CPAN package.
     $module =~ s/'/::/g;                            # Acme::Can't
 
+    # use base 'accessors';
+    if ( $is_use eq 'use' and $module =~ /^(base|parent)$/ ) {
+        $token = $token->snext_sibling;
+        $token->class =~ m/^PPI::Token::Quote::/ or die dump_tree( $top, "Unexpected sequence parsing use parent/base" );
+        $module = strip_quotes( $token->content );
+        return $module;
+    }
+
     # no imports for require.
     return $module if ( $is_use ne 'use' );
 
@@ -1185,6 +1208,11 @@ sub get_package_usage ($element) {
 
     # A module is loaded here but it allows imports (BOO!)
     return $module;
+}
+
+sub strip_quotes ($string) {
+    $string =~ s/^(['"])(.+)\1\z/$2/ms;
+    return $string;
 }
 
 sub dump_tree ( $element, $die_msg = '' ) {
