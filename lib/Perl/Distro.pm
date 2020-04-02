@@ -352,6 +352,7 @@ sub determine_primary_module ($self) {
 
     return unless $self->is_play;               # We shouldn't alter the location of the module if we're not a play module.
 
+    # Move the module into lib/ if we need to.
     my @module      = split( '::', $build_json->{'primary'} );
     my $module_path = join( '/', ( 'lib', @module ) ) . ".pm";
     if ( !-f $module_path ) {
@@ -372,10 +373,6 @@ sub determine_primary_module ($self) {
             die( "Can't find $module_path\n" . Dumper($self) );
         }
     }
-    my $module_txt = $self->try_to_read_file($module_path);
-    my ($package) = $module_txt =~ m{package\s+(\S+?)\s*;};
-    $package =~ s/'/::/g;    # Acme::Can't
-    $build_json->{'primary'} eq $package or die("Unexpected distro name / primary mismatch in distro $distro");
 
     return;
 }
@@ -393,7 +390,7 @@ sub is_extra_files_we_ship ( $self, $file ) {
     return 1 if ( grep { $file eq $_ } qw/Changelog LICENSE CONTRIBUTING Todo author.yml/ );
 
     # paths with example files we're going to ignore.
-    return 1 if $file =~ m{^(eg|examples)/};
+    return 1 if $file =~ m{^(eg|examples|ex)/};
 
     my $distro = $self->distro;
 
@@ -404,6 +401,7 @@ sub is_extra_files_we_ship ( $self, $file ) {
     return 1 if $file =~ m{^share/}            && $distro eq 'Acme-AllThePerlIsAStage';
     return 1 if $file =~ m{^ascii-art\.pl$}    && $distro eq 'Acme-AsciiArtinator';
     return 1 if $file =~ m{^demo/|unbleach.pl} && $distro eq 'Acme-Bleach';
+    return 1 if $file =~ m{^testlib/}          && $distro eq 'abbreviation';
 
     return 0;
 }
@@ -1076,7 +1074,7 @@ sub parse_code ( $self, $filename ) {
                     $version = $node->content;
                     $version =~ s/['"]//g;
                 }
-                elsif ( $node->class eq 'PPI::Token::Word' && $node->content eq 'qv' ) {
+                elsif ( $node->class eq 'PPI::Token::Word' && $node->content eq 'qv' ) {    # our $version = qv{v0.0.2}
                     $node = $node->snext_sibling;
                     $node->class eq 'PPI::Structure::List' or die dump_tree($node);
 
@@ -1087,16 +1085,16 @@ sub parse_code ( $self, $filename ) {
                     $node->class =~ m/^PPI::Token::Quote::/ or die dump_tree($node);
 
                     $version = $node->content;
-                    $version =~ s/^\s*['"](.+)['"]\s*$/v$1/;    # Make it a v-string since that's what they were going for.
+                    $version =~ s/^\s*['"](.+)['"]\s*$/v$1/;                                # Make it a v-string since that's what they were going for.
                 }
-                elsif ( $node->class eq 'PPI::Token::Word' && $node->content eq 'version' ) {
-                    $node = $node->snext_sibling;               # ->
+                elsif ( $node->class eq 'PPI::Token::Word' && $node->content eq 'version' ) {    # our $VERSION = version->declare('v0.2.2');
+                    $node = $node->snext_sibling;                                                # ->
                     $node->class eq 'PPI::Token::Operator' or die dump_tree($node);
 
-                    $node = $node->snext_sibling;               # declare
+                    $node = $node->snext_sibling;                                                # declare
                     $node->class eq 'PPI::Token::Word' && $node->content eq 'declare' or die dump_tree($node);
 
-                    $node = $node->snext_sibling;               # ( ... )
+                    $node = $node->snext_sibling;                                                # ( ... )
                     $node->class eq 'PPI::Structure::List' or die dump_tree($node);
 
                     $node = $node->schild(0);
@@ -1106,7 +1104,7 @@ sub parse_code ( $self, $filename ) {
                     $node->class =~ m/^PPI::Token::Quote::/ or die dump_tree($node);
 
                     $version = $node->content;
-                    $version =~ s/^\s*['"](.+)['"]\s*$/v$1/;    # Make it a v-string since that's what they were going for.
+                    $version =~ s/^\s*['"](.+)['"]\s*$/v$1/;                                     # Make it a v-string since that's what they were going for.
                 }
                 else {
                     my $str = $pkg_token->content;
