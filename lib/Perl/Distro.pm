@@ -25,10 +25,11 @@ use Carp;
 use Data::Dumper;
 $Data::Dumper::Sortkeys = 1;
 
-has 'distro'         => ( isa => 'Str',  is => 'ro', required => 1 );
-has 'repo_path'      => ( isa => 'Str',  is => 'ro', required => 1 );
-has 'git_binary'     => ( isa => 'Str',  is => 'ro', required => 1 );
-has 'push_to_github' => ( isa => 'Bool', is => 'ro', required => 1 );
+has 'distro'            => ( isa => 'Str',  is => 'ro', required => 1 );
+has 'repo_path'         => ( isa => 'Str',  is => 'ro', required => 1 );
+has 'git_binary'        => ( isa => 'Str',  is => 'ro', required => 1 );
+has 'push_to_github'    => ( isa => 'Bool', is => 'ro', required => 1 );
+has 'clean_dirty_repos' => ( isa => 'Bool', is => 'ro', default  => 1 );
 
 has 'git'       => ( isa => 'Object',  lazy => 1,    is   => 'ro', lazy    => 1, builder => '_build_git' );
 has 'dist_meta' => ( isa => 'HashRef', is   => 'rw', lazy => 1,    builder => '_build_meta' );
@@ -150,7 +151,8 @@ sub find_non_play_primary ($self) {
 }
 
 sub check_if_dirty_and_die ($self) {
-    my $st = $self->git->status;
+    my $git = $self->git;
+    my $st  = $git->status;
     return unless $st->is_dirty;
 
     my $txt = '';
@@ -165,8 +167,17 @@ sub check_if_dirty_and_die ($self) {
         }
     }
 
-    my $repo_path = $self->git->dir;
-    die("\nThe repo $repo_path is unexpectedly dirty. Please correct this:\n$txt\n");
+    if ( $self->clean_dirty_repos ) {
+        $git->reset('.');
+        $git->clean('-dxf');
+        $git->checkout('.');
+    }
+    else {
+        my $repo_path = $self->git->dir;
+        die("\nThe repo $repo_path is unexpectedly dirty. Please correct this:\n$txt\n");
+    }
+
+    return;
 }
 
 sub checkout_p5_branch ($self) {
