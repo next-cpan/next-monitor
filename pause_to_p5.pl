@@ -57,6 +57,7 @@ sub run ( $self, @optional_repos ) {
     };
     push @skip_list, 'Acme-CatalystX-ILoveDebug';    # incorrect deps @nico
     push @skip_list, 'Apache-FastForward';           # Perl Makefile.PL && detect author.
+    push @skip_list, 'xisofs';                       # 1997 module with no sanity.
 
     my $repo_list = $self->repo_list;
     if (@optional_repos) {
