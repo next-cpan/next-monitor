@@ -48,16 +48,21 @@ sub _build_repo_list ($self) {
     return \@repos;
 }
 
+sub skip_list {
+    my @skip_list;
+
+    foreach my $line ( split( "\n", File::Slurper::read_text('skip_list.txt') ) ) {
+        next unless $line =~ m/\S/;
+        $line =~ s/\s.+$//;
+        push @skip_list, $line;
+    }
+
+    return @skip_list;
+}
+
 sub run ( $self, @optional_repos ) {
 
-    my @skip_list = qw{
-      AAAA-Crypt-DH
-      AAAAAAAAA
-      Acme-3mxA
-    };
-    push @skip_list, 'Acme-CatalystX-ILoveDebug';    # incorrect deps @nico
-    push @skip_list, 'Apache-FastForward';           # Perl Makefile.PL && detect author.
-    push @skip_list, 'xisofs';                       # 1997 module with no sanity.
+    my @skip_list = skip_list();
 
     my $repo_list = $self->repo_list;
     if (@optional_repos) {

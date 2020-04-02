@@ -1,0 +1,5 @@
+AAAAAAAAA                 # the file is in the wrong place.
+Acme-3mxA                 # UTF8 encoded files - "lib/Acme/\\307\\235m\\311\\224A.pm"
+Acme-CatalystX-ILoveDebug # incorrect deps @nico
+Apache-FastForward        # Perl Makefile.PL && detect author.
+xisofs                    # 1997 module with no sanity.
