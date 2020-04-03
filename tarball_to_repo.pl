@@ -80,6 +80,8 @@ sub run ($self) {
     mkdir $self->base_dir;    # Make sure the base data dir is there.
 
     $self->stage_tarballs();
+
+    #printf("HERE %s\n", __LINE__);
     $self->process_updates();
 
     return 0;
@@ -195,7 +197,7 @@ sub otwo_packages_fh ($self) {
     if ( !-e $local_otwo_file ) {
         my $url = $self->pause_base_url . "/modules/$otwofile.gz";
         fetch_file( $url, "$local_otwo_file.gz" )
-          or die "Failed to retrieve $local_otwo_file.gz";
+          or die "Failed to retrieve $url";
         IO::Uncompress::Gunzip::gunzip( "$local_otwo_file.gz" => $local_otwo_file )
           or die "gunzip failed for $local_otwo_file.gz: ${IO::Uncompress::Gunzip::GunzipError}";
         unlink "$local_otwo_file.gz";
@@ -385,6 +387,25 @@ sub create_github_repo ( $self, $distro ) {
     die;
 }
 
+sub delete_all_repo_files ( $self, $git, $distro ) {
+
+    # Delete any old stuff.
+    my @files = eval { $git->ls_files };
+    if (@files) {
+        eval { $git->rm( '-f', @files ) };
+
+        # Just in case any files are remaining.
+        eval { @files = $git->ls_files };
+        if (@files) {
+            foreach my $file (@files) {
+                $git->rm( '-f', $file );
+            }
+            @files = $git->ls_files;
+        }
+        @files and die( "Unexpected files could not be deleted from $distro repo: " . Dumper \@files );
+    }
+}
+
 sub add_extracted_tarball_from_tmp_to_repo ( $self, $distro, $version ) {
     my $temp_dir  = $self->temp_repo_dir;
     my $repo_path = $self->repos_dir . '/' . $distro;
@@ -410,37 +431,29 @@ sub add_extracted_tarball_from_tmp_to_repo ( $self, $distro, $version ) {
 
     -d $repo_path or die("Can't proceed without a $repo_path dir");
 
-    # Delete any old stuff.
-    my @files = eval { $git->ls_files };
-    if (@files) {
-        eval { $git->rm( '-f', @files ) };
-
-        # Just in case any files are remaining.
-        eval { @files = $git->ls_files };
-        if (@files) {
-            foreach my $file (@files) {
-                $git->rm( '-f', $file );
-            }
-            @files = $git->ls_files;
-        }
-        @files and die( "Unexpected files could not be deleted from $distro repo: " . Dumper \@files );
-    }
+    $self->delete_all_repo_files( $git, $distro );
 
     `/usr/bin/mv $temp_dir/* $repo_path/ 2>&1`;
     `/usr/bin/mv $temp_dir/.* $repo_path/ 2>&1`;
-    rmdir $temp_dir or die( "Could not move all files from temp dir to $repo_path: " . `ls -al $temp_dir` );
+    rmdir $temp_dir or die( "Could not move all files from temp dir to $repo_path via $temp_dir: " . `ls -al $temp_dir` );
 
     eval { $git->add('.') };
     eval { $git->commit( '-m', "Import $distro version $version from PAUSE" ) };
 
     # We only need to do this the first time since we couldn't create a branch and set upstream until we make our first commit.
     if ($just_cloned) {
-        eval { $git->branch(qw/-m PAUSE/) };
+        eval { $git->branch(qw/-m p5/) };
         eval { $git->branch(qw/--unset-upstream/) };
+        eval { $git->branch(qw/--track origin p5/) };
+        eval { $git->push(qw/origin p5/) };
+
+        eval { $git->checkout(qw/-b PAUSE/) };
         eval { $git->branch(qw/--track origin PAUSE/) };
     }
 
     eval { $git->push(qw/origin PAUSE/) };
+
+    exit;
 
     return 1;
 }
@@ -538,114 +551,3 @@ package main;
 my $ptgr = PauseToGithubRepo->new_with_options( configfile => "${FindBin::Bin}/settings.ini" );
 
 exit( $ptgr->run );
-
-__END__
-
-print "Writing out distros to $settings->{base_dir}/distros\n";
-chdir($settings->{'base_dir'}) or die($!);
-
-my %processed_tarball;
-my $fh = open_otwo_packages_file();
-while (my $line = <$fh>) {
-    my ($module, $module_version, $author_path) = split(qr/\s+/, $line);
-    next if $author_path =~ m{\.pm\.gz$};
-    next if $author_path =~ m{/Bundle-FinalTest2.tar.gz$};
-    next if $author_path =~ m{/Spreadsheet-WriteExcel-WebPivot2.tar.gz$};
-    next if $author_path =~ m{/perl5.00402-bindist04-msvcAlpha.tar.gz$};
-    next if $author_path =~ m{/Geo-GoogleEarth-Document-modules2.tar.gz$};
-    
-    chomp $author_path;
-    my $tarball_file = $self->path_to_tarball_cache_file($author_path);
-        
-    next if $processed_tarball{$tarball_file};
-    $processed_tarball{$tarball_file} = 1;
-    -f $tarball_file && !-z _ or die("ZERO TARBALL??? $tarball_file");
-    
-    next if was_parsed($author_path);
-
-    DEBUG("Parsing $author_path");
-    my $extracted_distro_name = expand_distro($tarball_file, $author_path);
-}
-
-exit;
-
-my %tarball_parsed_cache;
-sub was_parsed {
-    my $author_path = shift or die;
-    return 1 if $tarball_parsed_cache{$author_path};
-    open(my $fh, '<', $tarball_parsed_file) or return 0;
-    while (<$fh>) {
-        chomp;
-        $tarball_parsed_cache{$_} = 1;
-    }
-
-    return $tarball_parsed_cache{$author_path};
-}
-
-sub write_stored_version_info {
-    my ($distro, $version, $author_path) = @_;
-    $author_path or die("Can't write meta without author_path! $distro $version");
-    $distro or die("Can't process $author_path without a distro");
-    $version ||= 0;
-    
-    my $letter = substr($distro, 0, 1);
-
-    mkdir "$distro_meta_dir/$letter";
-    -d "$distro_meta_dir/$letter" or die ("Can't create directory $distro_meta_dir/$letter");
-    
-    my $distro_meta_dir 
-    
-    my $meta_file = "$distro_meta_dir/$letter/$distro.yml";
-
-    open(my $fh, '>', $meta_file) or die "Can't write $meta_file";
-    print {$fh} "---\ndistro: $distro\nversion: $version\nauthor_path: $author_path\n";
-    close $fh;  
-}
-
-
-
-
-
-
-
-sub get_packages_info {
-    my $fh = open_otwo_packages_file();
-    
-    my $packages = {};
-    # Which files do we want to download and maintain??
-    while (my $line = <$fh>) {
-        my ($module, $module_version, $file) = split(qr/\s+/, $line);
-        chomp $file;
-        next if !length $module_version; # Means we didn't read it in.
-        next if !length $file; # Means we didn't read it in.
-        next if $module_version eq 'undef';
-        next if ($file =~ m/\.pm\.gz$/i);
-    
-        my $distro_file = $file;
-    
-        $distro_file =~ s/\.pm\.gz$//; # https://github.com/andk/pause/issues/237
-        
-        my $d = CPAN::DistnameInfo->new($distro_file);
-        my $distro = $d->dist || $distro_file;
-        my $version = $d->version || $module_version;
-
-        # Skip if we have a newer version for $distro already.
-        next if( $packages->{$distro} && compare($packages->{$distro}->{'version'}, '>=', $version) );
-    
-#        $file =~ m/"/ and die("$file unexpectedly had a \" in it??");
-        # Store it.
-        $packages->{$distro} = {
-            author => $d->cpanid,
-            version => $version,
-            author_path => $file,
-            file => File::Basename::fileparse($file),
-            distro => $distro,
-        };
-    }
-    return $packages;
-}
-
-
-
-
-
