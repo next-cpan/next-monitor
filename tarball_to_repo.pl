@@ -453,7 +453,7 @@ sub add_extracted_tarball_from_tmp_to_repo ( $self, $distro, $version ) {
 
     eval { $git->push(qw/origin PAUSE/) };
 
-    exit;
+    exit if $just_cloned;
 
     return 1;
 }

@@ -95,8 +95,11 @@ sub do_the_do ($self) {
     my @log = $self->git->log(qw/p5..PAUSE/);
 
     # Has the PAUSE branch been updated since p5 was last merged from it?
-    if (@log) {
-        die(q{We need to determine how we're going to merge from PAUSE once we've updated p5 once.});
+    if (@log) {    # Reset the branch to its state on the current PAUSE branch and re-process it.
+        $self->delete_all_repo_files;
+        my $bin = $self->git_binary;
+        `$bin archive PAUSE | /usr/bin/tar -x`;
+        $self->git->add( '-f', '.' );
     }
     elsif ( -e $self->BUILD_file ) {
         print "Nothing to update\n";
@@ -125,6 +128,29 @@ sub do_the_do ($self) {
     }
 
     $self->git_commit;
+}
+
+sub delete_all_repo_files ($self) {
+    my $git = $self->git;
+
+    my @files = eval { $git->ls_files };
+    return unless @files;
+
+    # remove any files and check if we succeed.
+    eval { $git->rm( '-f', @files ) };
+    eval { @files = $git->ls_files };
+    return unless @files;
+
+    # If we still have files, try to do it one at a time.
+    foreach my $file (@files) {
+        $git->rm( '-f', $file );
+    }
+
+    # fail if there are still files at this point.
+    @files = $git->ls_files;
+    @files and die( sprintf( "Unexpected files could not be deleted from %s repo: %s", $self->distro, Dumper \@files ) );
+
+    return;
 }
 
 sub gather_non_play_provides_from_meta ($self) {
@@ -196,6 +222,8 @@ sub checkout_p5_branch ($self) {
         return;
     }
 
+    # All of this only needs to happen if we don't have a local p5 branch already.
+
     eval { $git->fetch('origin') };
     @branches = eval { $git->branch('-a') };
 
@@ -209,7 +237,7 @@ sub checkout_p5_branch ($self) {
         die( "Could not checkout p5 branch from upstream in repo: " . $git->dir );
     }
 
-    # We haven't generated the p5 branch we need to fork it from PAUSE.
+    # We haven't generated the p5 branch yet. we need to fork it from PAUSE.
 
     # Make sure there's a PAUSE branch.
     if ( !grep { $_ =~ m/^\s*\*?\s+PAUSE\z/ } @branches ) {
@@ -244,7 +272,7 @@ sub fix_special_repos ( $self ) {
     };
 
     return unless $files_to_delete->{ $self->distro };
-    $self->git->rm( @{ $files_to_delete->{ $self->distro } } );
+    $self->git->rm( '-f', @{ $files_to_delete->{ $self->distro } } );
 }
 
 sub cleanup_tree ($self) {
@@ -263,28 +291,28 @@ sub cleanup_tree ($self) {
     ) {
         next unless $files->{$unwanted_file};
         delete $files->{$unwanted_file};
-        $git->rm($unwanted_file);
+        $git->rm( '-f', $unwanted_file );
     }
 
     # Throw out maint/cip- files. Not sure what they are.
     foreach my $file ( keys %$files ) {
         next unless $file =~ m{^maint/(cip-|release)};
         delete $files->{$file};
-        $git->rm($file);
+        $git->rm( '-f', $file );
     }
 
     # Get rid of directories we don't want.
     foreach my $file ( keys %$files ) {
         next unless $file =~ m{^(?:inc|debian|ubuntu-[^/]+)/};
         delete $files->{$file};
-        $git->rm($file);
+        $git->rm( '-f', $file );
     }
 
     # *~ or /#file#
     foreach my $file ( keys %$files ) {
         next unless $file =~ m{~$|/#.+#$};
         delete $files->{$file};
-        $git->rm($file);
+        $git->rm( '-f', $file );
     }
 
     # Normalize all TODO files to 'Todo' and throw out the boilerplate ones.
@@ -312,7 +340,7 @@ sub cleanup_tree ($self) {
             $git->mv( 'COPYRIGHT', 'LICENSE' );
             $files->{'LICENSE'} = 1;
         }
-        $git->rm('COPYRIGHT');
+        $git->rm( '-f', 'COPYRIGHT' );
         delete $files->{'COPYRIGHT'};
     }
 
@@ -619,7 +647,7 @@ sub generate_build_json ($self) {
     # unused vars in meta.
     delete $meta->{$_} foreach (
         qw/dynamic_config generated_by meta-spec x_generated_by_perl x_serialization_backend license resources x_deprecated
-        release_status x_Dist_Zilla x_authority distribution_type installdirs version_from no_index x_contributors/
+        release_status x_Dist_Zilla x_authority distribution_type installdirs version_from no_index x_contributors x_spdx_expression/
     );
     foreach my $prereq_key (qw/configure build runtime test develop/) {
         next unless $meta->{'prereqs'};
