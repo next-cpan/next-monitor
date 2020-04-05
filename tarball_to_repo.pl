@@ -366,6 +366,7 @@ sub expand_distro ( $self, $tarball_file, $author_path ) {
     }
 
     $self->report_archive_parsed($author_path);
+    exit;
 
     return 0;
 }
@@ -444,16 +445,14 @@ sub add_extracted_tarball_from_tmp_to_repo ( $self, $distro, $version ) {
     if ($just_cloned) {
         eval { $git->branch(qw/-m p5/) };
         eval { $git->branch(qw/--unset-upstream/) };
-        eval { $git->branch(qw/--track origin p5/) };
-        eval { $git->push(qw/origin p5/) };
+        eval { $git->push(qw/--set-upstream origin p5/) };
 
         eval { $git->checkout(qw/-b PAUSE/) };
-        eval { $git->branch(qw/--track origin PAUSE/) };
+        eval { $git->push(qw/--set-upstream origin PAUSE/) };
+
     }
 
     eval { $git->push(qw/origin PAUSE/) };
-
-    exit if $just_cloned;
 
     return 1;
 }
