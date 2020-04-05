@@ -96,6 +96,8 @@ sub do_the_do ($self) {
 
     # Has the PAUSE branch been updated since p5 was last merged from it?
     if (@log) {    # Reset the branch to its state on the current PAUSE branch and re-process it.
+        my $git = $self->git;
+        eval { $git->merge('PAUSE') };    # This will probably fail but that's ok.
         $self->delete_all_repo_files;
         my $bin = $self->git_binary;
         `$bin archive PAUSE | /usr/bin/tar -x`;
@@ -269,6 +271,7 @@ sub fix_special_repos ( $self ) {
         'Acme-CPANAuthors-Acme-CPANAuthors-Authors' => [qw{scripts/author_info.pl scripts/basic_info.pl}],
         'Acme-Cow-Interpreter'                      => ['bin/*'],
         'Test-Unit'                                 => [ 'TestRunner.pl', 'TkTestRunner.pl' ],
+        'Acme-CPANAuthors-AnyEvent'                 => [qw{script/AnyEvent.tt script/generate.pl}],
     };
 
     return unless $files_to_delete->{ $self->distro };
@@ -541,7 +544,6 @@ sub git_commit ($self) {
 
     $git->commit( '-m', sprintf( "Update %s version %s to play.", $self->distro, $self->BUILD_json->{'version'} ) );
 
-    $self->push_to_github and die("Publishing to github should be off");
     $git->push if $self->push_to_github;
 
     return;
