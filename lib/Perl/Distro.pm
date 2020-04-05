@@ -201,6 +201,7 @@ sub check_if_dirty_and_die ($self) {
     }
 
     if ( $self->clean_dirty_repos ) {
+        eval { $git->merge('--abort') }; # In case we were in the middle of a merge.
         $git->reset('.');
         $git->clean('-dxf');
         $git->checkout('.');
