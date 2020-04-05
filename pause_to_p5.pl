@@ -74,7 +74,7 @@ sub run ( $self, @optional_repos ) {
             print "Skipping $repo\n";
             next;
         }
-        print "--- Processing repos/$repo\n";
+        print "--- Processing repo   $repo\n";
 
         my $repo_dir = $self->repos_dir . '/' . $repo;
         my $cd       = Cwd::Guard->new($repo_dir);
