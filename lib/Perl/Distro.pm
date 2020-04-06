@@ -115,7 +115,7 @@ sub do_the_do ($self) {
     $self->determine_installer;
 
     if ( $self->is_play ) {
-        $self->parse_maker;
+        $self->parse_maker_for_scripts;
         $self->cleanup_tree;
         $self->update_p5_branch_from_PAUSE;
     }
@@ -275,7 +275,20 @@ sub fix_special_repos ( $self ) {
     # Distro doesn't match the file.
     $self->parse_pod('Ace.pm') if $distro eq 'AcePerl';
 
-    $self->BUILD_json->{'license'} = 'unknown' if $distro eq 'Acme-Code-FreedomFighter';
+    $self->BUILD_json->{'maintainers'} = 'Cal Henderson, <cal@iamcal.com>' if $distro eq 'Acme-Goatse';
+
+    # Repos where their tarball doesn't match their primary module.
+    state $repos_to_rename = {
+        'AI-Classifier-Text' => 1,
+    };
+
+    if ( $repos_to_rename->{$distro} ) {
+        $self->dist_meta->{'name'} = $distro;
+    }
+
+    $self->BUILD_json->{'license'} = 'unknown' if grep { $distro eq $_ } qw{ Acme-Code-FreedomFighter ACME-Error-Translate Acme-ESP Acme-Goatse AFS AFS-Command AI-Fuzzy AI-General };
+    $self->BUILD_json->{'license'} = 'perl'    if grep { $distro eq $_ } qw{ ACME-Error-31337 ACME-Error-IgpayAtinlay };
+    $self->BUILD_json->{'license'} = 'GPL'     if grep { $distro eq $_ } qw{ AI-LibNeural };
 
     state $files_to_delete = {
         'Acme-Aheui'                                => [qw{bin/aheui}],
@@ -298,6 +311,24 @@ sub fix_special_repos ( $self ) {
         'Acme-CreatingCPANModules'                  => [qw{images/* slides/*}],
         'Acme-Curses-Marquee'                       => [qw{scrolly}],
         'Acme-Dahut-Call'                           => [qw{demo/synopsis.pl}],
+        'Acme-EvaTitlenize'                         => [qw{bin/eva-titlenize}],
+        'Acme-EyeDrops'                             => [qw{demo/findshapes.pl demo/gentable.pl demo/sightly.pl xBuild.PL}],
+        'Acme-Filter-Kenny'                         => [qw{bin/kennyfy}],
+        'Acme-Flat'                                 => [qw{misc/Changes.deps misc/Changes.deps.all misc/Changes.deps.dev misc/Changes.deps.opt misc/built_with.json misc/perlcritic.deps}],
+        'Acme-Futuristic-Perl'                      => [qw{COPYRIGHT}],
+        'Acme-Geo-Whitwell-Name'                    => [qw{demo/zip_to_whitwell}],
+        'Acme-Glue'                                 => [qw{snippets/LEEJO/hopscotch.p6 snippets/LEEJO/transform.pl snippets/SLU/MAZE.BAS snippets/SLU/schwartzian_transform.pl}],
+        'ADAMK-Release'                             => [qw{script/adamk-release share/LICENSE share/MANIFEST.SKIP share/pmv.t share/pod.t}],
+        'AFS-Command'                               => [qw{COPYRIGHT}],
+        'AI-Categorizer'                            => [qw{doc/classes-overview.png doc/classes.png}],
+        'AI-Evolve-Befunge'                         => [qw{example.conf}],
+        'AI-MXNetCAPI'                              => [qw{mxnet.i mxnet_typemaps.i}],
+        'AI-NaiveBayes'                             => [qw{a}],
+        'AI-NeuralNet-BackProp'                     => [qw{docs.htm}],
+        'AI-NeuralNet-Mesh'                         => [qw{mesh.htm}],
+        'AI-PSO'                                    => [qw{MPL-1.1.txt extradoc/ReactivePower-PSO-wks.pdf}],
+        'AI-Pathfinding-OptimizeMultiple'           => [qw{bin/optimize-game-ai-multi-tasking rejects.pod}],
+
     };
 
     return unless $files_to_delete->{$distro};
@@ -312,11 +343,11 @@ sub cleanup_tree ($self) {
 
     # Delete explicit files we don't want.
     foreach my $unwanted_file (
-        qw{ MANIFEST MANIFEST.SKIP MANIFEST.bak MANIFEST.skip INSTALL SIGNATURE dist.ini README README.md README.pod Makefile.PL Build.PL weaver.ini
+        qw{ MANIFEST MANIFEST.SKIP MANIFEST.bak MANIFEST.skip INSTALL INSTALL.txt SIGNATURE dist.ini README README.md README.pod README.txt Makefile.PL Build.PL weaver.ini
         META.yml META.json ignore.txt .gitignore .mailmap Changes.PL cpanfile cpanfile.snapshot minil.toml .cvsignore .travis.yml travis.yml
         .project t/boilerplate.t MYMETA.json MYMETA.yml Makefile Makefile.old maint/Makefile.PL.include metamerge.json README.bak dist.ini.bak
         CREDITS doap.ttl author_test.sh cpants.pl makeall.sh perlcritic.rc .perltidyrc .perltidy dist.ini.meta Changes.new Changes.old
-        CONTRIBUTORS INSTALL.skip
+        CONTRIBUTORS INSTALL.skip tidyall.ini perlcriticrc perltidyrc README.mkdn .shipit
         }
     ) {
         next unless $files->{$unwanted_file};
@@ -333,7 +364,7 @@ sub cleanup_tree ($self) {
 
     # Get rid of directories we don't want.
     foreach my $file ( keys %$files ) {
-        next unless $file =~ m{^(?:inc|debian|tools|devdata|devscript|devscripts|_build|maint|ubuntu-[^/]+)/};
+        next unless $file =~ m{^(?:inc|Samples|demo|debian|tools|devdata|devscript|devscripts|_build|maint|ubuntu-[^/]+)/};
         delete $files->{$file};
         $git->rm( '-f', $file );
     }
@@ -365,7 +396,7 @@ sub cleanup_tree ($self) {
     }
 
     # Alternative license files. LICENCE
-    foreach my $license_variant (qw/COPYRIGHT LICENCE/) {
+    foreach my $license_variant (qw/COPYRIGHT LICENCE COPYING/) {
         next unless $files->{$license_variant};
         $files->{'LICENSE'} and die("Unexpectedly found LICENSE and $license_variant in the same distro");
 
@@ -376,7 +407,20 @@ sub cleanup_tree ($self) {
     }
 
     # Normalize all Changelog files to a common 'Changelog'
-    foreach my $changes_variant (qw/CHANGES Changes ChangeLog/) {
+    foreach my $contrib_variant (qw/CONTRIBUTING CONTRIBUTING.mkdn/) {
+        next unless $files->{$contrib_variant};
+
+        $files->{'Changelog'} && die("Unexpectedly saw CONTRIBUTING.md and $contrib_variant in the same repo. I don't know what to do");
+
+        print "Renaming $contrib_variant to CONTRIBUTING.md\n";
+        $git->mv( $contrib_variant, 'CONTRIBUTING.md' );
+        delete $files->{$contrib_variant};
+        $files->{'CONTRIBUTING.md'} = 1;
+        last;    # We can't move 2 files to the same destination so this will fail later.
+    }
+
+    # Normalize all Changelog files to a common 'Changelog'
+    foreach my $changes_variant (qw/CHANGES CHANGELOG Changes ChangeLog/) {
         next unless $files->{$changes_variant};
 
         $files->{'Changelog'} && die("Unexpectedly saw Changelog and $changes_variant in the same repo. I don't know what to do");
@@ -386,7 +430,6 @@ sub cleanup_tree ($self) {
         delete $files->{$changes_variant};
         $files->{'Changelog'} = 1;
         last;    # We can't move 2 files to the same destination so this will fail later.
-
     }
 
     foreach my $file ( sort { $a cmp $b } keys %$files ) {
@@ -419,6 +462,7 @@ sub determine_primary_module ($self) {
     my $distro     = $self->distro;
     my $build_json = $self->BUILD_json;
     my $meta       = $self->dist_meta;
+    my $files      = $self->repo_files;
 
     # Try to determine the primary package of this distro.
     # Let's make sure it matches the 'name' of the module.
@@ -431,23 +475,46 @@ sub determine_primary_module ($self) {
     # Move the module into lib/ if we need to.
     my @module      = split( '::', $build_json->{'primary'} );
     my $module_path = join( '/', ( 'lib', @module ) ) . ".pm";
-    if ( !-f $module_path ) {
-        print "Primary module $module_path is in the wrong place\n";
+
+    if ( !-d 'lib' && -d $module[0] ) {
+        printf( "Moving root name space (%s) into lib/\n", $module[0] );
+        mkdir 'lib';
+        $git->mv( $module[0], 'lib/' );
+
+        # There's no easy way to update $self->repo_files. We're going to have to re-scan it.
+        $self->repo_files( { map { ( $_ => 1 ) } $git->ls_files } );
+        $files = $self->repo_files;
+    }
+
+    if ( !$files->{$module_path} ) {
 
         my $filename = $module[-1] . ".pm";
-        if ( -f $filename ) {
+        if ( $files->{$filename} ) {
+            print "Primary module $module_path is in the wrong place. It is being moved.\n";
             mkpath($module_path);
             rmdir $module_path;
             $git->mv( $filename, $module_path );
 
-            delete $self->repo_files->{$filename};
-            $self->repo_files->{$module_path} = 1;
+            delete $files->{$filename};
+            $files->{$module_path} = 1;
         }
 
-        if ( !-f $module_path ) {
-            $self->dump_self;
-            die("Can't find $module_path");
+        # Possibly the submodules also need to be moved.
+        my $dir_path = join( '/', ( 'lib', @module ) );
+        my $dir      = $module[-1];
+        if ( -d $dir && !-d $dir_path ) {
+            print "Detected submodules in the wrong place. Moving those too.\n";
+            $git->mv( $dir, $dir_path );
+
+            # There's no easy way to update $self->repo_files. We're going to have to re-scan it.
+            $self->repo_files( { map { ( $_ => 1 ) } $git->ls_files } );
+            $files = $self->repo_files;
         }
+    }
+
+    if ( !-f $module_path ) {
+        $self->dump_self;
+        die("Can't find $module_path");
     }
 
     return;
@@ -463,10 +530,10 @@ sub update_p5_branch_to_not_play ($self) {
 sub is_extra_files_we_ship ( $self, $file ) {
 
     # Explicit files we're going to ignore.
-    return 1 if ( grep { $file eq $_ } qw/Changelog LICENSE CONTRIBUTING CONTRIBUTING.md Todo author.yml/ );
+    return 1 if ( grep { $file eq $_ } qw/Changelog LICENSE CONTRIBUTING.md Todo author.yml/ );
 
     # paths with example files we're going to ignore.
-    return 1 if $file =~ m{^(eg|examples|ex)/};
+    return 1 if $file =~ m{^(eg|examples?|ex)/};
 
     my $distro = $self->distro;
 
@@ -586,9 +653,10 @@ sub determine_installer ( $self ) {
     my $builder = 'play';
 
     # Tag the BUILD file with whether this repo has XS.
-    if ( grep { $_ =~ m/\.xs$/ } keys %$files ) {
+    if ( grep { $_ =~ m/\.xs(.inc?)$/ } keys %$files ) {
         $build_json->{'XS'} = 1;
         $builder = 'legacy';
+        print "Detected .xs files in distro\n";
     }
     else {
         $build_json->{'XS'} = 0;
@@ -600,6 +668,7 @@ sub determine_installer ( $self ) {
         foreach my $prereq ( values %{ $meta->{'prereqs'} } ) {
             next unless defined $prereq->{'requires'}->{'Alien::Base'};
             $builder = 'legacy';
+            print "Alien modules are not supported as a play module\n";
             last;
         }
     }
@@ -614,8 +683,32 @@ sub determine_installer ( $self ) {
         else {
             $builder eq 'legacy' or warn(q{x_static_install says this distro isn't static but I don't know why it is play at this point?});
             $builder = 'legacy';
+            print "Detected x_static_install=1\n";
         }
         delete $meta->{'x_static_install'};
+    }
+
+    # No XS but maybe OBJECTS is mentioned in Makefile.PL?
+    if ( $builder ne 'legacy' and -e 'Makefile.PL' ) {
+        my $doc = $self->get_ppi_doc('Makefile.PL');
+
+        my $objects = $doc->find( sub { $_[1]->class =~ m/^PPI::Token::Quote::|^PPI::Token::Word$/ && $_[1]->content =~ m{^['"]?(OBJECT)['"]?$} } ) || [];
+
+        if (@$objects) {
+            my $node = $objects->[0];
+            my $key  = $node->content;
+            $node = $node->snext_sibling();
+            $node->content eq '=>' or die( "Unexpected sibling to $key: " . dump_tree($objects) );
+
+            $node = $node->snext_sibling();
+            if ( $node->class =~ m/^PPI::Token::Quote/ && $node->content =~ m/\.o/ ) {
+                $builder = 'legacy';
+                printf( "Detected a legacy build due to OBJECT => %s in Makefile.PL\n", $node->content );
+            }
+            else {
+                die( "Unexpected sibling value $key: " . dump_tree($node) );
+            }
+        }
     }
 
     # If the builder is play, then set it and return.
@@ -627,6 +720,17 @@ sub determine_installer ( $self ) {
     # Guess based on what builder to use based on files in the repo.
     $build_json->{'builder'} = $files->{'Build.PL'} ? 'Build.PL' : $files->{'Makefile.PL'} ? 'Makefile.PL' : die( "Can't determine builder for distro " . $self->distro );
     return;
+}
+
+sub parse_license_file ($self) {
+    my $files = $self->repo_files;
+    return unless $files->{'LICENSE'};
+    my $content = $self->try_to_read_file('LICENSE');
+
+    return 'perl' if $content =~ m/Terms\s*(of|as)\s*Perl\s*itself/msi;
+    return 'MIT'  if $content =~ m/The MIT Licens/msi;
+    return;
+
 }
 
 sub generate_build_json ($self) {
@@ -653,12 +757,10 @@ sub generate_build_json ($self) {
     if ( $meta->{'license'} ) {
         $build_json->{'license'} = $meta->{'license'};
     }
+
+    # Last attempt try reading LICENSE
     if ( !$build_json->{'license'} ) {
-        if ( -e 'LICENSE' ) {
-            my $lic = $self->try_to_read_file('LICENSE');
-            $build_json->{'license'} = 'perl' if $lic =~ m/Terms\s*(of|as)\s*Perl\s*itself/msi;
-        }
-        $build_json->{'license'} or die("Missing license for distro");
+        $build_json->{'license'} = $self->parse_license_file or die( "Missing license for " . $self->distro . "    -- " . $self->dump_self );
     }
 
     if ( %{ $self->provides } ) {
@@ -680,7 +782,7 @@ sub generate_build_json ($self) {
     delete $meta->{$_} foreach (
         qw/dynamic_config generated_by meta-spec x_generated_by_perl x_serialization_backend license resources x_deprecated
         release_status x_Dist_Zilla x_authority distribution_type installdirs version_from x_contributors x_spdx_expression
-        x_test_requires x_authority_from_module x_permissions_from_module x_BuiltWith/
+        x_test_requires x_authority_from_module x_permissions_from_module x_BuiltWith module_name/
     );
     foreach my $prereq_key (qw/configure build runtime test develop/) {
         next unless $meta->{'prereqs'};
@@ -877,9 +979,15 @@ sub generate_build_json ($self) {
 
     if ( $meta->{'provides'} ) {
         foreach my $module ( sort { $a cmp $b } keys %{ $meta->{'provides'} } ) {
-            $provides->{$module}                                                                  or die( "Meta provides $module but it was not detected: " . Dumper( $meta, $provides ) );
-            $meta->{'provides'}->{$module}->{'file'} eq $provides->{$module}->{'file'}            or die( "Meta provides $module file is not the same as was detected: " . Dumper( $meta, $provides ) );
-            $meta->{'provides'}->{$module}->{'version'} // 0 eq $provides->{$module}->{'version'} or die( "Meta provides $module version is not the same as was detected: " . Dumper( $meta, $provides ) );
+            $provides->{$module} or die( "Meta provides $module but it was not detected: " . Dumper( $meta, $provides ) );
+            $meta->{'provides'}->{$module}->{'file'} eq $provides->{$module}->{'file'} or die( "Meta provides $module file is not the same as was detected: " . Dumper( $meta, $provides ) );
+
+            # use version.pm to be sure versions don't match if a simple eq doesn't work.
+            if ( $meta->{'provides'}->{$module}->{'version'} ne $provides->{$module}->{'version'} ) {
+                my $detected_version = version->declare( $provides->{$module}->{'version'}           // 0 );
+                my $meta_version     = version->declare( $meta->{'provides'}->{$module}->{'version'} // 0 );
+                $detected_version == $meta_version or die( "Meta provides $module version ($meta_version) is not the same as was detected ($detected_version): " . $self->dump_self );
+            }
             delete $meta->{'provides'}->{$module};
         }
         prune_ref($meta);
@@ -958,7 +1066,7 @@ sub prune_ref ($var) {
 }
 
 sub get_ppi_doc ( $self, $filename ) {
-    return if $filename =~ m{\.(bak|yml|json|yaml|txt|out|html|tt2|jpg|jpeg|png|gif)$}i;
+    return if $filename =~ m{\.(bak|yml|json|yaml|txt|out|html|tt2|jpg|jpeg|png|gif|eye|eyp)$}i;
     return if $self->is_extra_files_we_ship($filename);
 
     if ( -l $filename || -d _ || -z _ ) {
@@ -1002,16 +1110,16 @@ sub is_xt_test ( $self, $filename ) {
     return 0;
 }
 
-sub parse_maker ($self) {
+sub parse_maker_for_scripts ($self) {
     if ( -e 'Makefile.PL' ) {
         my $doc = $self->get_ppi_doc('Makefile.PL');
 
-        my $quotes = $doc->find( sub { $_[1]->class =~ m/^PPI::Token::Quote::|^PPI::Token::Word$/ && $_[1]->content =~ m{^['"]?EXE_FILES['"]?$} } ) || [];
+        my $quotes = $doc->find( sub { $_[1]->class =~ m/^PPI::Token::Quote::|^PPI::Token::Word$/ && $_[1]->content =~ m{^['"]?(EXE_FILES)['"]?$} } ) || [];
 
         if (@$quotes) {    # EU::MM Format.
             my $node = $quotes->[0];
             $node = $node->snext_sibling();
-            $node->content eq '=>' or die( "Unexpected sibling to EXE_FILES: " . dump_tree( $quotes->[0] ) );
+            $node->content eq '=>' or die( "Unexpected sibling to EXE_FILES: " . dump_tree($quotes) );
 
             $node = $node->snext_sibling();
             $node->class eq 'PPI::Structure::Constructor' or die( "Unexpected sibling value EXE_FILES: " . dump_tree($node) );
@@ -1021,7 +1129,8 @@ sub parse_maker ($self) {
             foreach my $script_node ( $script_nodes->children ) {
                 next   if $script_node->class eq 'PPI::Token::Operator';
                 next   if $script_node->class eq 'PPI::Token::Whitespace';
-                return if $script_node->class eq 'PPI::Token::Word';         # Looks like code not a list. Forget it!
+                return if $script_node->class eq 'PPI::Token::Word';               # Looks like code not a list. Forget it!
+                next   if $script_node->content =~ m/^\s*qw[\[(]\s*[\])]\s*\z/;    # qw()
                 $script_node->class =~ m{^PPI::Token::Quote::} or die( "Unexpected child node parsing EXE_FILES: " . Dumper($script_node) );
 
                 my ($script) = $script_node->content =~ m/^\s*['"](.+)['"]\s*$/;
@@ -1029,7 +1138,7 @@ sub parse_maker ($self) {
 
             }
         }
-        return if @{ $self->scripts };                                       # Found Scripts!
+        return if @{ $self->scripts };                                             # Found Scripts!
 
         # Look for Module::Install stuff.
         my $statements = $doc->find( sub { $_[1]->class eq 'PPI::Statement' } ) || [];
@@ -1111,6 +1220,16 @@ sub parse_pod ( $self, $filename ) {
                     push @author, $line;
                 }
             }
+            if ( $line =~ m{^=head1 CONTRIBUTORS} ) {
+                while ( @pod_lines && $pod_lines[0] !~ m/^=/ ) {
+                    my $line = shift @pod_lines;
+                    next unless $line =~ s/Author:\s*(\S.+)/$1/;
+                    if ( !$self->BUILD_json->{'maintainers'} ) {
+                        $self->BUILD_json->{'maintainers'} = \@author;
+                    }
+                    push @author, $line;
+                }
+            }
             if ( $line =~ m{^=head1 (COPYRIGHT|LICENSE|LICENCE)|^=head1 .+ E COPYRIGHT}i ) {
                 while ( @pod_lines && $pod_lines[0] !~ m/^=(cut|head)/ ) {
                     my $line = shift @pod_lines;
@@ -1123,13 +1242,13 @@ sub parse_pod ( $self, $filename ) {
                 $license_data =~ s/\s\s+/ /msg;    # Strip double spaces to make parsing the text easier.
                 $license_data =~ s/\s/ /msg;       # Convert all white space to a single space.
 
-                if ( $license_data =~ m/or the Artistic License/msi ) {
+                if ( $license_data =~ m/(or|under) the Artistic License/msi ) {
                     $self->BUILD_json->{'license'} = 'perl';
                 }
                 elsif ( $license_data =~ m/Terms (of|as) Perl itself/msi ) {
                     $self->BUILD_json->{'license'} = 'perl';
                 }
-                elsif ( $license_data =~ m{same as Perl itself|you can redistribute it and/or modify it under the same terms as the perl 5 programming language system itself}msi ) {
+                elsif ( $license_data =~ m{same as Perl itself|you can redistribute it and/or modify it under the same terms as the perl 5 programming language system itself|under the same terms as perl\.}msi ) {
                     $self->BUILD_json->{'license'} = 'perl';
                 }
                 elsif ( $license_data =~ m/L<perlartistic>/msi ) {
@@ -1149,6 +1268,9 @@ sub parse_pod ( $self, $filename ) {
                 }
                 elsif ( $license_data =~ m/MIT License/msi ) {
                     $self->BUILD_json->{'license'} = 'MIT';
+                }
+                elsif ( $license_data =~ m/the Mozilla Public License Version 1\.1/msi ) {
+                    $self->BUILD_json->{'license'} = 'Mozilla_1_1';
                 }
                 elsif ( $license_data =~ m/under the terms of the Apache 2.0 license/msi ) {
                     $self->BUILD_json->{'license'} = 'Apache_2_0';
@@ -1178,6 +1300,10 @@ sub parse_code ( $self, $filename ) {
     return unless $requires_runtime_hash;    # Doesn't look like perl code we know about.
 
     my $doc = $self->get_ppi_doc($filename) or return;
+    if ( $filename eq 'lib/ACME/QuoteDB/DB/DBI.pm' ) {
+        print dump_tree($doc);
+        exit;
+    }
 
     # find use/require statements and parse them.
     my $use_find = $doc->find('PPI::Statement::Include') || [];
@@ -1201,9 +1327,9 @@ sub parse_code ( $self, $filename ) {
             while ( $pkg_token = $pkg_token->snext_sibling ) {
                 my $class = $pkg_token->class;
                 last if $class eq 'PPI::Statement::Package';
-                next unless $class eq 'PPI::Statement::Variable';
+                next unless $class =~ m/^(PPI::Statement|PPI::Statement::Variable)$/;
 
-                my $nodes = $pkg_token->find( sub { $_[1]->content eq '$VERSION' && $_[1]->class eq 'PPI::Token::Symbol' } ) or next;
+                my $nodes = $pkg_token->find( sub { ( $_[1]->content eq '$VERSION' | $_[1]->content eq "\$${module}::VERSION" ) && $_[1]->class eq 'PPI::Token::Symbol' } ) or next;
                 foreach my $node (@$nodes) {
                     my $node = $nodes->[0];
                     $node = $node->snext_sibling;
@@ -1216,7 +1342,7 @@ sub parse_code ( $self, $filename ) {
                     # Try to handle all the stupid things people have done with version lines :(
                     if ( $node->class =~ m/^PPI::Token::(Quote|Number)/ ) {
                         $version = $node->content;
-                        $version =~ s/['"]//g;
+                        $version = strip_quotes($version);
                     }
                     elsif ( $node->class eq 'PPI::Token::Word' && $node->content eq 'qv' ) {    # our $version = qv{v0.0.2}
                         $node = $node->snext_sibling;
@@ -1252,7 +1378,7 @@ sub parse_code ( $self, $filename ) {
                     }
                     elsif ( $node->class eq 'PPI::Token::Symbol' && $node->content =~ m/"?\$\Q$primary_module\E::VERSION"?$/ ) {    # our $VERSION = $accessors::fast::VERSION;
                         if ( !$self->provides->{$primary_module} ) {
-                            ...;
+                            ...;                                                                                                    # Most of the time we process the primary module first...
                         }
                         $version = $self->provides->{$primary_module}->{'version'};
                     }
@@ -1319,7 +1445,7 @@ sub get_package_usage ($element) {
     if ( $is_use eq 'use' and $module =~ /^(base|parent)$/ ) {
         $token = $token->snext_sibling;
         return if $token->class eq 'PPI::Token::Structure' and $token->content eq ';';    # use base;
-        $token->class =~ m/^PPI::Token::Quote::/ or die dump_tree( $top, "Unexpected sequence parsing use parent/base" );
+        $token->class =~ m/^PPI::Token::(Quote::|QuoteLike::Words|Word$)/ or die dump_tree( $top, "Unexpected sequence parsing use parent/base" );
         $module = strip_quotes( $token->content );
         return $module;
     }
@@ -1339,6 +1465,7 @@ sub get_package_usage ($element) {
 
 sub strip_quotes ($string) {
     $string =~ s/^(['"])(.+)\1\z/$2/ms;
+    $string =~ s/^qw[\[(](.+)[\])]\z/$1/ms;
     return $string;
 }
 
