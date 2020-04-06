@@ -43,7 +43,7 @@ sub _build_repo_list ($self) {
     close $dh;
 
     # Strip out directories starting with '.'
-    @repos = sort { $a cmp $b } grep { $_ !~ m/^\./ } @repos;
+    @repos = sort { $a cmp $b } grep { $_ !~ m/^\.|^tmp$/ } @repos;
 
     return \@repos;
 }
