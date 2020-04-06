@@ -13,6 +13,9 @@ use experimental 'signatures';
 
 use FindBin;
 
+my $stop      = 0;
+my $processed = 0;
+
 use LWP::UserAgent     ();
 use File::Basename     ();
 use CPAN::Meta::YAML   ();
@@ -96,6 +99,7 @@ sub stage_tarballs ($self) {
     my @to_download;
     while ( my $line = <$fh> ) {
         my ( $module, $module_version, $author_path ) = split( qr/\s+/, $line );
+        $author_path or next;
         chomp $author_path;
 
         # The legacy pm files we're just going to ignore.
@@ -218,6 +222,13 @@ sub fetch_file ( $url, $file ) {
     my $_ua = LWP::UserAgent->new( timeout => 10 );
 
     my $response = $_ua->mirror( $url, $file );
+
+    if ( !$response->is_success ) {
+        print "Retrying download of $url\n";
+        unlink $file;
+        unlink "$file-$$";    # Temp file UA uses?
+        $response = $_ua->mirror( $url, $file );
+    }
 
     if ( !$response->is_success ) {
         warn "Failed to download $file: " . $response->status_line;
@@ -366,12 +377,23 @@ sub expand_distro ( $self, $tarball_file, $author_path ) {
     }
 
     $self->report_archive_parsed($author_path);
-    exit;
+    if ($stop) {
+        print "exec - pause_to_p5.pl $distro\n";
+        chdir $self->base_dir;
+        exec( $^X, "$FindBin::Bin/pause_to_p5.pl", $distro );
+        exit;
+    }
+    if ( $processed >= 50 ) {
+        print "Processed $processed distros. Stopping\n";
+        exit;
+    }
 
     return 0;
 }
 
 sub create_github_repo ( $self, $distro ) {
+
+    print "Creating repo $distro\n";
     my $rp = $self->gh_repo->create(
         {
             org         => $self->github_org,
@@ -454,6 +476,10 @@ sub add_extracted_tarball_from_tmp_to_repo ( $self, $distro, $version ) {
 
     eval { $git->push(qw/origin PAUSE/) };
 
+    if ($just_cloned) {
+        $stop = 0;
+        $processed++;
+    }
     return 1;
 }
 
