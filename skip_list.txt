@@ -5,3 +5,6 @@ Acme-CatalystX-ILoveDebug # incorrect deps @nico
 Apache-FastForward        # Perl Makefile.PL && detect author.
 Acme-CPANPLUS-Module-With-Failing-Configure-Requires # Garbage repo only for testing CPANPLUS We don't need it.
 Acme-DependOnEverything # Really hard to parse :(
+ACME-QuoteDB # The lib files have a corrupt byte sequence at the head of the file.
+AFS-Command # The distro is corrupt and has never passed tests.
+AFS-Monitor # The distro is corrupt and has never passed tests.
