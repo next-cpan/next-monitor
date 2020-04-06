@@ -3,3 +3,5 @@ xisofs                    # 1997 module with no sanity.
 Acme-3mxA                 # UTF8 encoded files - "lib/Acme/\\307\\235m\\311\\224A.pm"
 Acme-CatalystX-ILoveDebug # incorrect deps @nico
 Apache-FastForward        # Perl Makefile.PL && detect author.
+Acme-CPANPLUS-Module-With-Failing-Configure-Requires # Garbage repo only for testing CPANPLUS We don't need it.
+Acme-DependOnEverything # Really hard to parse :(
