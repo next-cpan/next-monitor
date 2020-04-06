@@ -89,3 +89,7 @@ AI-Perceptron 1586158244
 AI-PredictionClient 1586209298
 AI-PredictionClient-Alien-TensorFlowServingProtos 1586158248
 AI-Prolog 1586209374
+AI-Termites 1586211729
+AI-XGBoost 1586211861
+AIIA-GMT 1586158256
+AIS-client 1586211920

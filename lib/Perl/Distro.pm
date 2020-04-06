@@ -296,7 +296,7 @@ sub fix_special_repos ( $self ) {
         $self->dist_meta->{'name'} = $distro;
     }
 
-    $self->BUILD_json->{'license'} = 'unknown' if grep { $distro eq $_ } qw{ Acme-Code-FreedomFighter ACME-Error-Translate Acme-ESP Acme-Goatse AFS AFS-Command AI-Fuzzy AI-General };
+    $self->BUILD_json->{'license'} = 'unknown' if grep { $distro eq $_ } qw{ Acme-Code-FreedomFighter ACME-Error-Translate Acme-ESP Acme-Goatse AFS AFS-Command AI-Fuzzy AI-General AIS-client };
     $self->BUILD_json->{'license'} = 'perl'    if grep { $distro eq $_ } qw{ ACME-Error-31337 ACME-Error-IgpayAtinlay };
     $self->BUILD_json->{'license'} = 'GPL'     if grep { $distro eq $_ } qw{ AI-LibNeural };
 
@@ -339,6 +339,7 @@ sub fix_special_repos ( $self ) {
         'AI-PSO'                                    => [qw{MPL-1.1.txt extradoc/ReactivePower-PSO-wks.pdf}],
         'AI-Pathfinding-OptimizeMultiple'           => [qw{bin/optimize-game-ai-multi-tasking rejects.pod}],
         'AI-Prolog'                                 => [qw{data/sleepy.pro data/spider.pro}],
+        'AI-XGBoost'                                => [qw{misc/using_capi.c}],
 
     };
 
@@ -375,7 +376,7 @@ sub cleanup_tree ($self) {
 
     # Get rid of directories we don't want.
     foreach my $file ( keys %$files ) {
-        next unless $file =~ m{^(?:inc|Samples|demo|debian|tools|devdata|devscript|devscripts|_build|maint|ubuntu-[^/]+)/};
+        next unless $file =~ m{^(?:inc|samples|Samples|demo|debian|tools|devdata|devscript|devscripts|_build|maint|ubuntu-[^/]+)/};
         delete $files->{$file};
         $git->rm( '-f', $file );
     }
