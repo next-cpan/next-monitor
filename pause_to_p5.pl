@@ -57,7 +57,7 @@ sub _build_repo_list ($self) {
 sub skip_list {
     my @skip_list;
 
-    foreach my $line ( split( "\n", File::Slurper::read_text('skip_list.txt') ) ) {
+    foreach my $line ( split( "\n", File::Slurper::read_text('data/skip_list.txt') ) ) {
         next unless $line =~ m/\S/;
         $line =~ s/\s.+$//;
         push @skip_list, $line;
