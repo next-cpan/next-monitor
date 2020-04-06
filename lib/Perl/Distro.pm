@@ -256,8 +256,6 @@ sub checkout_p5_branch ($self) {
 sub is_unnecessary_dep ( $self, $module ) {
     my $distro = $self->distro;
 
-    print "Checking $distro dep for $module\n";
-
     state $skips = {
         'Acme-CPANModules-CalculatingDayOfWeek' => [qw{ Bencher::Backend }],
         'Acme-CPANModules-TextTable'            => [qw{ Bencher::Backend }],
@@ -265,6 +263,18 @@ sub is_unnecessary_dep ( $self, $module ) {
 
     return unless $skips->{$distro};
     return 1 if grep { $_ eq $module } @{ $skips->{$distro} };
+    return 0;
+}
+
+sub is_necessary_dep ( $self, $module ) {
+    my $distro = $self->distro;
+
+    state $keeps = {
+        'AI-PredictionClient' => [qw{ Inline::CPP Inline::MakeMaker }],    # hard to parse Inline use statement to detect Inline::CPP.
+    };
+
+    return unless $keeps->{$distro};
+    return 1 if grep { $_ eq $module } @{ $keeps->{$distro} };
     return 0;
 }
 
@@ -328,6 +338,7 @@ sub fix_special_repos ( $self ) {
         'AI-NeuralNet-Mesh'                         => [qw{mesh.htm}],
         'AI-PSO'                                    => [qw{MPL-1.1.txt extradoc/ReactivePower-PSO-wks.pdf}],
         'AI-Pathfinding-OptimizeMultiple'           => [qw{bin/optimize-game-ai-multi-tasking rejects.pod}],
+        'AI-Prolog'                                 => [qw{data/sleepy.pro data/spider.pro}],
 
     };
 
@@ -905,6 +916,10 @@ sub generate_build_json ($self) {
                     delete $meta->{$req}->{$module};
                     next;
                 }
+                elsif ( $req eq 'configure_requires' && exists $self->requires_runtime->{$module} ) {    # Allow runtime to imply configure
+                    delete $meta->{$req}->{$module};
+                    next;
+                }
                 elsif ( $self->is_dual_life($module) ) {
                     $build_req->{$module} = $meta->{$req}->{$module};
                     delete $meta->{$req}->{$module};
@@ -912,6 +927,12 @@ sub generate_build_json ($self) {
                 }
                 elsif ( $self->is_unnecessary_dep($module) ) {
                     print "Skipping dep for $module\n";
+                    delete $meta->{$req}->{$module};
+                    next;
+                }
+                elsif ( $self->is_necessary_dep($module) ) {
+                    print "Keeping dep for $module\n";
+                    $build_req->{$module} = $meta->{$req}->{$module};
                     delete $meta->{$req}->{$module};
                     next;
                 }
