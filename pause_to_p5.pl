@@ -7,7 +7,8 @@ use warnings;
 use FindBin;
 
 use lib 'lib';
-use Perl::Distro ();
+use Perl::Distro    ();
+use Perl::RepoCache ();
 
 use Moose;
 with 'MooseX::SimpleConfig';
@@ -32,8 +33,13 @@ has 'parsed_pause_archives_file' => ( isa => 'Str', is => 'ro', lazy => 1, defau
 has 'repos_dir'                  => ( isa => 'Str', is => 'ro', lazy => 1, default => sub { my $d = $_[0]->base_dir . '/repos'; -d $d or mkdir $d; return $d } );
 has 'repo_list' => ( isa => 'ArrayRef', is => 'rw', lazy => 1, builder => '_build_repo_list' );
 
-has 'pause_branch' => ( isa => 'Str', is => 'ro', default => 'PAUSE' );
-has 'p5_branch'    => ( isa => 'Str', is => 'ro', default => 'p5' );
+has 'pause_branch' => ( isa => 'Str',    is   => 'ro', default => 'PAUSE' );
+has 'p5_branch'    => ( isa => 'Str',    is   => 'ro', default => 'p5' );
+has 'repo_cache'   => ( isa => 'Object', lazy => 1,    is      => 'ro', lazy => 1, builder => '_build_repo_cache' );
+
+sub _build_repo_cache ($self) {
+    return Perl::RepoCache->new( { base_dir => $self->base_dir } );
+}
 
 sub _build_repo_list ($self) {
     my $repos_dir = $self->repos_dir;
@@ -69,11 +75,15 @@ sub run ( $self, @optional_repos ) {
         $repo_list = \@optional_repos;
     }
 
+    my $repo_cache = $self->repo_cache;
+
     foreach my $repo (@$repo_list) {
         if ( grep { $repo eq $_ } @skip_list ) {
             print "Skipping $repo\n";
             next;
         }
+
+        next unless $repo_cache->needs_check($repo);
         print "--- Processing repo   $repo\n";
 
         my $repo_dir = $self->repos_dir . '/' . $repo;
@@ -82,6 +92,8 @@ sub run ( $self, @optional_repos ) {
         my $distro = Perl::Distro->new( distro => $repo, repo_path => $repo_dir, git_binary => $self->git_binary, push_to_github => $self->push_to_github );
 
         $distro->do_the_do;
+
+        $repo_cache->update_cache_for_repo($repo);
     }
 
     return 0;
