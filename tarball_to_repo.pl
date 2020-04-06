@@ -250,6 +250,7 @@ sub process_updates ($self) {
     while ( my $line = <$fh> ) {
         my ( $module, $module_version, $author_path ) = split( qr/\s+/, $line );
         chomp $author_path;
+        next if grep { $author_path eq $_ } qw{B/BI/BINGOS/Acme-Working-Out-Dependencies-From-META-files-Will-Be-Wrong-At-Some-Point-Like-This-Module-For-Instance-9.99.tar.gz};
 
         # The legacy pm files we're just going to ignore.
         next if $author_path =~ m/\.(?:pm|pm.gz)$/i;
@@ -276,7 +277,7 @@ sub sleep_until_not_throttled ($self) {
     $loop++;
     my $gh = $self->gh;
 
-    while ( ( $rate_remaining = $gh->rate_limit_remaining() ) < 50 ) {
+    while ( ( $rate_remaining = $gh->rate_limit_remaining() ) < 1000 ) {
         my $time_to_wait = time - $gh->rate_limit_reset() + 1;
         $time_to_wait > 0 or die("time_remaining == $time_to_wait");
         $time_to_wait = int( $time_to_wait / 2 );
@@ -383,7 +384,7 @@ sub expand_distro ( $self, $tarball_file, $author_path ) {
         exec( $^X, "$FindBin::Bin/pause_to_p5.pl", $distro );
         exit;
     }
-    if ( $processed >= 50 ) {
+    if ( $processed >= 2 ) {
         print "Processed $processed distros. Stopping\n";
         exit;
     }
@@ -483,11 +484,18 @@ sub add_extracted_tarball_from_tmp_to_repo ( $self, $distro, $version ) {
     return 1;
 }
 
+sub rename_distro ( $self, $distro ) {
+    return 'AI-Classifier-Text' if $distro eq 'AI-Classifier';
+    return $distro;
+}
+
 sub determine_distro_and_version ( $self, $extracted_dir, $author_path ) {
 
     my $d       = CPAN::DistnameInfo->new($author_path);
     my $distro  = $d->dist;
     my $version = $d->version;
+
+    $distro = $self->rename_distro($distro);
 
     # Is the version parseable?
     if ( $version and eval { version->parse($version); 1 } ) {
@@ -502,7 +510,7 @@ sub determine_distro_and_version ( $self, $extracted_dir, $author_path ) {
     $meta_name or return ( $distro, $version );
 
     $meta_name =~ s/::/-/g;
-    return ( $meta_name, $meta_version );
+    return ( $self->rename_distro($meta_name), $meta_version );
 }
 
 sub get_dist_version_from_meta_yaml ($file) {
