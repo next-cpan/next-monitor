@@ -29,7 +29,7 @@ has 'repo_email'     => ( isa => 'Str', is => 'ro', required => 1, documentation
 
 has 'push_to_github' => ( isa => 'Bool', is => 'ro', required => 0, default => sub { 1 }, documentation => 'push changes to github.' );
 
-has 'parsed_pause_archives_file' => ( isa => 'Str', is => 'ro', lazy => 1, default => sub { $_[0]->base_dir . '/parsed_pause_archives.txt' } );
+has 'parsed_pause_archives_file' => ( isa => 'Str', is => 'ro', lazy => 1, default => sub { $_[0]->base_dir . '/data/parsed_pause_archives.txt' } );
 has 'repos_dir'                  => ( isa => 'Str', is => 'ro', lazy => 1, default => sub { my $d = $_[0]->base_dir . '/repos'; -d $d or mkdir $d; return $d } );
 has 'repo_list' => ( isa => 'ArrayRef', is => 'rw', lazy => 1, builder => '_build_repo_list' );
 

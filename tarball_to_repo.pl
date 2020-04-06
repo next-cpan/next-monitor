@@ -44,7 +44,7 @@ has 'git_binary'                 => ( isa => 'Str',  is => 'ro', lazy => 1, defa
 has 'repo_user_name' => ( isa => 'Str', is => 'ro', required => 1, documentation => 'The name that will be on commits for this repo.' );
 has 'repo_email'     => ( isa => 'Str', is => 'ro', required => 1, documentation => 'The email that will be on commits for this repo.' );
 
-has 'parsed_pause_archives_file' => ( isa => 'Str', is => 'ro', lazy => 1, default => sub { $_[0]->base_dir . '/parsed_pause_archives.txt' } );
+has 'parsed_pause_archives_file' => ( isa => 'Str', is => 'ro', lazy => 1, default => sub { $_[0]->base_dir . '/data/parsed_pause_archives.txt' } );
 has 'tar_cache_dir'              => ( isa => 'Str', is => 'ro', lazy => 1, default => sub { my $d = $_[0]->base_dir . '/tar_cache'; -d $d or mkdir $d; return $d } );
 has 'repos_dir'                  => ( isa => 'Str', is => 'ro', lazy => 1, default => sub { my $d = $_[0]->base_dir . '/repos'; -d $d or mkdir $d; return $d } );
 has 'temp_repo_dir'              => ( isa => 'Str', is => 'ro', lazy => 1, default => sub { my $d = $_[0]->repos_dir . '/tmp'; -d $d or mkdir $d; return $d } );
