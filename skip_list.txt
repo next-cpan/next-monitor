@@ -8,3 +8,5 @@ Acme-DependOnEverything # Really hard to parse :(
 ACME-QuoteDB # The lib files have a corrupt byte sequence at the head of the file.
 AFS-Command # The distro is corrupt and has never passed tests.
 AFS-Monitor # The distro is corrupt and has never passed tests.
+AI-NNEasy # Depends on Class/HPLOO/MakeMaker.pm which has been broken since 5.20
+Class-HPLOO # has been broken since 5.20
