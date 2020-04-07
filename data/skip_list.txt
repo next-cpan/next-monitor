@@ -11,3 +11,6 @@ AFS-Monitor # The distro is corrupt and has never passed tests.
 AI-NNEasy # Depends on Class/HPLOO/MakeMaker.pm which has been broken since 5.20
 Class-HPLOO # has been broken since 5.20
 AI-SimulatedAnnealing # No Makefile.PL or META file to validate it.
+AIX-ODM # Old and doesn't pass on CPAN.
+AIX-Perfstat # Nobody has tested this since 5.10
+AIX-SysInfo # No passing tests ever.
