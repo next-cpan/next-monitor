@@ -290,13 +290,14 @@ sub fix_special_repos ( $self ) {
     # Repos where their tarball doesn't match their primary module.
     state $repos_to_rename = {
         'AI-Classifier-Text' => 1,
+        'AIX-LPP-lpp_name'   => 1,
     };
 
     if ( $repos_to_rename->{$distro} ) {
         $self->dist_meta->{'name'} = $distro;
     }
 
-    $self->BUILD_json->{'license'} = 'unknown' if grep { $distro eq $_ } qw{ Acme-Code-FreedomFighter ACME-Error-Translate Acme-ESP Acme-Goatse AFS AFS-Command AI-Fuzzy AI-General AIS-client };
+    $self->BUILD_json->{'license'} = 'unknown' if grep { $distro eq $_ } qw{ Acme-Code-FreedomFighter ACME-Error-Translate Acme-ESP Acme-Goatse AFS AFS-Command AI-Fuzzy AI-General AIS-client AIX-LPP-lpp_name};
     $self->BUILD_json->{'license'} = 'perl'    if grep { $distro eq $_ } qw{ ACME-Error-31337 ACME-Error-IgpayAtinlay };
     $self->BUILD_json->{'license'} = 'GPL'     if grep { $distro eq $_ } qw{ AI-LibNeural };
 
@@ -317,7 +318,6 @@ sub fix_special_repos ( $self ) {
         'Acme-CPANAuthors-Japanese'                 => [qw{bin/unregistered_japanese_authors}],
         'Acme-CPANAuthors-MBTI'                     => [qw{authorlists/* misc/*}],
         'Acme-CPANAuthors-Russian'                  => [qw{script/cpan-author.pl script/cpan-faces.pl}],
-        'Acme-CPANAuthors-You-re_using'             => [qw{samples/list_authors}],
         'Acme-CreatingCPANModules'                  => [qw{images/* slides/*}],
         'Acme-Curses-Marquee'                       => [qw{scrolly}],
         'Acme-Dahut-Call'                           => [qw{demo/synopsis.pl}],
@@ -340,6 +340,7 @@ sub fix_special_repos ( $self ) {
         'AI-Pathfinding-OptimizeMultiple'           => [qw{bin/optimize-game-ai-multi-tasking rejects.pod}],
         'AI-Prolog'                                 => [qw{data/sleepy.pro data/spider.pro}],
         'AI-XGBoost'                                => [qw{misc/using_capi.c}],
+        'AIX-LPP-lpp_name'                          => [qw{data/lpp_name scripts/mkcontrol}],
 
     };
 
@@ -376,7 +377,7 @@ sub cleanup_tree ($self) {
 
     # Get rid of directories we don't want.
     foreach my $file ( keys %$files ) {
-        next unless $file =~ m{^(?:inc|samples|Samples|demo|debian|tools|devdata|devscript|devscripts|_build|maint|ubuntu-[^/]+)/};
+        next unless $file =~ m{^(?:inc|samples|Samples|demo|debian|tools|devdata|devscript|devscripts|_build|maint|ubuntu-)/};
         delete $files->{$file};
         $git->rm( '-f', $file );
     }
@@ -1096,12 +1097,18 @@ sub get_ppi_doc ( $self, $filename ) {
         return;
     }
 
-    return $self->ppi_cache->{$filename} if $self->ppi_cache->{$filename};
+    return $self->ppi_cache->{$filename} if exists $self->ppi_cache->{$filename};
 
     print "PPI $filename\n";
     my $content = $self->try_to_read_file($filename);
 
-    return $self->ppi_cache->{$filename} = PPI::Document->new( \$content );
+    printf( "got %s content\n", length $content );
+
+    local $@;
+    my $cache = $self->ppi_cache->{$filename} = PPI::Document->new( \$content );
+    print( "ERR: " . Dumper $@) if $@;
+
+    return $cache;
 }
 
 sub _file_to_package ( $self, $filename ) {
