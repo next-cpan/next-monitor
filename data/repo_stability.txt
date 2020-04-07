@@ -1,0 +1,56 @@
+{
+   "AIX-SysInfo" : {
+      "1.2" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 0,
+            "total" : 250,
+            "unknown" : 250
+         },
+         "mtime" : 1586287034,
+         "oldest_report" : "20090617",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 0,
+            "total" : 4,
+            "unknown" : 4
+         }
+      }
+   },
+   "DBI" : {
+      "1.643" : {
+         "all_results" : {
+            "fail" : 50,
+            "pass" : 462,
+            "total" : 520,
+            "unknown" : 8
+         },
+         "mtime" : 1586287053,
+         "oldest_report" : "20200131",
+         "recent_perl_results" : {
+            "fail" : 1,
+            "pass" : 151,
+            "total" : 153,
+            "unknown" : 1
+         }
+      }
+   },
+   "YAML-Syck" : {
+      "1.32" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 538,
+            "total" : 550,
+            "unknown" : 12
+         },
+         "mtime" : 1586287223,
+         "oldest_report" : "20200127",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 181,
+            "total" : 185,
+            "unknown" : 4
+         }
+      }
+   }
+}
