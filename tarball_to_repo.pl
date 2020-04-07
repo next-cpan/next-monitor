@@ -486,6 +486,8 @@ sub add_extracted_tarball_from_tmp_to_repo ( $self, $distro, $version ) {
 
 sub rename_distro ( $self, $distro ) {
     return 'AI-Classifier-Text' if $distro eq 'AI-Classifier';
+    return 'AIX-LPP-lpp_name'   if $distro eq 'AIX-LPP';
+
     return $distro;
 }
 
