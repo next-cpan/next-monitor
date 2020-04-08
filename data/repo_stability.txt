@@ -7913,6 +7913,25 @@
          }
       }
    },
+   "Acme-Lingua-Strine-Perl" : {
+      "0.54" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 204,
+            "total" : 204,
+            "unknown" : 0
+         },
+         "mtime" : 1586321147,
+         "newest_report" : "20171215",
+         "oldest_report" : "20030207",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 18,
+            "total" : 18,
+            "unknown" : 0
+         }
+      }
+   },
    "DBI" : {
       "1.643" : {
          "all_results" : {

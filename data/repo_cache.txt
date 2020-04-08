@@ -467,3 +467,4 @@ Acme-Letter 1586158481
 Acme-Lexical-Thief 1586320557
 Acme-LifeUniverseEverything 1586158486
 Acme-Lingua-EN-Inflect-Modern 1586158489
+Acme-Lingua-NIGERIAN 1586321139

@@ -305,7 +305,7 @@ sub fix_special_repos ( $self ) {
     state $files_to_delete = {
         'Acme-Aheui'                                => [qw{bin/aheui}],
         'Acme-BeCool'                               => [qw{example.pm}],
-        'Acme-Beatnik'                              => [qw{example.pl findwords.pl generate.pl}],
+        'Acme-Beatnik'                              => [qw{findwords.pl generate.pl}],
         'Acme-Blarghy-McBlarghBlargh'               => [qw{blarghymcblarghblargh.pl}],
         'Acme-Buckaroo'                             => [qw{retest.txt}],
         'Acme-Buffy'                                => [qw{buffy}],
@@ -374,7 +374,7 @@ sub cleanup_tree ($self) {
         META.yml META.json ignore.txt .gitignore .mailmap Changes.PL cpanfile cpanfile.snapshot minil.toml .cvsignore .travis.yml travis.yml
         .project t/boilerplate.t MYMETA.json MYMETA.yml Makefile Makefile.old maint/Makefile.PL.include metamerge.json README.bak dist.ini.bak
         CREDITS doap.ttl author_test.sh cpants.pl makeall.sh perlcritic.rc .perltidyrc .perltidy dist.ini.meta Changes.new Changes.old
-        CONTRIBUTORS INSTALL.skip tidyall.ini perlcriticrc perltidyrc README.mkdn .shipit LICENSE.GPL LICENSE.Artistic
+        CONTRIBUTORS INSTALL.skip tidyall.ini perlcriticrc perltidyrc README.mkdn .shipit LICENSE.GPL LICENSE.Artistic example.pl
         }
     ) {
         next unless $files->{$unwanted_file};
