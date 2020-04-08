@@ -286,6 +286,7 @@ sub fix_special_repos ( $self ) {
     $self->parse_pod('Ace.pm') if $distro eq 'AcePerl';
 
     $self->BUILD_json->{'maintainers'} = 'Cal Henderson, <cal@iamcal.com>' if $distro eq 'Acme-Goatse';
+    $self->BUILD_json->{'maintainers'} = 'Audrey Tang <cpan@audreyt.org>.' if $distro eq 'Acme-Hello';
 
     # Repos where their tarball doesn't match their primary module.
     state $repos_to_rename = {
@@ -341,6 +342,8 @@ sub fix_special_repos ( $self ) {
         'AI-Prolog'                                 => [qw{data/sleepy.pro data/spider.pro}],
         'AI-XGBoost'                                => [qw{misc/using_capi.c}],
         'AIX-LPP-lpp_name'                          => [qw{data/lpp_name scripts/mkcontrol}],
+        'Acme-Gosub'                                => [qw{scripts/bump-version-number.pl scripts/tag-release.pl}],
+        'Acme-Hodor'                                => [qw{unhodor.pl}],
 
     };
 
@@ -405,6 +408,17 @@ sub cleanup_tree ($self) {
         if ( $content =~ m/- Nothing yet/ms ) {
             $git->rm( '-f', 'Todo' );
             delete $files->{'Todo'};
+        }
+    }
+
+    # Deal with unneeded debian COPYRIGHT file.
+    if ( $files->{'COPYRIGHT'} && $files->{'LICENSE'} ) {
+        open( my $fh, '<', 'COPYRIGHT' ) or die("Can't read COPYRIGHT: $!");
+        my $line = <$fh>;
+        if ( $line =~ m/^Format: http.+debian/ ) {
+            close $fh;
+            $git->rm('COPYRIGHT');
+            delete $files->{'COPYRIGHT'};
         }
     }
 
@@ -1002,7 +1016,7 @@ sub generate_build_json ($self) {
 
     if ( $meta->{'provides'} ) {
         foreach my $module ( sort { $a cmp $b } keys %{ $meta->{'provides'} } ) {
-            $provides->{$module} or die( "Meta provides $module but it was not detected: " . Dumper( $meta, $provides ) );
+            $provides->{$module} or die( "Meta provides $module but it was not detected.\n" . Dumper( $meta, $provides ) );
             $meta->{'provides'}->{$module}->{'file'} eq $provides->{$module}->{'file'} or die( "Meta provides $module file is not the same as was detected: " . Dumper( $meta, $provides ) );
 
             # use version.pm to be sure versions don't match if a simple eq doesn't work.
@@ -1101,8 +1115,6 @@ sub get_ppi_doc ( $self, $filename ) {
 
     print "PPI $filename\n";
     my $content = $self->try_to_read_file($filename);
-
-    printf( "got %s content\n", length $content );
 
     local $@;
     my $cache = $self->ppi_cache->{$filename} = PPI::Document->new( \$content );
@@ -1259,7 +1271,7 @@ sub parse_pod ( $self, $filename ) {
                     push @author, $line;
                 }
             }
-            if ( $line =~ m{^=head1 (COPYRIGHT|LICENSE|LICENCE)|^=head1 .+ E COPYRIGHT}i ) {
+            if ( $line =~ m{^=head1 (COPYRIGHT|LICENSE|LICENCE|LEGALESE)|^=head1 .+ E COPYRIGHT}i ) {
                 while ( @pod_lines && $pod_lines[0] !~ m/^=(cut|head)/ ) {
                     my $line = shift @pod_lines;
                     next unless $line =~ m/\S/;
@@ -1386,24 +1398,47 @@ sub parse_code ( $self, $filename ) {
                         $version = $node->content;
                         $version =~ s/^\s*['"](.+)['"]\s*$/v$1/;                                # Make it a v-string since that's what they were going for.
                     }
-                    elsif ( $node->class eq 'PPI::Token::Word' && $node->content eq 'version' ) {    # our $VERSION = version->declare('v0.2.2');
+                    elsif ( $node->class eq 'PPI::Token::Word' && $node->content eq 'version' ) {    # our $VERSION = version->.....
                         $node = $node->snext_sibling;                                                # ->
                         $node->class eq 'PPI::Token::Operator' or die dump_tree($node);
 
                         $node = $node->snext_sibling;                                                # declare
-                        $node->class eq 'PPI::Token::Word' && $node->content eq 'declare' or die dump_tree($node);
+                        if ( $node->class eq 'PPI::Token::Word' && $node->content eq 'declare' ) {   # our $VERSION = version->declare('v0.2.2');
 
-                        $node = $node->snext_sibling;                                                # ( ... )
-                        $node->class eq 'PPI::Structure::List' or die dump_tree($node);
+                            $node = $node->snext_sibling;                                            # ( ... )
+                            $node->class eq 'PPI::Structure::List' or die dump_tree($node);
 
-                        $node = $node->schild(0);
-                        $node->class eq 'PPI::Statement::Expression' or die dump_tree($node);
+                            $node = $node->schild(0);
+                            $node->class eq 'PPI::Statement::Expression' or die dump_tree($node);
 
-                        $node = $node->schild(0);
-                        $node->class =~ m/^PPI::Token::Quote::/ or die dump_tree($node);
+                            $node = $node->schild(0);
+                            $node->class =~ m/^PPI::Token::Quote::/ or die dump_tree($node);
 
-                        $version = $node->content;
-                        $version =~ s/^\s*['"](.+)['"]\s*$/v$1/;                                     # Make it a v-string since that's what they were going for.
+                            $version = $node->content;
+                            $version =~ s/^\s*['"](.+)['"]\s*$/v$1/;                                 # Make it a v-string since that's what they were going for.
+                        }
+                        elsif ( $node->class eq 'PPI::Token::Word' && $node->content eq 'parse' ) {    # our $VERSION = version->parse('v0.2.2')->numify;
+
+                            my $next = $node = $node->snext_sibling;                                   # ( ... )
+                            $node->class eq 'PPI::Structure::List' or die dump_tree($node);
+
+                            $node = $node->schild(0);
+                            $node->class eq 'PPI::Statement::Expression' or die dump_tree($node);
+
+                            $node = $node->schild(0);
+                            $node->class eq 'PPI::Token::Number::Version' or die dump_tree( $nodes->[0]->parent );
+                            $version = strip_quotes( $node->content );
+
+                            $node = $next->snext_sibling;
+                            $node->class eq 'PPI::Token::Operator' && $node->content eq '->' or die dump_tree( $nodes->[0]->parent );
+
+                            $node = $node->snext_sibling;
+                            $node->class eq 'PPI::Token::Word' && $node->content eq 'numify' or die dump_tree( $nodes->[0]->parent );
+                            $version = version->parse($version)->numify;
+                        }
+                        else {
+                            die dump_tree( $nodes->[0]->parent, "Failed to parse version-> declaration" );
+                        }
                     }
                     elsif ( $node->class eq 'PPI::Token::Symbol' && $node->content =~ m/"?\$\Q$primary_module\E::VERSION"?$/ ) {    # our $VERSION = $accessors::fast::VERSION;
                         if ( !$self->provides->{$primary_module} ) {
@@ -1500,6 +1535,7 @@ sub strip_quotes ($string) {
 
 sub dump_tree ( $element, $die_msg = '' ) {
     my $dump = PPI::Dumper->new($element);
+    print "\n";
     $dump->print;
     return $die_msg ? $die_msg : ();
 }
