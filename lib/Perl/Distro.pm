@@ -259,6 +259,17 @@ sub is_unnecessary_dep ( $self, $module ) {
     state $skips = {
         'Acme-CPANModules-CalculatingDayOfWeek' => [qw{ Bencher::Backend }],
         'Acme-CPANModules-TextTable'            => [qw{ Bencher::Backend }],
+        'Acme-MetaSyntactic-chinese_zodiac'     => [qw{ Test::MetaSyntactic }],
+        'Acme-MetaSyntactic-christmas'          => [qw{ Test::MetaSyntactic }],
+        'Acme-MetaSyntactic-countries'          => [qw{ Test::MetaSyntactic }],
+        'Acme-MetaSyntactic-dangdut'            => [qw{ Test::MetaSyntactic }],
+        'Acme-MetaSyntactic-display_resolution' => [qw{ Test::MetaSyntactic }],
+        'Acme-MetaSyntactic-frasier'            => [qw{ Test::MetaSyntactic }],
+        'Acme-MetaSyntactic-id_names'           => [qw{ Test::MetaSyntactic }],
+        'Acme-MetaSyntactic-nethack'            => [qw{ File::Find::Rule }],
+        'Acme-MetaSyntactic-seinfeld'           => [qw{ Test::MetaSyntactic }],
+        'Acme-MetaSyntactic-vim'                => [qw{ File::Find::Rule }],
+
     };
 
     return unless $skips->{$distro};
@@ -270,7 +281,8 @@ sub is_necessary_dep ( $self, $module ) {
     my $distro = $self->distro;
 
     state $keeps = {
-        'AI-PredictionClient' => [qw{ Inline::CPP Inline::MakeMaker }],    # hard to parse Inline use statement to detect Inline::CPP.
+        'AI-PredictionClient'            => [qw{ Inline::CPP Inline::MakeMaker }],    # hard to parse Inline use statement to detect Inline::CPP.
+        'Acme-MathProfessor-RandomPrime' => [qw{Test::NoWarnings}],
     };
 
     return unless $keeps->{$distro};
@@ -281,6 +293,23 @@ sub is_necessary_dep ( $self, $module ) {
 sub fix_special_repos ( $self ) {
 
     my $distro = $self->distro;
+
+    state $incorrect_case_files = {
+        qw{
+          makefile.pl Makefile.PL
+          meta.json META.json
+          meta.yml META.yml
+          manifest MANIFEST
+          readme README
+          }
+    };
+
+    # Correct case insensitive files to the right case.
+    foreach my $bad_file ( keys %$incorrect_case_files ) {
+        next if !-e $bad_file;
+        next if -e $incorrect_case_files->{$bad_file};
+        $self->git->mv( $bad_file, $incorrect_case_files->{$bad_file} );
+    }
 
     # Distro doesn't match the file.
     $self->parse_pod('Ace.pm') if $distro eq 'AcePerl';
@@ -299,7 +328,7 @@ sub fix_special_repos ( $self ) {
     }
 
     $self->BUILD_json->{'license'} = 'unknown' if grep { $distro eq $_ } qw{ Acme-Code-FreedomFighter ACME-Error-Translate Acme-ESP Acme-Goatse AFS AFS-Command AI-Fuzzy AI-General AIS-client AIX-LPP-lpp_name
-      Acme-Lingua-Strine-Perl  };
+      Acme-Lingua-Strine-Perl Acme-ManekiNeko Acme-Method-CaseInsensitive};
     $self->BUILD_json->{'license'} = 'perl' if grep { $distro eq $_ } qw{ ACME-Error-31337 ACME-Error-IgpayAtinlay };
     $self->BUILD_json->{'license'} = 'GPL'  if grep { $distro eq $_ } qw{ AI-LibNeural };
 
@@ -350,6 +379,9 @@ sub fix_special_repos ( $self ) {
         'Acme-KeyboardMarathon'                     => [qw{marathon.pl source-tree-marathon.pl}],
         'Acme-Lambda-Expr'                          => [qw{tool/operators.pl}],
         'Acme-MITHALDU-XSGrabBag'                   => [qw{README.PATCHING}],
+        'Acme-Mahjong-Rule-CC'                      => [qw{mj_series}],
+        'Acme-MetaSyntactic-legoindianajones'       => [qw{indie.txt}],
+        'Acme-MorningMusume-ShinMember'             => [qw{bin/genmusume}],
 
     };
 
@@ -376,7 +408,7 @@ sub cleanup_tree ($self) {
         META.yml META.json ignore.txt .gitignore .mailmap Changes.PL cpanfile cpanfile.snapshot minil.toml .cvsignore .travis.yml travis.yml
         .project t/boilerplate.t MYMETA.json MYMETA.yml Makefile Makefile.old maint/Makefile.PL.include metamerge.json README.bak dist.ini.bak
         CREDITS doap.ttl author_test.sh cpants.pl makeall.sh perlcritic.rc .perltidyrc .perltidy dist.ini.meta Changes.new Changes.old
-        CONTRIBUTORS INSTALL.skip tidyall.ini perlcriticrc perltidyrc README.mkdn .shipit LICENSE.GPL LICENSE.Artistic example.pl
+        CONTRIBUTORS INSTALL.skip tidyall.ini perlcriticrc perltidyrc README.mkdn .shipit LICENSE.GPL LICENSE.Artistic example.pl pm_to_blib
         }
     ) {
         next unless $files->{$unwanted_file};
@@ -807,7 +839,13 @@ sub generate_build_json ($self) {
 
     # Last attempt try reading LICENSE
     if ( !$build_json->{'license'} ) {
-        $build_json->{'license'} = $self->parse_license_file or die( "Missing license for " . $self->distro . "    -- " . $self->dump_self );
+        $build_json->{'license'} = $self->parse_license_file;
+        if ( !$build_json->{'license'} ) {
+            $self->dump_self;
+            printf( "Missing license for   %s\n\n", $self->distro );
+            print `git grep -iP 'license|copyright'`;
+            die;
+        }
     }
 
     if ( %{ $self->provides } ) {
@@ -973,7 +1011,12 @@ sub generate_build_json ($self) {
                     next;
                 }
                 elsif ( $module !~ m{^(CPAN::Meta|CPAN::Meta::Prereqs|Test::Pod|Test::MinimumVersion|Test::MinimumVersion::Fast|Test::PAUSE::Permissions|Test::Spellunker|Test::CPAN::Meta|Software::License|Catalyst|Pod::Coverage::TrustPod|Test::HasVersion|Test::Kwalitee|Test::Pod::Coverage)$} ) {    # Ignore stuff that's probably release testing.
-                    die "META specified requirement '$module' for '$req' was not detected.\n" . $self->dump_self;
+                    my $distro = $self->distro;
+                    $self->dump_self;
+                    print "META specified requirement in  $distro  '$module' for '$req' was not detected. Found:\n";
+                    print `git grep $module`;
+                    printf( "\n        '%s'            => [qw{ %s }],\n", $distro, $module );
+                    die;
                 }
             }
 
@@ -1009,6 +1052,7 @@ sub generate_build_json ($self) {
     $build_json->{'name'} = $build_json->{'primary'};
     $build_json->{'name'} =~ s/::/-/g;
 
+    delete $meta->{'author'} unless defined $meta->{'author'};    # Remove bogus undefine author.
     if ( $meta->{'author'} ) {
         my $author = $meta->{'author'};
         if ( ref $author eq 'ARRAY' ) {
@@ -1042,8 +1086,8 @@ sub generate_build_json ($self) {
 
             # use version.pm to be sure versions don't match if a simple eq doesn't work.
             if ( $meta->{'provides'}->{$module}->{'version'} ne $provides->{$module}->{'version'} ) {
-                my $detected_version = version->declare( $provides->{$module}->{'version'}           // 0 );
-                my $meta_version     = version->declare( $meta->{'provides'}->{$module}->{'version'} // 0 );
+                my $detected_version = version->parse( $provides->{$module}->{'version'}           // 0 );
+                my $meta_version     = version->parse( $meta->{'provides'}->{$module}->{'version'} // 0 );
                 $detected_version == $meta_version or die( "Meta provides $module version ($meta_version) is not the same as was detected ($detected_version): " . $self->dump_self );
             }
             delete $meta->{'provides'}->{$module};
@@ -1293,6 +1337,9 @@ sub parse_pod ( $self, $filename ) {
                 }
             }
             if ( $line =~ m{^=head1 (COPYRIGHT|LICENSE|LICENCE|LEGALESE)|^=head1 .+ E COPYRIGHT}i ) {
+
+                $self->BUILD_json->{'license'} = 'MIT' if ( $line =~ m/the mit license/i );    # =head1 COPYRIGHT AND LICENSE (The MIT License)
+
                 while ( @pod_lines && $pod_lines[0] !~ m/^=(cut|head)/ ) {
                     my $line = shift @pod_lines;
                     next unless $line =~ m/\S/;
@@ -1301,10 +1348,10 @@ sub parse_pod ( $self, $filename ) {
             }
 
             if ( $license_data && !$self->BUILD_json->{'license'} ) {
-                $license_data =~ s/\s\s+/ /msg;    # Strip double spaces to make parsing the text easier.
-                $license_data =~ s/\s/ /msg;       # Convert all white space to a single space.
+                $license_data =~ s/\s\s+/ /msg;                                                # Strip double spaces to make parsing the text easier.
+                $license_data =~ s/\s/ /msg;                                                   # Convert all white space to a single space.
 
-                if ( $license_data =~ m/(or|under) the Artistic License/msi ) {
+                if ( $license_data =~ m/(or|under) the Artistic License|/msi ) {
                     $self->BUILD_json->{'license'} = 'perl';
                 }
                 elsif ( $license_data =~ m/Terms (of|as) Perl itself/msi ) {
@@ -1316,7 +1363,7 @@ sub parse_pod ( $self, $filename ) {
                 elsif ( $license_data =~ m/L<perlartistic>/msi ) {
                     $self->BUILD_json->{'license'} = 'perl';
                 }
-                elsif ( $license_data =~ m{This distribution is free software; you can redistribute it and/or modify it under the Artistic License 2.0|licensed under: The Artistic License 2.0}msi ) {
+                elsif ( $license_data =~ m{This distribution is free software; you can redistribute it and/or modify it under the Artistic License 2.0|licensed under: The Artistic License 2.0|artistic_license_2_0}msi ) {
                     $self->BUILD_json->{'license'} = 'Artistic_2_0';
                 }
                 elsif ( $license_data =~ m/under the terms of the Perl Artistic License/msi ) {
@@ -1420,6 +1467,7 @@ sub parse_code ( $self, $filename ) {
 
                         $version = $node->content;
                         $version =~ s/^\s*['"](.+)['"]\s*$/v$1/;                                # Make it a v-string since that's what they were going for.
+                        $version =~ s/^vv/v/;                                                   # Sometimes the v is already there. strip off the duplicate.
                     }
                     elsif ( $node->class eq 'PPI::Token::Word' && $node->content eq 'version' ) {    # our $VERSION = version->.....
                         $node = $node->snext_sibling;                                                # ->
@@ -1468,6 +1516,9 @@ sub parse_code ( $self, $filename ) {
                             ...;                                                                                                    # Most of the time we process the primary module first...
                         }
                         $version = $self->provides->{$primary_module}->{'version'};
+                    }
+                    elsif ( $node->class eq 'PPI::Token::Word' && $node->content eq 'sprintf' && $pkg_token->content =~ m/Revision:\s*([0-9]+\.[0-9]+)\s*\$/ ) {    # our $VERSION = sprintf "%d.%02d", q$Revision: 0.2 $ =~ /(\d+)/g;
+                        $version = $1;
                     }
                     else {
                         #                    my $str = $pkg_token->content;

@@ -8301,6 +8301,1708 @@
          }
       }
    },
+   "Acme-Mahjong-Rule-CC" : {
+      "0.22" : {
+         "all_results" : {
+            "fail" : 0,
+            "na" : 2,
+            "pass" : 224,
+            "total" : 226,
+            "unknown" : 0
+         },
+         "mtime" : 1586325205,
+         "newest_report" : "20190815",
+         "oldest_report" : "20100203",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 48,
+            "total" : 48,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-MakeMoneyAtHome" : {
+      "1.004001" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 188,
+            "total" : 188,
+            "unknown" : 0
+         },
+         "mtime" : 1586325269,
+         "newest_report" : "20190808",
+         "oldest_report" : "20150805",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 110,
+            "total" : 110,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-Mandolion-Utils" : {
+      "0.01" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 113,
+            "total" : 113,
+            "unknown" : 0
+         },
+         "mtime" : 1586325270,
+         "newest_report" : "20190809",
+         "oldest_report" : "20140731",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 49,
+            "total" : 49,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-ManekiNeko" : {
+      "0.03" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 300,
+            "total" : 301,
+            "unknown" : 1
+         },
+         "mtime" : 1586325271,
+         "newest_report" : "20190611",
+         "oldest_report" : "20080712",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 36,
+            "total" : 36,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-Math-Google" : {
+      "0.02" : {
+         "all_results" : {
+            "fail" : 0,
+            "na" : 12,
+            "pass" : 247,
+            "total" : 261,
+            "unknown" : 2
+         },
+         "mtime" : 1586325391,
+         "newest_report" : "20190614",
+         "oldest_report" : "20060521",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 35,
+            "total" : 35,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-Math-Josan" : {
+      "0.01" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 188,
+            "total" : 188,
+            "unknown" : 0
+         },
+         "mtime" : 1586325657,
+         "newest_report" : "20190807",
+         "oldest_report" : "20171024",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 88,
+            "total" : 88,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-Math-PerfectChristmasTree" : {
+      "0.02" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 138,
+            "total" : 138,
+            "unknown" : 0
+         },
+         "mtime" : 1586325658,
+         "newest_report" : "20190811",
+         "oldest_report" : "20121222",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 45,
+            "total" : 45,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-Math-XS-LeanDist" : {
+      "0.100" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 129,
+            "total" : 129,
+            "unknown" : 0
+         },
+         "mtime" : 1586325658,
+         "newest_report" : "20190809",
+         "oldest_report" : "20150113",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 58,
+            "total" : 58,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-MathProfessor-RandomPrime" : {
+      "2009121001" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 389,
+            "total" : 389,
+            "unknown" : 0
+         },
+         "mtime" : 1586325659,
+         "newest_report" : "20190815",
+         "oldest_report" : "20091221",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 130,
+            "total" : 130,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-Matt-Daemon" : {
+      "0.01" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 275,
+            "total" : 276,
+            "unknown" : 1
+         },
+         "mtime" : 1586325759,
+         "newest_report" : "20190614",
+         "oldest_report" : "20090222",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 24,
+            "total" : 24,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-Meow" : {
+      "0.01" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 272,
+            "total" : 273,
+            "unknown" : 1
+         },
+         "mtime" : 1586325760,
+         "newest_report" : "20170214",
+         "oldest_report" : "20080704",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 17,
+            "total" : 17,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-Meta" : {
+      "0.02" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 285,
+            "total" : 285,
+            "unknown" : 0
+         },
+         "mtime" : 1586325762,
+         "newest_report" : "20180509",
+         "oldest_report" : "20061002",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 39,
+            "total" : 39,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-MetaSyntactic" : {
+      "1.014" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 509,
+            "total" : 509,
+            "unknown" : 0
+         },
+         "mtime" : 1586325763,
+         "newest_report" : "20200205",
+         "oldest_report" : "20171030",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 235,
+            "total" : 235,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-MetaSyntactic-Themes" : {
+      "1.054" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 73,
+            "total" : 73,
+            "unknown" : 0
+         },
+         "mtime" : 1586325764,
+         "newest_report" : "20200205",
+         "oldest_report" : "20191029",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 53,
+            "total" : 53,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-MetaSyntactic-Themes-Abigail" : {
+      "2013073101" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 641,
+            "total" : 641,
+            "unknown" : 0
+         },
+         "mtime" : 1586325765,
+         "newest_report" : "20190807",
+         "oldest_report" : "20130730",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 236,
+            "total" : 236,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-MetaSyntactic-WordList" : {
+      "0.002" : {
+         "all_results" : {
+            "fail" : 0,
+            "na" : 73,
+            "pass" : 270,
+            "total" : 343,
+            "unknown" : 0
+         },
+         "mtime" : 1586325767,
+         "newest_report" : "20190807",
+         "oldest_report" : "20160612",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 163,
+            "total" : 163,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-MetaSyntactic-buzzwords" : {
+      "1.00" : {
+         "all_results" : {
+            "fail" : 5,
+            "pass" : 713,
+            "total" : 721,
+            "unknown" : 3
+         },
+         "mtime" : 1586325768,
+         "newest_report" : "20190807",
+         "oldest_report" : "20071126",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 227,
+            "total" : 227,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-MetaSyntactic-chinese_zodiac" : {
+      "0.002" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 209,
+            "total" : 209,
+            "unknown" : 0
+         },
+         "mtime" : 1586325772,
+         "newest_report" : "20190807",
+         "oldest_report" : "20170204",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 105,
+            "total" : 105,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-MetaSyntactic-christmas" : {
+      "0.003" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 206,
+            "total" : 206,
+            "unknown" : 0
+         },
+         "mtime" : 1586326218,
+         "newest_report" : "20190807",
+         "oldest_report" : "20170204",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 102,
+            "total" : 102,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-MetaSyntactic-countries" : {
+      "0.002" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 182,
+            "total" : 182,
+            "unknown" : 0
+         },
+         "mtime" : 1586326243,
+         "newest_report" : "20190807",
+         "oldest_report" : "20170204",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 109,
+            "total" : 109,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-MetaSyntactic-cpanauthors" : {
+      "1.001" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 525,
+            "total" : 525,
+            "unknown" : 0
+         },
+         "mtime" : 1586326258,
+         "newest_report" : "20190807",
+         "oldest_report" : "20140603",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 221,
+            "total" : 221,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-MetaSyntactic-daleks" : {
+      "1.05" : {
+         "all_results" : {
+            "fail" : 467,
+            "pass" : 271,
+            "total" : 742,
+            "unknown" : 4
+         },
+         "mtime" : 1586326260,
+         "newest_report" : "20190807",
+         "oldest_report" : "20080918",
+         "recent_perl_results" : {
+            "fail" : 187,
+            "pass" : 74,
+            "total" : 261,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-MetaSyntactic-dangdut" : {
+      "0.002" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 197,
+            "total" : 197,
+            "unknown" : 0
+         },
+         "mtime" : 1586326261,
+         "newest_report" : "20190807",
+         "oldest_report" : "20170204",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 95,
+            "total" : 95,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-MetaSyntactic-display_resolution" : {
+      "0.003" : {
+         "all_results" : {
+            "fail" : 0,
+            "na" : 34,
+            "pass" : 164,
+            "total" : 198,
+            "unknown" : 0
+         },
+         "mtime" : 1586326278,
+         "newest_report" : "20190807",
+         "oldest_report" : "20170204",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 97,
+            "total" : 97,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-MetaSyntactic-dune" : {
+      "0.02" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 672,
+            "total" : 672,
+            "unknown" : 0
+         },
+         "mtime" : 1586326346,
+         "newest_report" : "20190807",
+         "oldest_report" : "20130205",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 214,
+            "total" : 214,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-MetaSyntactic-errno" : {
+      "1.003" : {
+         "all_results" : {
+            "fail" : 8,
+            "pass" : 703,
+            "total" : 711,
+            "unknown" : 0
+         },
+         "mtime" : 1586326347,
+         "newest_report" : "20190807",
+         "oldest_report" : "20130514",
+         "recent_perl_results" : {
+            "fail" : 4,
+            "pass" : 207,
+            "total" : 211,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-MetaSyntactic-frasier" : {
+      "0.002" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 196,
+            "total" : 196,
+            "unknown" : 0
+         },
+         "mtime" : 1586326348,
+         "newest_report" : "20190807",
+         "oldest_report" : "20170204",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 95,
+            "total" : 95,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-MetaSyntactic-id_names" : {
+      "0.002" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 194,
+            "total" : 194,
+            "unknown" : 0
+         },
+         "mtime" : 1586326361,
+         "newest_report" : "20190807",
+         "oldest_report" : "20170204",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 95,
+            "total" : 95,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-MetaSyntactic-legobatman" : {
+      "0.04" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 445,
+            "total" : 445,
+            "unknown" : 0
+         },
+         "mtime" : 1586326373,
+         "newest_report" : "20190807",
+         "oldest_report" : "20141227",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 207,
+            "total" : 207,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-MetaSyntactic-legocityundercover" : {
+      "0.02" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 588,
+            "total" : 588,
+            "unknown" : 0
+         },
+         "mtime" : 1586326375,
+         "newest_report" : "20190807",
+         "oldest_report" : "20131202",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 224,
+            "total" : 224,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-MetaSyntactic-legoharrypotter" : {
+      "0.02" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 668,
+            "total" : 668,
+            "unknown" : 0
+         },
+         "mtime" : 1586326376,
+         "newest_report" : "20190807",
+         "oldest_report" : "20120715",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 226,
+            "total" : 226,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-MetaSyntactic-legoindianajones" : {
+      "0.02" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 638,
+            "total" : 638,
+            "unknown" : 0
+         },
+         "mtime" : 1586326377,
+         "newest_report" : "20190807",
+         "oldest_report" : "20121218",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 215,
+            "total" : 215,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-MetaSyntactic-legojurassicworld" : {
+      "0.04" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 419,
+            "total" : 419,
+            "unknown" : 0
+         },
+         "mtime" : 1586326443,
+         "newest_report" : "20190807",
+         "oldest_report" : "20150818",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 186,
+            "total" : 186,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-MetaSyntactic-legolotr" : {
+      "0.02" : {
+         "all_results" : {
+            "fail" : 2,
+            "pass" : 637,
+            "total" : 639,
+            "unknown" : 0
+         },
+         "mtime" : 1586326444,
+         "newest_report" : "20190807",
+         "oldest_report" : "20121218",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 213,
+            "total" : 213,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-MetaSyntactic-legomarvelsavengers" : {
+      "0.02" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 305,
+            "total" : 305,
+            "unknown" : 0
+         },
+         "mtime" : 1586326445,
+         "newest_report" : "20190807",
+         "oldest_report" : "20160414",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 148,
+            "total" : 148,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-MetaSyntactic-legomarvelsuperheroes" : {
+      "0.04" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 707,
+            "total" : 707,
+            "unknown" : 0
+         },
+         "mtime" : 1586326446,
+         "newest_report" : "20190807",
+         "oldest_report" : "20140116",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 221,
+            "total" : 221,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-MetaSyntactic-legomovievideogame" : {
+      "0.02" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 512,
+            "total" : 512,
+            "unknown" : 0
+         },
+         "mtime" : 1586326447,
+         "newest_report" : "20190807",
+         "oldest_report" : "20141021",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 215,
+            "total" : 215,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-MetaSyntactic-legopiratesofthecaribbean" : {
+      "0.02" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 659,
+            "total" : 659,
+            "unknown" : 0
+         },
+         "mtime" : 1586326448,
+         "newest_report" : "20190807",
+         "oldest_report" : "20121218",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 224,
+            "total" : 224,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-MetaSyntactic-legostarwarstheforceawakens" : {
+      "0.02" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 313,
+            "total" : 313,
+            "unknown" : 0
+         },
+         "mtime" : 1586326449,
+         "newest_report" : "20190807",
+         "oldest_report" : "20160630",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 147,
+            "total" : 147,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-MetaSyntactic-legothehobbit" : {
+      "0.02" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 514,
+            "total" : 514,
+            "unknown" : 0
+         },
+         "mtime" : 1586326450,
+         "newest_report" : "20190807",
+         "oldest_report" : "20141021",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 216,
+            "total" : 216,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-MetaSyntactic-legoworlds" : {
+      "0.02" : {
+         "all_results" : {
+            "fail" : 0,
+            "na" : 1,
+            "pass" : 119,
+            "total" : 120,
+            "unknown" : 0
+         },
+         "mtime" : 1586326451,
+         "newest_report" : "20190807",
+         "oldest_report" : "20170707",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 43,
+            "total" : 43,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-MetaSyntactic-mlpfim" : {
+      "0.0.1" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 245,
+            "total" : 245,
+            "unknown" : 0
+         },
+         "mtime" : 1586326452,
+         "newest_report" : "20190807",
+         "oldest_report" : "20151128",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 101,
+            "total" : 101,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-MetaSyntactic-morning_musume" : {
+      "1.002" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 529,
+            "total" : 529,
+            "unknown" : 0
+         },
+         "mtime" : 1586326453,
+         "newest_report" : "20190807",
+         "oldest_report" : "20131014",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 204,
+            "total" : 204,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-MetaSyntactic-nethack" : {
+      "v1.0.1" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 691,
+            "total" : 691,
+            "unknown" : 0
+         },
+         "mtime" : 1586326454,
+         "newest_report" : "20190807",
+         "oldest_report" : "20080315",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 212,
+            "total" : 212,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-MetaSyntactic-seinfeld" : {
+      "0.002" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 195,
+            "total" : 195,
+            "unknown" : 0
+         },
+         "mtime" : 1586327235,
+         "newest_report" : "20190807",
+         "oldest_report" : "20170204",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 99,
+            "total" : 99,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-MetaSyntactic-soviet" : {
+      "0.05" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 235,
+            "total" : 235,
+            "unknown" : 0
+         },
+         "mtime" : 1586327261,
+         "newest_report" : "20190807",
+         "oldest_report" : "20161021",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 120,
+            "total" : 120,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-MetaSyntactic-vim" : {
+      "v1.0.1" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 779,
+            "total" : 782,
+            "unknown" : 3
+         },
+         "mtime" : 1586327261,
+         "newest_report" : "20190807",
+         "oldest_report" : "20080315",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 212,
+            "total" : 212,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-Method-CaseInsensitive" : {
+      "0.04" : {
+         "all_results" : {
+            "fail" : 30,
+            "pass" : 132,
+            "total" : 163,
+            "unknown" : 1
+         },
+         "mtime" : 1586327305,
+         "newest_report" : "20190612",
+         "oldest_report" : "20021212",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 21,
+            "total" : 21,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-Metification" : {
+      "1.01" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 223,
+            "total" : 224,
+            "unknown" : 1
+         },
+         "mtime" : 1586327397,
+         "newest_report" : "20171212",
+         "oldest_report" : "20061105",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 17,
+            "total" : 17,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-MilkyHolmes" : {
+      "0.07" : {
+         "all_results" : {
+            "fail" : 0,
+            "na" : 1,
+            "pass" : 74,
+            "total" : 75,
+            "unknown" : 0
+         },
+         "mtime" : 1586327399,
+         "newest_report" : "20190808",
+         "oldest_report" : "20160203",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 54,
+            "total" : 54,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-MirrorTracer" : {
+      "2009.052920495001" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 302,
+            "total" : 303,
+            "unknown" : 1
+         },
+         "mtime" : 1586327399,
+         "newest_report" : "20190602",
+         "oldest_report" : "20090529",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 24,
+            "total" : 24,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-Mobile-Therbligs" : {
+      "0.05" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 207,
+            "total" : 207,
+            "unknown" : 0
+         },
+         "mtime" : 1586327400,
+         "newest_report" : "20190814",
+         "oldest_report" : "20100410",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 25,
+            "total" : 25,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-Module-Authors" : {
+      "0.01" : {
+         "all_results" : {
+            "fail" : 78,
+            "pass" : 157,
+            "total" : 236,
+            "unknown" : 1
+         },
+         "mtime" : 1586327401,
+         "newest_report" : "20171220",
+         "oldest_report" : "20021121",
+         "recent_perl_results" : {
+            "fail" : 30,
+            "pass" : 1,
+            "total" : 31,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-Mom-Yours" : {
+      "0.02" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 31,
+            "total" : 31,
+            "unknown" : 0
+         },
+         "mtime" : 1586327402,
+         "newest_report" : "20150404",
+         "oldest_report" : "20090516",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 0,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-MomoiroClover" : {
+      "0.2" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 157,
+            "total" : 157,
+            "unknown" : 0
+         },
+         "mtime" : 1586327403,
+         "newest_report" : "20190812",
+         "oldest_report" : "20110914",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 33,
+            "total" : 33,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-Monkey" : {
+      "4.99" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 1,
+            "total" : 34,
+            "unknown" : 33
+         },
+         "mtime" : 1586327404,
+         "newest_report" : "20170214",
+         "oldest_report" : "20070627",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 0,
+            "total" : 8,
+            "unknown" : 8
+         }
+      }
+   },
+   "Acme-Monme" : {
+      "0.01" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 171,
+            "total" : 171,
+            "unknown" : 0
+         },
+         "mtime" : 1586327405,
+         "newest_report" : "20190807",
+         "oldest_report" : "20171030",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 88,
+            "total" : 88,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-Monta" : {
+      "0.01" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 302,
+            "total" : 305,
+            "unknown" : 3
+         },
+         "mtime" : 1586327405,
+         "newest_report" : "20190612",
+         "oldest_report" : "20050609",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 47,
+            "total" : 47,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-Moose" : {
+      "0.02" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 17,
+            "total" : 70,
+            "unknown" : 53
+         },
+         "mtime" : 1586327407,
+         "newest_report" : "20190810",
+         "oldest_report" : "20140309",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 0,
+            "total" : 16,
+            "unknown" : 16
+         }
+      }
+   },
+   "Acme-MorningMusume" : {
+      "0.20" : {
+         "all_results" : {
+            "fail" : 0,
+            "na" : 2,
+            "pass" : 381,
+            "total" : 383,
+            "unknown" : 0
+         },
+         "mtime" : 1586327407,
+         "newest_report" : "20190807",
+         "oldest_report" : "20160604",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 176,
+            "total" : 176,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-MorningMusume-ShinMember" : {
+      "0.01" : {
+         "all_results" : {
+            "fail" : 1,
+            "pass" : 76,
+            "total" : 80,
+            "unknown" : 3
+         },
+         "mtime" : 1586327780,
+         "newest_report" : "20171211",
+         "oldest_report" : "20061016",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 20,
+            "total" : 20,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-Morse-Audible" : {
+      "1.10" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 217,
+            "total" : 219,
+            "unknown" : 2
+         },
+         "mtime" : 1586327839,
+         "newest_report" : "20190613",
+         "oldest_report" : "20020825",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 28,
+            "total" : 28,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-MorseComments" : {
+      "1.00" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 236,
+            "total" : 236,
+            "unknown" : 0
+         },
+         "mtime" : 1586327840,
+         "newest_report" : "20171120",
+         "oldest_report" : "20060719",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 39,
+            "total" : 39,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-MotorcycleGang" : {
+      "0.0.5" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 90,
+            "total" : 90,
+            "unknown" : 0
+         },
+         "mtime" : 1586327840,
+         "newest_report" : "20190808",
+         "oldest_report" : "20151125",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 54,
+            "total" : 54,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-MyFirstModule-APIERRE" : {
+      "0.02" : {
+         "all_results" : {
+            "fail" : 45,
+            "na" : 42,
+            "pass" : 0,
+            "total" : 87,
+            "unknown" : 0
+         },
+         "mtime" : 1586327861,
+         "newest_report" : "20190809",
+         "oldest_report" : "20150606",
+         "recent_perl_results" : {
+            "fail" : 45,
+            "na" : 2,
+            "pass" : 0,
+            "total" : 47,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-MyFirstModule-ASTPL" : {
+      "0.03" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 117,
+            "total" : 117,
+            "unknown" : 0
+         },
+         "mtime" : 1586327862,
+         "newest_report" : "20190809",
+         "oldest_report" : "20140906",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 46,
+            "total" : 46,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-MyFirstModule-AUSTIN" : {
+      "0.03" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 90,
+            "total" : 90,
+            "unknown" : 0
+         },
+         "mtime" : 1586327863,
+         "newest_report" : "20190809",
+         "oldest_report" : "20140801",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 21,
+            "total" : 21,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-MyFirstModule-BWAGNER" : {
+      "0.03" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 90,
+            "total" : 90,
+            "unknown" : 0
+         },
+         "mtime" : 1586327945,
+         "newest_report" : "20190809",
+         "oldest_report" : "20140906",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 22,
+            "total" : 22,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-MyFirstModule-CARNIL" : {
+      "0.03" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 126,
+            "total" : 126,
+            "unknown" : 0
+         },
+         "mtime" : 1586327950,
+         "newest_report" : "20190809",
+         "oldest_report" : "20140906",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 43,
+            "total" : 43,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-MyFirstModule-DRPENGUIN" : {
+      "0.04" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 117,
+            "total" : 117,
+            "unknown" : 0
+         },
+         "mtime" : 1586327954,
+         "newest_report" : "20190808",
+         "oldest_report" : "20150606",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 58,
+            "total" : 58,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-MyFirstModule-DRZIGMAN" : {
+      "0.03" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 129,
+            "total" : 129,
+            "unknown" : 0
+         },
+         "mtime" : 1586327954,
+         "newest_report" : "20190809",
+         "oldest_report" : "20140801",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 47,
+            "total" : 47,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-MyFirstModule-JWKEENE" : {
+      "0.02" : {
+         "all_results" : {
+            "fail" : 86,
+            "pass" : 0,
+            "total" : 86,
+            "unknown" : 0
+         },
+         "mtime" : 1586327958,
+         "newest_report" : "20190809",
+         "oldest_report" : "20140801",
+         "recent_perl_results" : {
+            "fail" : 23,
+            "pass" : 0,
+            "total" : 23,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-MyFirstModule-MALLEN" : {
+      "0.002" : {
+         "all_results" : {
+            "fail" : 0,
+            "na" : 71,
+            "pass" : 33,
+            "total" : 104,
+            "unknown" : 0
+         },
+         "mtime" : 1586327959,
+         "newest_report" : "20190809",
+         "oldest_report" : "20140801",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 33,
+            "total" : 33,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-MyFirstModule-NANDO" : {
+      "0.03" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 118,
+            "total" : 118,
+            "unknown" : 0
+         },
+         "mtime" : 1586327960,
+         "newest_report" : "20190809",
+         "oldest_report" : "20140815",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 38,
+            "total" : 38,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-MyFirstModule-RAYMONDJM" : {
+      "0.03" : {
+         "all_results" : {
+            "fail" : 0,
+            "na" : 22,
+            "pass" : 93,
+            "total" : 115,
+            "unknown" : 0
+         },
+         "mtime" : 1586327964,
+         "newest_report" : "20190809",
+         "oldest_report" : "20140815",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 44,
+            "total" : 44,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-MyFirstModule-SADAMS" : {
+      "0.03" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 85,
+            "total" : 85,
+            "unknown" : 0
+         },
+         "mtime" : 1586327964,
+         "newest_report" : "20190808",
+         "oldest_report" : "20150606",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 39,
+            "total" : 39,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-MyFirstModule-Tracers" : {
+      "0.02" : {
+         "all_results" : {
+            "fail" : 69,
+            "na" : 27,
+            "pass" : 0,
+            "total" : 96,
+            "unknown" : 0
+         },
+         "mtime" : 1586327969,
+         "newest_report" : "20190809",
+         "oldest_report" : "20140801",
+         "recent_perl_results" : {
+            "fail" : 41,
+            "pass" : 0,
+            "total" : 41,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-MyFirstModule-WWILLIS" : {
+      "0.02" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 120,
+            "total" : 120,
+            "unknown" : 0
+         },
+         "mtime" : 1586327969,
+         "newest_report" : "20190809",
+         "oldest_report" : "20140801",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 40,
+            "total" : 40,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-MyFirstModule-ddeimeke" : {
+      "0.03" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 139,
+            "total" : 139,
+            "unknown" : 0
+         },
+         "mtime" : 1586327970,
+         "newest_report" : "20190809",
+         "oldest_report" : "20140906",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 56,
+            "total" : 56,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-MyPeek" : {
+      "0.07" : {
+         "all_results" : {
+            "fail" : 18,
+            "pass" : 130,
+            "total" : 148,
+            "unknown" : 0
+         },
+         "mtime" : 1586327971,
+         "newest_report" : "20200213",
+         "oldest_report" : "20160306",
+         "recent_perl_results" : {
+            "fail" : 8,
+            "pass" : 63,
+            "total" : 71,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-MySecondModule-SADAMS" : {
+      "0.03" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 133,
+            "total" : 133,
+            "unknown" : 0
+         },
+         "mtime" : 1586327971,
+         "newest_report" : "20190808",
+         "oldest_report" : "20151231",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 80,
+            "total" : 80,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-NAHCNUJ-Utils" : {
+      "0.01" : {
+         "all_results" : {
+            "fail" : 1,
+            "pass" : 323,
+            "total" : 324,
+            "unknown" : 0
+         },
+         "mtime" : 1586327972,
+         "newest_report" : "20190806",
+         "oldest_report" : "20180828",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 91,
+            "total" : 91,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-NabeAtzz" : {
+      "0.01" : {
+         "all_results" : {
+            "fail" : 6,
+            "pass" : 264,
+            "total" : 277,
+            "unknown" : 7
+         },
+         "mtime" : 1586327973,
+         "newest_report" : "20171024",
+         "oldest_report" : "20080623",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 28,
+            "total" : 28,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-NameGen" : {
+      "0.010100" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 220,
+            "total" : 220,
+            "unknown" : 0
+         },
+         "mtime" : 1586327974,
+         "newest_report" : "20190807",
+         "oldest_report" : "20170427",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 90,
+            "total" : 90,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-NamespaceRoulette" : {
+      "4.56" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 140,
+            "total" : 140,
+            "unknown" : 0
+         },
+         "mtime" : 1586327975,
+         "newest_report" : "20190809",
+         "oldest_report" : "20150203",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 67,
+            "total" : 67,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-Net-OdiousPlan" : {
+      "0.001" : {
+         "all_results" : {
+            "fail" : 150,
+            "pass" : 138,
+            "total" : 289,
+            "unknown" : 1
+         },
+         "mtime" : 1586327976,
+         "newest_report" : "20171207",
+         "oldest_report" : "20050904",
+         "recent_perl_results" : {
+            "fail" : 51,
+            "pass" : 21,
+            "total" : 72,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-NewMath" : {
+      "0.01" : {
+         "all_results" : {
+            "fail" : 1,
+            "pass" : 0,
+            "total" : 15,
+            "unknown" : 14
+         },
+         "mtime" : 1586327977,
+         "newest_report" : "20170215",
+         "oldest_report" : "20080118",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 0,
+            "total" : 11,
+            "unknown" : 11
+         }
+      }
+   },
+   "Acme-No" : {
+      "0.03" : {
+         "all_results" : {
+            "fail" : 27,
+            "pass" : 252,
+            "total" : 282,
+            "unknown" : 3
+         },
+         "mtime" : 1586328545,
+         "newest_report" : "20190611",
+         "oldest_report" : "20020816",
+         "recent_perl_results" : {
+            "fail" : 15,
+            "pass" : 54,
+            "total" : 69,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-NoTalentAssClown" : {
+      "0.01" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 196,
+            "total" : 197,
+            "unknown" : 1
+         },
+         "mtime" : 1586328546,
+         "newest_report" : "20190612",
+         "oldest_report" : "20080319",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 11,
+            "total" : 11,
+            "unknown" : 0
+         }
+      }
+   },
    "DBI" : {
       "1.643" : {
          "all_results" : {
