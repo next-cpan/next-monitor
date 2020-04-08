@@ -344,11 +344,22 @@ sub fix_special_repos ( $self ) {
         'AIX-LPP-lpp_name'                          => [qw{data/lpp_name scripts/mkcontrol}],
         'Acme-Gosub'                                => [qw{scripts/bump-version-number.pl scripts/tag-release.pl}],
         'Acme-Hodor'                                => [qw{unhodor.pl}],
+        'Acme-JTM-Experiment'                       => [qw{AUTHOR_PLEDGE CODE_OF_CONDUCT.md}],
+        'Acme-Jungle-CrawlerExample'                => [qw{data/sample}],
+        'Acme-KeyboardMarathon'                     => [qw{marathon.pl source-tree-marathon.pl}],
+        'Acme-Lambda-Expr'                          => [qw{tool/operators.pl}],
 
     };
 
-    return unless $files_to_delete->{$distro};
-    $self->git->rm( '-f', @{ $files_to_delete->{$distro} } );
+    if ( $files_to_delete->{$distro} ) {
+        $self->git->rm( '-f', @{ $files_to_delete->{$distro} } );
+    }
+
+    # Remove vim .swp files.
+    my @files = $self->git->ls_files('*.swp');
+    if (@files) {
+        $self->git->rm( '-f', @files );
+    }
 }
 
 sub cleanup_tree ($self) {
@@ -363,7 +374,7 @@ sub cleanup_tree ($self) {
         META.yml META.json ignore.txt .gitignore .mailmap Changes.PL cpanfile cpanfile.snapshot minil.toml .cvsignore .travis.yml travis.yml
         .project t/boilerplate.t MYMETA.json MYMETA.yml Makefile Makefile.old maint/Makefile.PL.include metamerge.json README.bak dist.ini.bak
         CREDITS doap.ttl author_test.sh cpants.pl makeall.sh perlcritic.rc .perltidyrc .perltidy dist.ini.meta Changes.new Changes.old
-        CONTRIBUTORS INSTALL.skip tidyall.ini perlcriticrc perltidyrc README.mkdn .shipit
+        CONTRIBUTORS INSTALL.skip tidyall.ini perlcriticrc perltidyrc README.mkdn .shipit LICENSE.GPL LICENSE.Artistic
         }
     ) {
         next unless $files->{$unwanted_file};
@@ -459,6 +470,7 @@ sub cleanup_tree ($self) {
         last;    # We can't move 2 files to the same destination so this will fail later.
     }
 
+    # Re-locate t/ test files that belong in xt/
     foreach my $file ( sort { $a cmp $b } keys %$files ) {
         next unless $self->is_xt_test($file);
 
@@ -572,6 +584,7 @@ sub is_extra_files_we_ship ( $self, $file ) {
     return 1 if $file =~ m{^ascii-art\.pl$}    && $distro eq 'Acme-AsciiArtinator';
     return 1 if $file =~ m{^demo/|unbleach.pl} && $distro eq 'Acme-Bleach';
     return 1 if $file =~ m{^testlib/}          && $distro eq 'abbreviation';
+    return 1 if $file eq 'acmelsd.png' && $distro eq 'Acme-LSD';
 
     return 0;
 }
@@ -658,7 +671,8 @@ sub try_to_read_file ( $self, $filename ) {
 
     local $@;
     my $contents;
-    eval { $contents = File::Slurper::read_text($filename);   1 } and return $contents;
+    eval { $contents = File::Slurper::read_text($filename); 1 } and return $contents;
+    print "Trying latin 1 on $filename\n";
     eval { $contents = File::Slurper::read_binary($filename); 1 } and return $contents;
     die("Could not parse $filename: $@");
 }
@@ -687,6 +701,10 @@ sub determine_installer ( $self ) {
     }
     else {
         $build_json->{'XS'} = 0;
+    }
+
+    if ( grep { $_ =~ m/\.pm.PL$/ } keys %$files ) {
+
     }
 
     # We can't support Alien modules yet.
@@ -809,7 +827,7 @@ sub generate_build_json ($self) {
     delete $meta->{$_} foreach (
         qw/dynamic_config generated_by meta-spec x_generated_by_perl x_serialization_backend license resources x_deprecated
         release_status x_Dist_Zilla x_authority distribution_type installdirs version_from x_contributors x_spdx_expression
-        x_test_requires x_authority_from_module x_permissions_from_module x_BuiltWith module_name/
+        x_test_requires x_authority_from_module x_permissions_from_module x_BuiltWith module_name x_contributor_covenant/
     );
     foreach my $prereq_key (qw/configure build runtime test develop/) {
         next unless $meta->{'prereqs'};
@@ -1114,7 +1132,7 @@ sub get_ppi_doc ( $self, $filename ) {
     return $self->ppi_cache->{$filename} if exists $self->ppi_cache->{$filename};
 
     print "PPI $filename\n";
-    my $content = $self->try_to_read_file($filename);
+    my $content = File::Slurper::read_text($filename);
 
     local $@;
     my $cache = $self->ppi_cache->{$filename} = PPI::Document->new( \$content );
@@ -1366,9 +1384,11 @@ sub parse_code ( $self, $filename ) {
 
             # Try to determine the VERSION value in each package.
             while ( $pkg_token = $pkg_token->snext_sibling ) {
+
+                #print dump_tree($pkg_token, "NEXT LINE\n");
                 my $class = $pkg_token->class;
                 last if $class eq 'PPI::Statement::Package';
-                next unless $class =~ m/^(PPI::Statement|PPI::Statement::Variable)$/;
+                next unless $class =~ m/^(PPI::Statement|PPI::Statement::Variable|PPI::Statement::Compound|PPI::Statement::Scheduled)$/;
 
                 my $nodes = $pkg_token->find( sub { ( $_[1]->content eq '$VERSION' | $_[1]->content eq "\$${module}::VERSION" ) && $_[1]->class eq 'PPI::Token::Symbol' } ) or next;
                 foreach my $node (@$nodes) {

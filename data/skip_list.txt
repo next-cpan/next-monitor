@@ -14,3 +14,4 @@ AI-SimulatedAnnealing # No Makefile.PL or META file to validate it.
 AIX-ODM # Old and doesn't pass on CPAN.
 AIX-Perfstat # Nobody has tested this since 5.10
 AIX-SysInfo # No passing tests ever.
+Acme-KMX-Test # It seems to do some uncommon things with pm.PL to generate perl modules dynamically.
