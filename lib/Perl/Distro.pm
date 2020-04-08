@@ -401,6 +401,7 @@ sub cleanup_tree ($self) {
     my $files = $self->repo_files;
 
     $self->dist_meta;    # Initialize META data in memory before removing it.
+    my $distro = $self->distro;
 
     # Delete explicit files we don't want.
     foreach my $unwanted_file (
@@ -414,6 +415,14 @@ sub cleanup_tree ($self) {
         next unless $files->{$unwanted_file};
         delete $files->{$unwanted_file};
         $git->rm( '-f', $unwanted_file );
+    }
+
+    # Throw out repo tarballs.
+    foreach my $file ( keys %$files ) {
+        next unless $file =~ m{^\Q$distro\E-.+\.tar\.gz$};
+        print "Found unexpected tarball $file. Removing\n";
+        delete $files->{$file};
+        $git->rm( '-f', $file );
     }
 
     # Throw out maint/cip- files. Not sure what they are.
@@ -672,7 +681,13 @@ sub update_p5_branch_from_PAUSE ($self) {
 
         # Nothing was found.
         #         'Acme-CPANAuthors-GitHub'                 => [qw{scripts/generate-github-authors.pl}],
-        %files_copy and die sprintf( "Unexpected files found.\n%s\n        '%s'                 => [qw{%s}],\n\n", Dumper( \%files_copy ), $distro, join( " ", sort { $a cmp $b } keys %files_copy ) );
+        if (%files_copy) {
+            my @unexpected_files = sort { $a cmp $b } keys %files_copy;
+            printf( "Unexpected files found.\n%s\n        '%s'                 => [qw{%s}],\n\n", Dumper( \%files_copy ), $distro, join( " ", @unexpected_files ) );
+            my $grep = join( '|', @unexpected_files );
+            print `git grep -iP '$grep'`;
+            die;
+        }
     }
 
     $self->generate_build_json;
