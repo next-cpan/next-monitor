@@ -349,6 +349,7 @@ sub fix_special_repos ( $self ) {
         'Acme-Jungle-CrawlerExample'                => [qw{data/sample}],
         'Acme-KeyboardMarathon'                     => [qw{marathon.pl source-tree-marathon.pl}],
         'Acme-Lambda-Expr'                          => [qw{tool/operators.pl}],
+        'Acme-MITHALDU-XSGrabBag'                   => [qw{README.PATCHING}],
 
     };
 
@@ -708,13 +709,13 @@ sub determine_installer ( $self ) {
 
     }
 
-    # We can't support Alien modules yet.
+    # We can't support Alien or Inline::C* modules as they produce .so files
     my $meta = $self->dist_meta;
     if ( $meta->{'prereqs'} && ref $meta->{'prereqs'} eq 'HASH' ) {
         foreach my $prereq ( values %{ $meta->{'prereqs'} } ) {
-            next unless defined $prereq->{'requires'}->{'Alien::Base'};
+            next unless grep { defined $prereq->{'requires'}->{$_} } qw/Alien::Base Inline::C Inline::CPP/;
             $builder = 'legacy';
-            print "Alien modules are not supported as a play module\n";
+            print "Alien/Inline modules are not supported as a play module\n";
             last;
         }
     }
@@ -978,6 +979,7 @@ sub generate_build_json ($self) {
 
             # Upgrade the version required if some META specified a version.
             if ( $meta->{$req}->{$module} ) {
+                $meta->{$req}->{$module} =~ s/[><]?=\s*//;
                 my $meta_version = version->parse( $meta->{$req}->{$module} );
                 if ( $meta_version > 0 ) {
                     if ( $build_req->{$module} && version->parse( $build_req->{$module} ) < $meta_version ) {
@@ -1475,6 +1477,7 @@ sub parse_code ( $self, $filename ) {
                         $version or die sprintf( "TOKEN (%s=%s): %s--\n", $node->class, $node->content, $pkg_token->content ) . dump_tree( $pkg_token, "Unexpected content in VERSION statement" );
                     }
 
+                    print "PROVIDES $module ($version)\n";
                     $self->provides->{$module}->{'version'} = $version;
                     next PACKAGE;
                 }

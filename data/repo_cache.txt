@@ -471,3 +471,13 @@ Acme-Lingua-NIGERIAN 1586321139
 Acme-Lingua-Strine-Perl 1586321360
 Acme-Lingua-ZH-Remix 1586321448
 Acme-List-CarCdr 1586321698
+Acme-LookOfDisapproval 1586158499
+Acme-Loopy 1586321841
+Acme-Lvalue 1586158506
+Acme-MITHALDU-XSGrabBag 1586324870
+Acme-MJD-FR 1586158514
+Acme-Machi 1586158522
+Acme-Madness 1586158525
+Acme-MadokaMagica 1586158530
+Acme-Magic-Pony 1586325069
+Acme-Magic8Ball 1586158534

@@ -7972,6 +7972,335 @@
          }
       }
    },
+   "Acme-Llama" : {
+      "0.42" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 20,
+            "total" : 171,
+            "unknown" : 151
+         },
+         "mtime" : 1586321838,
+         "newest_report" : "20190813",
+         "oldest_report" : "20110219",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 4,
+            "total" : 19,
+            "unknown" : 15
+         }
+      }
+   },
+   "Acme-Locals" : {
+      "0.0.1" : {
+         "all_results" : {
+            "fail" : 1,
+            "pass" : 41,
+            "total" : 237,
+            "unknown" : 195
+         },
+         "mtime" : 1586321838,
+         "newest_report" : "20190601",
+         "oldest_report" : "20071122",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 0,
+            "total" : 11,
+            "unknown" : 11
+         }
+      }
+   },
+   "Acme-LookOfDisapproval" : {
+      "0.007" : {
+         "all_results" : {
+            "fail" : 0,
+            "na" : 42,
+            "pass" : 205,
+            "total" : 247,
+            "unknown" : 0
+         },
+         "mtime" : 1586321839,
+         "newest_report" : "20190806",
+         "oldest_report" : "20180902",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 129,
+            "total" : 129,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-Loopy" : {
+      "0.004" : {
+         "all_results" : {
+            "fail" : 0,
+            "na" : 16,
+            "pass" : 84,
+            "total" : 100,
+            "unknown" : 0
+         },
+         "mtime" : 1586321840,
+         "newest_report" : "20190809",
+         "oldest_report" : "20140910",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 45,
+            "total" : 45,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-Lou" : {
+      "0.04" : {
+         "all_results" : {
+            "fail" : 0,
+            "na" : 62,
+            "pass" : 0,
+            "total" : 62,
+            "unknown" : 0
+         },
+         "mtime" : 1586321845,
+         "newest_report" : "20190612",
+         "oldest_report" : "20160911",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 0,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-Lvalue" : {
+      "0.03" : {
+         "all_results" : {
+            "fail" : 0,
+            "na" : 8,
+            "pass" : 82,
+            "total" : 90,
+            "unknown" : 0
+         },
+         "mtime" : 1586321845,
+         "newest_report" : "20190811",
+         "oldest_report" : "20121021",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 27,
+            "total" : 27,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-MITHALDU-BleedingOpenGL" : {
+      "0.67049" : {
+         "all_results" : {
+            "fail" : 0,
+            "na" : 94,
+            "pass" : 22,
+            "total" : 118,
+            "unknown" : 2
+         },
+         "mtime" : 1586321846,
+         "newest_report" : "20190808",
+         "oldest_report" : "20161004",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "na" : 60,
+            "pass" : 18,
+            "total" : 79,
+            "unknown" : 1
+         }
+      }
+   },
+   "Acme-MITHALDU-XSGrabBag" : {
+      "1.161310" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 190,
+            "total" : 190,
+            "unknown" : 0
+         },
+         "mtime" : 1586321847,
+         "newest_report" : "20190808",
+         "oldest_report" : "20160510",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 100,
+            "total" : 100,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-MJD" : {
+      "0.02" : {
+         "all_results" : {
+            "fail" : 201,
+            "pass" : 1,
+            "total" : 205,
+            "unknown" : 3
+         },
+         "mtime" : 1586324892,
+         "newest_report" : "20190613",
+         "oldest_report" : "20031105",
+         "recent_perl_results" : {
+            "fail" : 32,
+            "pass" : 0,
+            "total" : 32,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-MJD-FR" : {
+      "0.01" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 287,
+            "total" : 289,
+            "unknown" : 2
+         },
+         "mtime" : 1586324893,
+         "newest_report" : "20171208",
+         "oldest_report" : "20080806",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 33,
+            "total" : 33,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-MTINBERG" : {
+      "0.02" : {
+         "all_results" : {
+            "fail" : 106,
+            "pass" : 0,
+            "total" : 106,
+            "unknown" : 0
+         },
+         "mtime" : 1586324894,
+         "newest_report" : "20190812",
+         "oldest_report" : "20120614",
+         "recent_perl_results" : {
+            "fail" : 25,
+            "pass" : 0,
+            "total" : 25,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-Machi" : {
+      "v1.00.1" : {
+         "all_results" : {
+            "fail" : 0,
+            "na" : 84,
+            "pass" : 134,
+            "total" : 218,
+            "unknown" : 0
+         },
+         "mtime" : 1586324894,
+         "newest_report" : "20190808",
+         "oldest_report" : "20160924",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 91,
+            "total" : 91,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-Madness" : {
+      "1.00" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 309,
+            "total" : 310,
+            "unknown" : 1
+         },
+         "mtime" : 1586324895,
+         "newest_report" : "20190615",
+         "oldest_report" : "20081223",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 36,
+            "total" : 36,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-MadokaMagica" : {
+      "0.09" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 124,
+            "total" : 124,
+            "unknown" : 0
+         },
+         "mtime" : 1586324896,
+         "newest_report" : "20190806",
+         "oldest_report" : "20190201",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 66,
+            "total" : 66,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-Magic-Pony" : {
+      "0.03" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 296,
+            "total" : 297,
+            "unknown" : 1
+         },
+         "mtime" : 1586324897,
+         "newest_report" : "20190816",
+         "oldest_report" : "20090710",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 33,
+            "total" : 33,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-Magic8Ball" : {
+      "1.3" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 156,
+            "total" : 156,
+            "unknown" : 0
+         },
+         "mtime" : 1586325072,
+         "newest_report" : "20200115",
+         "oldest_report" : "20130527",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 58,
+            "total" : 58,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-Magpie" : {
+      "0.06" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 313,
+            "total" : 314,
+            "unknown" : 1
+         },
+         "mtime" : 1586325073,
+         "newest_report" : "20190613",
+         "oldest_report" : "20081213",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 33,
+            "total" : 33,
+            "unknown" : 0
+         }
+      }
+   },
    "DBI" : {
       "1.643" : {
          "all_results" : {
