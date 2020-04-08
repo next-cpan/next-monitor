@@ -468,3 +468,6 @@ Acme-Lexical-Thief 1586320557
 Acme-LifeUniverseEverything 1586158486
 Acme-Lingua-EN-Inflect-Modern 1586158489
 Acme-Lingua-NIGERIAN 1586321139
+Acme-Lingua-Strine-Perl 1586321360
+Acme-Lingua-ZH-Remix 1586321448
+Acme-List-CarCdr 1586321698

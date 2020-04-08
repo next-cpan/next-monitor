@@ -7932,6 +7932,46 @@
          }
       }
    },
+   "Acme-Lingua-ZH-Remix" : {
+      "0.99" : {
+         "all_results" : {
+            "fail" : 0,
+            "na" : 4,
+            "pass" : 91,
+            "total" : 95,
+            "unknown" : 0
+         },
+         "mtime" : 1586321390,
+         "newest_report" : "20190806",
+         "oldest_report" : "20190416",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 28,
+            "total" : 28,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-List-CarCdr" : {
+      "0.01" : {
+         "all_results" : {
+            "fail" : 0,
+            "na" : 3,
+            "pass" : 97,
+            "total" : 100,
+            "unknown" : 0
+         },
+         "mtime" : 1586321452,
+         "newest_report" : "20190808",
+         "oldest_report" : "20150628",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 58,
+            "total" : 58,
+            "unknown" : 0
+         }
+      }
+   },
    "DBI" : {
       "1.643" : {
          "all_results" : {

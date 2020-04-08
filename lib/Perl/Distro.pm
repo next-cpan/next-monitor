@@ -298,9 +298,10 @@ sub fix_special_repos ( $self ) {
         $self->dist_meta->{'name'} = $distro;
     }
 
-    $self->BUILD_json->{'license'} = 'unknown' if grep { $distro eq $_ } qw{ Acme-Code-FreedomFighter ACME-Error-Translate Acme-ESP Acme-Goatse AFS AFS-Command AI-Fuzzy AI-General AIS-client AIX-LPP-lpp_name};
-    $self->BUILD_json->{'license'} = 'perl'    if grep { $distro eq $_ } qw{ ACME-Error-31337 ACME-Error-IgpayAtinlay };
-    $self->BUILD_json->{'license'} = 'GPL'     if grep { $distro eq $_ } qw{ AI-LibNeural };
+    $self->BUILD_json->{'license'} = 'unknown' if grep { $distro eq $_ } qw{ Acme-Code-FreedomFighter ACME-Error-Translate Acme-ESP Acme-Goatse AFS AFS-Command AI-Fuzzy AI-General AIS-client AIX-LPP-lpp_name
+      Acme-Lingua-Strine-Perl  };
+    $self->BUILD_json->{'license'} = 'perl' if grep { $distro eq $_ } qw{ ACME-Error-31337 ACME-Error-IgpayAtinlay };
+    $self->BUILD_json->{'license'} = 'GPL'  if grep { $distro eq $_ } qw{ AI-LibNeural };
 
     state $files_to_delete = {
         'Acme-Aheui'                                => [qw{bin/aheui}],
@@ -370,7 +371,7 @@ sub cleanup_tree ($self) {
 
     # Delete explicit files we don't want.
     foreach my $unwanted_file (
-        qw{ MANIFEST MANIFEST.SKIP MANIFEST.bak MANIFEST.skip INSTALL INSTALL.txt SIGNATURE dist.ini README README.md README.pod README.txt Makefile.PL Build.PL weaver.ini
+        qw{ MANIFEST MANIFEST.SKIP MANIFEST.bak MANIFEST.skip INSTALL INSTALL.txt SIGNATURE dist.ini README README.md README.pod README.txt README.markdown Makefile.PL Build.PL weaver.ini
         META.yml META.json ignore.txt .gitignore .mailmap Changes.PL cpanfile cpanfile.snapshot minil.toml .cvsignore .travis.yml travis.yml
         .project t/boilerplate.t MYMETA.json MYMETA.yml Makefile Makefile.old maint/Makefile.PL.include metamerge.json README.bak dist.ini.bak
         CREDITS doap.ttl author_test.sh cpants.pl makeall.sh perlcritic.rc .perltidyrc .perltidy dist.ini.meta Changes.new Changes.old
@@ -950,7 +951,7 @@ sub generate_build_json ($self) {
                     delete $meta->{$req}->{$module};
                     next;
                 }
-                elsif ( $req eq 'configure_requires' && exists $self->requires_runtime->{$module} ) {    # Allow runtime to imply configure
+                elsif ( ( grep { $req eq $_ } qw/configure_requires test_requires build_requires/ ) && exists $self->requires_runtime->{$module} ) {    # ignore build stage requires if runtime requires it.
                     delete $meta->{$req}->{$module};
                     next;
                 }
