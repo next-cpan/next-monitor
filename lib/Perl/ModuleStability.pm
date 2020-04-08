@@ -11,7 +11,9 @@ use experimental 'signatures';
 use File::Slurper    ();
 use Cpanel::JSON::XS ();
 use LWP::UserAgent   ();
+use Git::Wrapper     ();
 
+use constant ZERO        => '19700101';
 use constant THA_FUTURE  => '30001212';
 use constant RECENT_PERL => 20;           # 5.20.0
 
@@ -29,7 +31,9 @@ use constant CACHE_AGE_INVALIDATION => 60 * 60 * 24 * 3;    # 3 days.
 use Data::Dumper;
 $Data::Dumper::Sortkeys = 1;
 
-has 'base_dir' => ( isa => 'Str', is => 'ro', required => 1 );
+has 'base_dir'   => ( isa => 'Str', is => 'ro', required => 1 );
+has 'repos_dir'  => ( isa => 'Str', is => 'ro', required => 1 );
+has 'git_binary' => ( isa => 'Str', is => 'ro', required => 1 );
 
 has 'cache_file' => ( isa => 'Str',     is => 'ro', lazy => 1, default => sub { shift->base_dir . "/data/repo_stability.txt" } );
 has 'cache'      => ( isa => 'HashRef', is => 'rw', lazy => 1, builder => '_build_cache' );
@@ -37,11 +41,32 @@ has 'cache_modified' => ( isa => 'Bool', is => 'rw', default => 0 );
 
 has 'ua' => ( isa => 'Object', lazy => 1, is => 'ro', lazy => 1, builder => '_build_useragent' );
 
-sub is_passing ( $self, $distro, $version ) {
+sub guess_version ( $self, $distro ) {
+
+    my $cache = $self->cache;
+    if ( $cache->{'distro'} && ref $cache->{'distro'} eq 'HASH' && %{ $cache->{'distro'} } ) {
+        my ($version) = sort { $a cmp $b } keys %{ $cache->{'distro'} };
+        length $version and return $version;
+    }
+
+    my $git = Git::Wrapper->new( { 'dir' => $self->repos_dir . '/' . $distro, 'git_binary' => $self->git_binary } ) || die( 'Failed to create Git::Wrapper for ' . $self->repos_dir );
+    foreach my $entry ( $git->log( '-2', 'PAUSE' ) ) {
+        $entry && $entry->message =~ m/Import \S+ version (\S+) from PAUSE/ or next;
+        return "$1";
+    }
+    die("Unexpected log entry in PAUSE for $distro");
+}
+
+sub is_passing ( $self, $distro, $version = undef ) {
+
+    $version //= $self->guess_version($distro);
 
     my $stats = $self->get_stats_for_module( $distro, $version );
 
-    if (1) {
+    defined $stats->{'oldest_report'} or return 0;    # Means there are no results.
+
+    if (0) {
+        print "*** $distro $version\n";
         printf( "ALL: %0.3f\n",    $stats->{'all_results'}->{'pass'} / $stats->{'all_results'}->{'total'} );
         printf( "RECENT: %0.3f\n", $stats->{'recent_perl_results'}->{'pass'} / $stats->{'recent_perl_results'}->{'total'} );
         print Dumper($stats);
@@ -54,8 +79,8 @@ sub is_passing ( $self, $distro, $version ) {
     # We can't yet judge this module based on results.
     return 1 if $stats->{'all_results'}->{'total'} < MINIMUM_RESULTS;
 
-    # If all the reports are old, something is funky. Fail it.
-    return 0 if ( ( RECENT_REPORT_DATE cmp $stats->{'oldest_report'} ) > 0 );
+    # Just cause it's old doesn't mean it's not valid. We can't skip over this.
+    # return 0 if( (RECENT_REPORT_DATE cmp $stats->{'oldest_report'}) > 0);
 
     # Detemine if the all time pass rate is abyssimal.
     return 0 if ( $stats->{'all_results'}->{'pass'} / $stats->{'all_results'}->{'total'} ) < MINIMUM_ALL_PASS_THRESHOLD;
@@ -68,28 +93,45 @@ sub is_passing ( $self, $distro, $version ) {
     return 1;
 }
 
+sub oldest_report ( $self, $distro, $version = undef ) {
+    $version //= $self->get_version_from_repo($distro);
+    my $stats = $self->get_stats_for_module( $distro, $version );
+    return $stats->{'oldest_report'};
+}
+
 sub get_stats_for_module ( $self, $distro, $version ) {
     my $mtime = $self->cache->{$distro}->{$version}->{'mtime'} // 0;
     if ( time - $mtime < CACHE_AGE_INVALIDATION ) {
-        print "Using cache for $distro $version\n";
         return $self->cache->{$distro}->{$version};
     }
 
-    my $stats = {};
-
-    my $url = "http://api.cpantesters.org/v3/summary/${distro}/${version}?osname=linux&perl_maturity=stable";
-    my $r   = $self->ua->get($url);
-
-    my $json = Cpanel::JSON::XS::decode_json( $r->decoded_content );
-    ref $json eq 'ARRAY' or die( "Unexpected output from $url:\n" . Dumper($json) );
-
     # Initialize our data we're going to gather.
     my $oldest_report = THA_FUTURE;
+    my $newest_report = ZERO;
     my %all_results;
     my %recent_perl_results;
 
     $all_results{$_}         //= 0 foreach (qw/pass unknown fail/);
     $recent_perl_results{$_} //= 0 foreach (qw/pass unknown fail/);
+
+    my $stats = {
+        all_results         => \%all_results,
+        recent_perl_results => \%recent_perl_results,
+        oldest_report       => undef,
+        newest_report       => undef,
+        mtime               => time,
+    };
+
+    my $url = "http://api.cpantesters.org/v3/summary/${distro}/${version}?osname=linux&perl_maturity=stable";
+    my $r   = $self->ua->get($url);
+
+    my $json = Cpanel::JSON::XS::decode_json( $r->decoded_content );
+    if ( ref $json eq 'HASH' ) {
+        if ( $json->{'errors'} && $json->{'errors'}->[0]->{'message'} eq 'No results found' ) {
+            return $self->cache->{$distro}->{$version} = $stats;
+        }
+    }
+    ref $json eq 'ARRAY' or die( "Unexpected output from $url:\n" . Dumper($json) );
 
     foreach my $test_result (@$json) {
 
@@ -97,6 +139,7 @@ sub get_stats_for_module ( $self, $distro, $version ) {
         $test_result->{'date'} =~ m/^([0-9]{4,4})-([0-9]{2,2})-([0-9]{2,2})/ or die( "Unexpected date in test result:\n" . Dumper($test_result) );
         my $stamp = "$1$2$3";
         $oldest_report = $stamp if ( ( $stamp cmp $oldest_report ) < 0 );
+        $newest_report = $stamp if ( ( $stamp cmp $newest_report ) > 0 );
 
         # Gather all report results.
         $all_results{ $test_result->{'grade'} }++;
@@ -109,11 +152,11 @@ sub get_stats_for_module ( $self, $distro, $version ) {
         }
     }
 
-    # Build up the cache.
-    $stats->{'all_results'}         = \%all_results;
-    $stats->{'recent_perl_results'} = \%recent_perl_results;
-    $stats->{'oldest_report'}       = $oldest_report;
-    $stats->{'mtime'}               = time;
+    # Store our SVs into the hash.
+    $stats->{'oldest_report'} = $oldest_report;
+    $stats->{'newest_report'} = $newest_report;
+
+    print "Retrieved cpantesters stats for $distro $version\n";
 
     $self->cache_modified(1);
 

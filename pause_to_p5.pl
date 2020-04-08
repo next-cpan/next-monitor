@@ -7,8 +7,9 @@ use warnings;
 use FindBin;
 
 use lib 'lib';
-use Perl::Distro    ();
-use Perl::RepoCache ();
+use Perl::Distro          ();
+use Perl::RepoCache       ();
+use Perl::ModuleStability ();
 
 use Moose;
 with 'MooseX::SimpleConfig';
@@ -33,12 +34,18 @@ has 'parsed_pause_archives_file' => ( isa => 'Str', is => 'ro', lazy => 1, defau
 has 'repos_dir'                  => ( isa => 'Str', is => 'ro', lazy => 1, default => sub { my $d = $_[0]->base_dir . '/repos'; -d $d or mkdir $d; return $d } );
 has 'repo_list' => ( isa => 'ArrayRef', is => 'rw', lazy => 1, builder => '_build_repo_list' );
 
-has 'pause_branch' => ( isa => 'Str',    is   => 'ro', default => 'PAUSE' );
-has 'p5_branch'    => ( isa => 'Str',    is   => 'ro', default => 'p5' );
-has 'repo_cache'   => ( isa => 'Object', lazy => 1,    is      => 'ro', lazy => 1, builder => '_build_repo_cache' );
+has 'pause_branch' => ( isa => 'Str', is => 'ro', default => 'PAUSE' );
+has 'p5_branch'    => ( isa => 'Str', is => 'ro', default => 'p5' );
+
+has 'repo_cache'       => ( isa => 'Object', lazy => 1, is => 'ro', lazy => 1, builder => '_build_repo_cache' );
+has 'module_stability' => ( isa => 'Object', lazy => 1, is => 'ro', lazy => 1, builder => '_build_module_stability' );
 
 sub _build_repo_cache ($self) {
-    return Perl::RepoCache->new( { base_dir => $self->base_dir } );
+    return Perl::RepoCache->new( { 'base_dir' => $self->base_dir } );
+}
+
+sub _build_module_stability ($self) {
+    return Perl::ModuleStability->new( { 'base_dir' => $self->base_dir, 'repos_dir' => $self->repos_dir, 'git_binary' => $self->git_binary } );
 }
 
 sub _build_repo_list ($self) {
@@ -75,7 +82,8 @@ sub run ( $self, @optional_repos ) {
         $repo_list = \@optional_repos;
     }
 
-    my $repo_cache = $self->repo_cache;
+    my $repo_cache       = $self->repo_cache;
+    my $module_stability = $self->module_stability;
 
     foreach my $repo (@$repo_list) {
         if ( grep { $repo eq $_ } @skip_list ) {
@@ -83,13 +91,21 @@ sub run ( $self, @optional_repos ) {
             next;
         }
 
+        # Skip repos we've already processed.
         next unless $repo_cache->needs_check($repo);
+
+        # Skip failing repos.
+        if ( !$module_stability->is_passing($repo) ) {
+            print "--- Skipping $repo because it isn't passing\n";
+            next;
+        }
+
         print "--- Processing repo   $repo\n";
 
         my $repo_dir = $self->repos_dir . '/' . $repo;
         my $cd       = Cwd::Guard->new($repo_dir);
 
-        my $distro = Perl::Distro->new( distro => $repo, repo_path => $repo_dir, git_binary => $self->git_binary, push_to_github => $self->push_to_github );
+        my $distro = Perl::Distro->new( 'distro' => $repo, 'repo_path' => $repo_dir, 'git_binary' => $self->git_binary, 'push_to_github' => $self->push_to_github );
 
         $distro->do_the_do;
 
@@ -134,6 +150,11 @@ sub parse_files_for_deps ( $self, $files_hash ) {
 #}
 
 package main;
+
+$SIG{INT} = sub {
+    print "Exiting due to Ctrl-C\n";
+    exit;
+};
 
 my $o = PauseTop5->new_with_options( configfile => "${FindBin::Bin}/settings.ini" );
 
