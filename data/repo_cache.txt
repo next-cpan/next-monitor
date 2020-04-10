@@ -833,3 +833,13 @@ Algorithm-Dependency 1586511586
 Algorithm-Dependency-MapReduce 1586511591
 Algorithm-Dependency-Objects 1586511596
 Algorithm-Dependency-Source-DBI 1586511600
+Algorithm-DependencySolver-Solver 1586512209
+Algorithm-Diff 1586512288
+Algorithm-Diff-Any 1586512293
+Algorithm-Diff-Apply 1586512298
+Algorithm-Diff-Callback 1586512303
+Algorithm-Diff-HTMLTable 1586512307
+Algorithm-Diff-XS 1586512313
+Algorithm-DimReduction 1586512317
+Algorithm-Easing 1586512323
+Algorithm-EquivalenceSets 1586512328

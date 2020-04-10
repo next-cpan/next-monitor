@@ -16294,6 +16294,216 @@
          }
       }
    },
+   "Algorithm-Diff" : {
+      "1.1903" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 17159,
+            "total" : 17160,
+            "unknown" : 1
+         },
+         "mtime" : 1586512225,
+         "newest_report" : "20200408",
+         "oldest_report" : "20141126",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 3918,
+            "total" : 3919,
+            "unknown" : 1
+         }
+      }
+   },
+   "Algorithm-Diff-Any" : {
+      "1.001" : {
+         "all_results" : {
+            "fail" : 1,
+            "pass" : 267,
+            "total" : 268,
+            "unknown" : 0
+         },
+         "mtime" : 1586512291,
+         "newest_report" : "20190815",
+         "oldest_report" : "20091223",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 57,
+            "total" : 57,
+            "unknown" : 0
+         }
+      }
+   },
+   "Algorithm-Diff-Apply" : {
+      "0.2.3" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 309,
+            "total" : 310,
+            "unknown" : 1
+         },
+         "mtime" : 1586512296,
+         "newest_report" : "20190614",
+         "oldest_report" : "20041104",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 28,
+            "total" : 28,
+            "unknown" : 0
+         }
+      }
+   },
+   "Algorithm-Diff-Callback" : {
+      "0.111" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 224,
+            "total" : 224,
+            "unknown" : 0
+         },
+         "mtime" : 1586512301,
+         "newest_report" : "20190808",
+         "oldest_report" : "20161014",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 115,
+            "total" : 115,
+            "unknown" : 0
+         }
+      }
+   },
+   "Algorithm-Diff-HTMLTable" : {
+      "0.05" : {
+         "all_results" : {
+            "fail" : 0,
+            "na" : 5,
+            "pass" : 56,
+            "total" : 61,
+            "unknown" : 0
+         },
+         "mtime" : 1586512306,
+         "newest_report" : "20190806",
+         "oldest_report" : "20181217",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 36,
+            "total" : 36,
+            "unknown" : 0
+         }
+      }
+   },
+   "Algorithm-Diff-XS" : {
+      "0.04" : {
+         "all_results" : {
+            "fail" : 15,
+            "pass" : 690,
+            "total" : 708,
+            "unknown" : 3
+         },
+         "mtime" : 1586512310,
+         "newest_report" : "20190807",
+         "oldest_report" : "20081024",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 219,
+            "total" : 219,
+            "unknown" : 0
+         }
+      }
+   },
+   "Algorithm-DimReduction" : {
+      "0.00001" : {
+         "all_results" : {
+            "fail" : 8,
+            "pass" : 325,
+            "total" : 333,
+            "unknown" : 0
+         },
+         "mtime" : 1586512316,
+         "newest_report" : "20171203",
+         "oldest_report" : "20081126",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 25,
+            "total" : 25,
+            "unknown" : 0
+         }
+      }
+   },
+   "Algorithm-DistanceMatrix" : {
+      "0.04" : {
+         "all_results" : {
+            "fail" : 54,
+            "pass" : 237,
+            "total" : 291,
+            "unknown" : 0
+         },
+         "mtime" : 1586512320,
+         "newest_report" : "20190812",
+         "oldest_report" : "20110627",
+         "recent_perl_results" : {
+            "fail" : 39,
+            "pass" : 33,
+            "total" : 72,
+            "unknown" : 0
+         }
+      }
+   },
+   "Algorithm-Easing" : {
+      "0.998" : {
+         "all_results" : {
+            "fail" : 2,
+            "pass" : 201,
+            "total" : 203,
+            "unknown" : 0
+         },
+         "mtime" : 1586512321,
+         "newest_report" : "20190808",
+         "oldest_report" : "20160706",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 115,
+            "total" : 115,
+            "unknown" : 0
+         }
+      }
+   },
+   "Algorithm-EquivalenceSets" : {
+      "1.101420" : {
+         "all_results" : {
+            "fail" : 3,
+            "pass" : 373,
+            "total" : 376,
+            "unknown" : 0
+         },
+         "mtime" : 1586512326,
+         "newest_report" : "20190814",
+         "oldest_report" : "20100523",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 111,
+            "total" : 111,
+            "unknown" : 0
+         }
+      }
+   },
+   "Algorithm-Evolutionary" : {
+      "0.80" : {
+         "all_results" : {
+            "fail" : 7,
+            "pass" : 177,
+            "total" : 184,
+            "unknown" : 0
+         },
+         "mtime" : 1586512331,
+         "newest_report" : "20200202",
+         "oldest_report" : "20141031",
+         "recent_perl_results" : {
+            "fail" : 4,
+            "pass" : 91,
+            "total" : 95,
+            "unknown" : 0
+         }
+      }
+   },
    "DBI" : {
       "1.643" : {
          "all_results" : {
