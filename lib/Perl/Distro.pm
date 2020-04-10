@@ -359,8 +359,9 @@ sub fix_special_repos ( $self ) {
 
     # Repos where their tarball doesn't match their primary module.
     state $repos_to_rename = {
-        'AI-Classifier-Text' => 1,
-        'AIX-LPP-lpp_name'   => 1,
+        'AI-Classifier-Text'                => 1,
+        'AIX-LPP-lpp_name'                  => 1,
+        'Algorithm-DependencySolver-Solver' => 1,
     };
 
     if ( $repos_to_rename->{$distro} ) {
@@ -447,6 +448,7 @@ sub fix_special_repos ( $self ) {
         'Algorithm-CouponCode'                      => [qw{html/cc_icons.png html/index.html html/jquery.couponcode.css html/jquery.couponcode.js html/style.css}],
         'Algorithm-CurveFit-Simple'                 => [qw{data/hra-bhn.tsv}],
         'Algorithm-DecisionTree'                    => [qw{Examples/* ExamplesBagging/* ExamplesBoosting/* ExamplesRandomizedTrees/* ExamplesRegression/*}],
+        'Algorithm-Diff'                            => [qw{cdiff.pl diff.pl diffnew.pl htmldiff.pl}],
 
     };
 
