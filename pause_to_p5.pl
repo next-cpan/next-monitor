@@ -87,7 +87,8 @@ sub run ( $self, @optional_repos ) {
 
     foreach my $repo (@$repo_list) {
         if ( grep { $repo eq $_ } @skip_list ) {
-            print "Skipping $repo\n";
+
+            #print "Skipping $repo\n";
             next;
         }
 
@@ -97,6 +98,7 @@ sub run ( $self, @optional_repos ) {
         # Skip failing repos.
         if ( !$module_stability->is_passing($repo) ) {
             print "--- Skipping $repo because it isn't passing\n";
+            $repo_cache->update_cache_for_repo($repo);
             next;
         }
 

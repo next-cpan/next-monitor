@@ -16867,6 +16867,103 @@
          }
       }
    },
+   "Algorithm-HITS-Lite" : {
+      "0.04" : {
+         "all_results" : {
+            "fail" : 1,
+            "pass" : 296,
+            "total" : 299,
+            "unknown" : 2
+         },
+         "mtime" : 1586551684,
+         "newest_report" : "20190613",
+         "oldest_report" : "20070422",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 52,
+            "total" : 52,
+            "unknown" : 0
+         }
+      }
+   },
+   "Algorithm-Hamming-Perl" : {
+      "0.05" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 349,
+            "total" : 350,
+            "unknown" : 1
+         },
+         "mtime" : 1586551690,
+         "newest_report" : "20190611",
+         "oldest_report" : "20031019",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 77,
+            "total" : 77,
+            "unknown" : 0
+         }
+      }
+   },
+   "Algorithm-Heapify-XS" : {
+      "0.04" : {
+         "all_results" : {
+            "fail" : 0,
+            "na" : 60,
+            "pass" : 88,
+            "total" : 150,
+            "unknown" : 2
+         },
+         "mtime" : 1586551726,
+         "newest_report" : "20190806",
+         "oldest_report" : "20180827",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 79,
+            "total" : 81,
+            "unknown" : 2
+         }
+      }
+   },
+   "Algorithm-History-Levels" : {
+      "0.001" : {
+         "all_results" : {
+            "fail" : 0,
+            "na" : 20,
+            "pass" : 231,
+            "total" : 251,
+            "unknown" : 0
+         },
+         "mtime" : 1586551731,
+         "newest_report" : "20191206",
+         "oldest_report" : "20170614",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 132,
+            "total" : 132,
+            "unknown" : 0
+         }
+      }
+   },
+   "Algorithm-HowSimilar" : {
+      "0.01" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 243,
+            "total" : 244,
+            "unknown" : 1
+         },
+         "mtime" : 1586551735,
+         "newest_report" : "20171205",
+         "oldest_report" : "20080306",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 18,
+            "total" : 18,
+            "unknown" : 0
+         }
+      }
+   },
    "DBI" : {
       "1.643" : {
          "all_results" : {
