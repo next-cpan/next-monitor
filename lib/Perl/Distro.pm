@@ -351,10 +351,11 @@ sub fix_special_repos ( $self ) {
     # Distro doesn't match the file.
     $self->parse_pod('Ace.pm') if $distro eq 'AcePerl';
 
-    $self->BUILD_json->{'maintainers'} = 'Cal Henderson, <cal@iamcal.com>' if $distro =~ /^(Acme-Goatse|Acme-OneBit)$/;
-    $self->BUILD_json->{'maintainers'} = 'Audrey Tang <cpan@audreyt.org>.' if $distro eq 'Acme-Hello';
-    $self->BUILD_json->{'maintainers'} = 'Paul Fenwick.'                   if $distro eq 'Acme-OSDc';
-    $self->BUILD_json->{'maintainers'} = 'David Nicol.'                    if $distro eq 'Acme-landmine';
+    $self->BUILD_json->{'maintainers'} = 'Cal Henderson, <cal@iamcal.com>'       if $distro =~ /^(Acme-Goatse|Acme-OneBit)$/;
+    $self->BUILD_json->{'maintainers'} = 'Audrey Tang <cpan@audreyt.org>.'       if $distro eq 'Acme-Hello';
+    $self->BUILD_json->{'maintainers'} = 'Paul Fenwick.'                         if $distro eq 'Acme-OSDc';
+    $self->BUILD_json->{'maintainers'} = 'David Nicol.'                          if $distro eq 'Acme-landmine';
+    $self->BUILD_json->{'maintainers'} = 'Salvador Fandino <sfandino@yahoo.com>' if $distro eq 'Algorithm-ClusterPoints';
 
     # Repos where their tarball doesn't match their primary module.
     state $repos_to_rename = {
@@ -368,7 +369,7 @@ sub fix_special_repos ( $self ) {
 
     $self->BUILD_json->{'license'} = 'unknown' if grep { $distro eq $_ } qw{ Acme-Code-FreedomFighter ACME-Error-Translate Acme-ESP Acme-Goatse AFS AFS-Command AI-Fuzzy AI-General AIS-client AIX-LPP-lpp_name
       Acme-Lingua-Strine-Perl Acme-ManekiNeko Acme-Method-CaseInsensitive Acme-Remote-Strangulation-Protocol Acme-Turing Acme-URM Acme-Ukrop Acme-Void};
-    $self->BUILD_json->{'license'} = 'perl' if grep { $distro eq $_ } qw{ ACME-Error-31337 ACME-Error-IgpayAtinlay Acme-OSDc Acme-PM-Berlin-Meetings Acme-please};
+    $self->BUILD_json->{'license'} = 'perl' if grep { $distro eq $_ } qw{ ACME-Error-31337 ACME-Error-IgpayAtinlay Acme-OSDc Acme-PM-Berlin-Meetings Acme-please Algorithm-Cluster};
     $self->BUILD_json->{'license'} = 'GPL'  if grep { $distro eq $_ } qw{ AI-LibNeural };
 
     state $files_to_delete = {
@@ -442,6 +443,10 @@ sub fix_special_repos ( $self ) {
         'Agent-TCLI-Package-Net'                    => [qw{bin/agent_net.pl}],
         'Album'                                     => [qw{helper/Makefile helper/README helper/autorun.inf helper/shellrun.c helper/shellrun.exe script/album}],
         'Algorithm-BitVector'                       => [qw{Examples/BitVectorDemo.pl Examples/README Examples/testinput.txt}],
+        'Algorithm-CheckDigits'                     => [qw{cgi-bin/checkdigits.cgi}],
+        'Algorithm-CouponCode'                      => [qw{html/cc_icons.png html/index.html html/jquery.couponcode.css html/jquery.couponcode.js html/style.css}],
+        'Algorithm-CurveFit-Simple'                 => [qw{data/hra-bhn.tsv}],
+        'Algorithm-DecisionTree'                    => [qw{Examples/* ExamplesBagging/* ExamplesBoosting/* ExamplesRandomizedTrees/* ExamplesRegression/*}],
 
     };
 

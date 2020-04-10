@@ -15732,6 +15732,568 @@
          }
       }
    },
+   "Algorithm-CP-IZ" : {
+      "0.05" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 0,
+            "total" : 27,
+            "unknown" : 27
+         },
+         "mtime" : 1586511053,
+         "newest_report" : "20190805",
+         "oldest_report" : "20190719",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 0,
+            "total" : 22,
+            "unknown" : 22
+         }
+      }
+   },
+   "Algorithm-CRF" : {
+      "0.04" : {
+         "all_results" : {
+            "fail" : 222,
+            "na" : 13,
+            "pass" : 0,
+            "total" : 245,
+            "unknown" : 10
+         },
+         "mtime" : 1586511053,
+         "newest_report" : "20171113",
+         "oldest_report" : "20080220",
+         "recent_perl_results" : {
+            "fail" : 33,
+            "pass" : 0,
+            "total" : 33,
+            "unknown" : 0
+         }
+      }
+   },
+   "Algorithm-CheckDigits" : {
+      "v1.3.2" : {
+         "all_results" : {
+            "fail" : 0,
+            "na" : 50,
+            "pass" : 585,
+            "total" : 635,
+            "unknown" : 0
+         },
+         "mtime" : 1586511054,
+         "newest_report" : "20191206",
+         "oldest_report" : "20160516",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 316,
+            "total" : 316,
+            "unknown" : 0
+         }
+      }
+   },
+   "Algorithm-ChooseSubsets" : {
+      "0.02" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 471,
+            "total" : 473,
+            "unknown" : 2
+         },
+         "mtime" : 1586511088,
+         "newest_report" : "20190807",
+         "oldest_report" : "20051021",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 106,
+            "total" : 106,
+            "unknown" : 0
+         }
+      }
+   },
+   "Algorithm-Closest-NetworkAddress" : {
+      "0.1" : {
+         "all_results" : {
+            "fail" : 1,
+            "na" : 12,
+            "pass" : 277,
+            "total" : 292,
+            "unknown" : 2
+         },
+         "mtime" : 1586511094,
+         "newest_report" : "20190611",
+         "oldest_report" : "20061112",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 23,
+            "total" : 23,
+            "unknown" : 0
+         }
+      }
+   },
+   "Algorithm-Cluster" : {
+      "1.59" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 81,
+            "total" : 81,
+            "unknown" : 0
+         },
+         "mtime" : 1586511095,
+         "newest_report" : "20190906",
+         "oldest_report" : "20190830",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 45,
+            "total" : 45,
+            "unknown" : 0
+         }
+      }
+   },
+   "Algorithm-Cluster-Thresh" : {
+      "0.05" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 242,
+            "total" : 242,
+            "unknown" : 0
+         },
+         "mtime" : 1586511195,
+         "newest_report" : "20190812",
+         "oldest_report" : "20110629",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 48,
+            "total" : 48,
+            "unknown" : 0
+         }
+      }
+   },
+   "Algorithm-ClusterPoints" : {
+      "0.08" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 327,
+            "total" : 328,
+            "unknown" : 1
+         },
+         "mtime" : 1586511196,
+         "newest_report" : "20190614",
+         "oldest_report" : "20080710",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 28,
+            "total" : 28,
+            "unknown" : 0
+         }
+      }
+   },
+   "Algorithm-Combinatorics" : {
+      "0.27" : {
+         "all_results" : {
+            "fail" : 4,
+            "pass" : 4458,
+            "total" : 4465,
+            "unknown" : 3
+         },
+         "mtime" : 1586511354,
+         "newest_report" : "20200403",
+         "oldest_report" : "20120210",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 1037,
+            "total" : 1038,
+            "unknown" : 1
+         }
+      }
+   },
+   "Algorithm-ConsistentHash-CHash" : {
+      "0.04" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 301,
+            "total" : 305,
+            "unknown" : 4
+         },
+         "mtime" : 1586511360,
+         "newest_report" : "20190808",
+         "oldest_report" : "20160608",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 153,
+            "total" : 153,
+            "unknown" : 0
+         }
+      }
+   },
+   "Algorithm-ConsistentHash-JumpHash" : {
+      "0.05" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 153,
+            "total" : 153,
+            "unknown" : 0
+         },
+         "mtime" : 1586511361,
+         "newest_report" : "20190809",
+         "oldest_report" : "20141110",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 55,
+            "total" : 55,
+            "unknown" : 0
+         }
+      }
+   },
+   "Algorithm-ConsistentHash-Ketama" : {
+      "0.00012" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 248,
+            "total" : 248,
+            "unknown" : 0
+         },
+         "mtime" : 1586511362,
+         "newest_report" : "20190808",
+         "oldest_report" : "20150528",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 150,
+            "total" : 150,
+            "unknown" : 0
+         }
+      }
+   },
+   "Algorithm-ConstructDFA" : {
+      "0.03" : {
+         "all_results" : {
+            "fail" : 0,
+            "na" : 12,
+            "pass" : 258,
+            "total" : 270,
+            "unknown" : 0
+         },
+         "mtime" : 1586511363,
+         "newest_report" : "20190810",
+         "oldest_report" : "20140212",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 101,
+            "total" : 101,
+            "unknown" : 0
+         }
+      }
+   },
+   "Algorithm-ConstructDFA-XS" : {
+      "0.23" : {
+         "all_results" : {
+            "fail" : 0,
+            "na" : 18,
+            "pass" : 169,
+            "total" : 202,
+            "unknown" : 15
+         },
+         "mtime" : 1586511368,
+         "newest_report" : "20190810",
+         "oldest_report" : "20140310",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 83,
+            "total" : 88,
+            "unknown" : 5
+         }
+      }
+   },
+   "Algorithm-ConstructDFA2" : {
+      "0.06" : {
+         "all_results" : {
+            "fail" : 0,
+            "na" : 92,
+            "pass" : 15,
+            "total" : 107,
+            "unknown" : 0
+         },
+         "mtime" : 1586511373,
+         "newest_report" : "20190807",
+         "oldest_report" : "20180304",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "na" : 29,
+            "pass" : 15,
+            "total" : 44,
+            "unknown" : 0
+         }
+      }
+   },
+   "Algorithm-ContextVector" : {
+      "0.01" : {
+         "all_results" : {
+            "fail" : 0,
+            "na" : 1,
+            "pass" : 184,
+            "total" : 185,
+            "unknown" : 0
+         },
+         "mtime" : 1586511373,
+         "newest_report" : "20190812",
+         "oldest_report" : "20111105",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 32,
+            "total" : 32,
+            "unknown" : 0
+         }
+      }
+   },
+   "Algorithm-CouponCode" : {
+      "1.005" : {
+         "all_results" : {
+            "fail" : 0,
+            "na" : 15,
+            "pass" : 174,
+            "total" : 189,
+            "unknown" : 0
+         },
+         "mtime" : 1586511378,
+         "newest_report" : "20190808",
+         "oldest_report" : "20151125",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 116,
+            "total" : 116,
+            "unknown" : 0
+         }
+      }
+   },
+   "Algorithm-CriticalPath" : {
+      "0.07" : {
+         "all_results" : {
+            "fail" : 0,
+            "na" : 8,
+            "pass" : 124,
+            "total" : 132,
+            "unknown" : 0
+         },
+         "mtime" : 1586511418,
+         "newest_report" : "20190809",
+         "oldest_report" : "20140813",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 52,
+            "total" : 52,
+            "unknown" : 0
+         }
+      }
+   },
+   "Algorithm-Cron" : {
+      "0.10" : {
+         "all_results" : {
+            "fail" : 9,
+            "pass" : 1284,
+            "total" : 1294,
+            "unknown" : 1
+         },
+         "mtime" : 1586511422,
+         "newest_report" : "20200219",
+         "oldest_report" : "20150529",
+         "recent_perl_results" : {
+            "fail" : 6,
+            "pass" : 564,
+            "total" : 570,
+            "unknown" : 0
+         }
+      }
+   },
+   "Algorithm-CurveFit" : {
+      "1.05" : {
+         "all_results" : {
+            "fail" : 134,
+            "pass" : 511,
+            "total" : 647,
+            "unknown" : 2
+         },
+         "mtime" : 1586511429,
+         "newest_report" : "20200406",
+         "oldest_report" : "20100605",
+         "recent_perl_results" : {
+            "fail" : 74,
+            "pass" : 165,
+            "total" : 239,
+            "unknown" : 0
+         }
+      }
+   },
+   "Algorithm-CurveFit-Simple" : {
+      "1.03" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 103,
+            "total" : 103,
+            "unknown" : 0
+         },
+         "mtime" : 1586511435,
+         "newest_report" : "20180328",
+         "oldest_report" : "20180321",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 42,
+            "total" : 42,
+            "unknown" : 0
+         }
+      }
+   },
+   "Algorithm-DBSCAN" : {
+      "0.07" : {
+         "all_results" : {
+            "fail" : 0,
+            "na" : 11,
+            "pass" : 102,
+            "total" : 113,
+            "unknown" : 0
+         },
+         "mtime" : 1586511453,
+         "newest_report" : "20190808",
+         "oldest_report" : "20160305",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 60,
+            "total" : 60,
+            "unknown" : 0
+         }
+      }
+   },
+   "Algorithm-Damm" : {
+      "1.001.002" : {
+         "all_results" : {
+            "fail" : 1,
+            "pass" : 122,
+            "total" : 123,
+            "unknown" : 0
+         },
+         "mtime" : 1586511458,
+         "newest_report" : "20190811",
+         "oldest_report" : "20130421",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 28,
+            "total" : 28,
+            "unknown" : 0
+         }
+      }
+   },
+   "Algorithm-DecisionTree" : {
+      "3.43" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 193,
+            "total" : 193,
+            "unknown" : 0
+         },
+         "mtime" : 1586511463,
+         "newest_report" : "20190807",
+         "oldest_report" : "20170623",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 89,
+            "total" : 89,
+            "unknown" : 0
+         }
+      }
+   },
+   "Algorithm-Dependency" : {
+      "1.111" : {
+         "all_results" : {
+            "fail" : 1,
+            "pass" : 433,
+            "total" : 434,
+            "unknown" : 0
+         },
+         "mtime" : 1586511584,
+         "newest_report" : "20191224",
+         "oldest_report" : "20181222",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 188,
+            "total" : 188,
+            "unknown" : 0
+         }
+      }
+   },
+   "Algorithm-Dependency-MapReduce" : {
+      "0.03" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 326,
+            "total" : 326,
+            "unknown" : 0
+         },
+         "mtime" : 1586511590,
+         "newest_report" : "20171205",
+         "oldest_report" : "20090414",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 18,
+            "total" : 18,
+            "unknown" : 0
+         }
+      }
+   },
+   "Algorithm-Dependency-Objects" : {
+      "0.04" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 260,
+            "total" : 261,
+            "unknown" : 1
+         },
+         "mtime" : 1586511594,
+         "newest_report" : "20171212",
+         "oldest_report" : "20070921",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 29,
+            "total" : 29,
+            "unknown" : 0
+         }
+      }
+   },
+   "Algorithm-Dependency-Source-DBI" : {
+      "1.06" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 368,
+            "total" : 369,
+            "unknown" : 1
+         },
+         "mtime" : 1586511599,
+         "newest_report" : "20190816",
+         "oldest_report" : "20090828",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 84,
+            "total" : 84,
+            "unknown" : 0
+         }
+      }
+   },
+   "Algorithm-DependencySolver" : {
+      "1.01" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 66,
+            "total" : 66,
+            "unknown" : 0
+         },
+         "mtime" : 1586511604,
+         "newest_report" : "20190809",
+         "oldest_report" : "20150220",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 34,
+            "total" : 34,
+            "unknown" : 0
+         }
+      }
+   },
    "DBI" : {
       "1.643" : {
          "all_results" : {
