@@ -693,3 +693,14 @@ Acme-Test-42 1586388544
 Acme-Test-Buffy 1586159211
 Acme-Test-DROLSKY 1586159215
 Acme-Test-LocaleTextDomain 1586501129
+Acme-Test-LocaleTextDomainIfEnv 1586501399
+Acme-Test-LocaleTextDomainUTF8IfEnv 1586501420
+Acme-Test-LogicalEquivalence 1586159220
+Acme-Test-MetaCPAN-NoContributingDoc 1586159223
+Acme-Test-SameRelease 1586501546
+Acme-Test-VW 1586159228
+Acme-Test-Weather 1586501711
+Acme-Test-crypt 1586159231
+Acme-TestDist-Cpp-EUMM-EUCppGuess 1586502056
+Acme-Testing 1586159235
+Acme-Testing-Permissions 1586159239

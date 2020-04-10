@@ -422,6 +422,8 @@ sub fix_special_repos ( $self ) {
         'Acme-RunDoc'                               => [qw{FAQ foo.pl foo2.pl word-examples/helloworld.doc word-lib/Hello/World.docm}],
         'Acme-Signum'                               => [qw{signum.pl}],
         'Acme-Test-LocaleTextDomain'                => [qw{LocaleData/id/LC_MESSAGES/Acme-Test-LocaleTextDomain.mo po/Acme-Test-LocaleTextDomain.pot po/id.po}],
+        'Acme-Test-LocaleTextDomainIfEnv'           => [qw{LocaleData/id/LC_MESSAGES/Acme-Test-LocaleTextDomainIfEnv.mo po/Acme-Test-LocaleTextDomainIfEnv.pot po/id.po}],
+        'Acme-Test-LocaleTextDomainUTF8IfEnv'       => [qw{LocaleData/id/LC_MESSAGES/Acme-Test-LocaleTextDomainUTF8IfEnv.mo po/Acme-Test-LocaleTextDomainUTF8IfEnv.pot po/id.po}],
 
     };
 
@@ -797,7 +799,7 @@ sub determine_installer ( $self ) {
     my $builder = 'play';
 
     # Tag the BUILD file with whether this repo has XS.
-    if ( grep { $_ =~ m/\.xs(.inc?)$/ } keys %$files ) {
+    if ( grep { $_ =~ m/\.xs(.inc)?$/ } keys %$files ) {
         $build_json->{'XS'} = 1;
         $builder = 'legacy';
         print "Detected .xs files in distro\n";
@@ -1009,6 +1011,7 @@ sub generate_build_json ($self) {
         }
 
         delete $meta->{'prereqs'}->{$prereq_key}->{'requires'};
+        prune_ref( $meta->{'prereqs'}->{$prereq_key} );
         keys %{ $meta->{'prereqs'}->{$prereq_key} } and die( "Unexpected prereqs found in $prereq_key:\n" . Dumper $meta);
     }
     foreach my $prereq_key ( grep { m/^x_/ } keys %{ $meta->{'prereqs'} } ) {
@@ -1262,7 +1265,7 @@ sub prune_ref ($var) {
 }
 
 sub get_ppi_doc ( $self, $filename ) {
-    return if $filename =~ m{\.(bak|yml|json|yaml|txt|out|htm|html|mo|tt2|jpg|jpeg|png|gif|eye|eyp|doc|docm|ppt)$}i;
+    return if $filename =~ m{\.(bak|yml|json|yaml|txt|out|htm|html|mo|tt2|jpg|jpeg|png|gif|eye|eyp|doc|docm|ppt|c|cpp|h)$}i;
     return if $self->is_extra_files_we_ship($filename);
 
     if ( -l $filename || -d _ || -z _ ) {
@@ -1321,7 +1324,7 @@ sub parse_builders_for_share ($self) {
     elsif ( -e 'Makefile.PL' ) {
         my $doc = $self->get_ppi_doc('Makefile.PL');
 
-        my $sharedir_vars = $doc->find( sub { $_[1]->class eq 'PPI::Token::Symbol' && $_[1]->content =~ m{^\$File::ShareDir::Install::} } );
+        my $sharedir_vars = $doc->find( sub { $_[1]->class eq 'PPI::Token::Symbol' && $_[1]->content =~ m{^\$File::ShareDir::Install::} } ) || [];
         foreach my $sharedir_var (@$sharedir_vars) {
             my ($var) = $sharedir_var->content =~ m/::(INCLUDE_DOT[A-Z]+)$/ or die( $sharedir_var->content );
 
@@ -1344,7 +1347,7 @@ sub parse_builders_for_share ($self) {
                 $child->content eq 'install_share'  or return 0;
                 return 1;
             }
-        );
+        ) || [];
 
         foreach my $node (@$install_shares) {
             $node = $node->schild(0);

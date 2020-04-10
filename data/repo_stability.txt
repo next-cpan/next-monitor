@@ -13115,6 +13115,255 @@
          }
       }
    },
+   "Acme-Test-LocaleTextDomainIfEnv" : {
+      "0.003" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 63,
+            "total" : 63,
+            "unknown" : 0
+         },
+         "mtime" : 1586501282,
+         "newest_report" : "20200317",
+         "oldest_report" : "20200313",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 11,
+            "total" : 11,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-Test-LocaleTextDomainUTF8IfEnv" : {
+      "0.001" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 82,
+            "total" : 82,
+            "unknown" : 0
+         },
+         "mtime" : 1586501402,
+         "newest_report" : "20200114",
+         "oldest_report" : "20191226",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 25,
+            "total" : 25,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-Test-LogicalEquivalence" : {
+      "0.001" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 167,
+            "total" : 167,
+            "unknown" : 0
+         },
+         "mtime" : 1586501424,
+         "newest_report" : "20190807",
+         "oldest_report" : "20161128",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 76,
+            "total" : 76,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-Test-MetaCPAN-NoContributingDoc" : {
+      "0.01" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 220,
+            "total" : 220,
+            "unknown" : 0
+         },
+         "mtime" : 1586501425,
+         "newest_report" : "20190806",
+         "oldest_report" : "20181001",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 108,
+            "total" : 108,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-Test-SameRelease" : {
+      "0.02" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 138,
+            "total" : 138,
+            "unknown" : 0
+         },
+         "mtime" : 1586501425,
+         "newest_report" : "20190808",
+         "oldest_report" : "20160206",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 81,
+            "total" : 81,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-Test-VW" : {
+      "0.01" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 151,
+            "total" : 151,
+            "unknown" : 0
+         },
+         "mtime" : 1586501550,
+         "newest_report" : "20190808",
+         "oldest_report" : "20151008",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 61,
+            "total" : 61,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-Test-Weather" : {
+      "0.2" : {
+         "all_results" : {
+            "fail" : 3,
+            "na" : 18,
+            "pass" : 0,
+            "total" : 23,
+            "unknown" : 2
+         },
+         "mtime" : 1586501551,
+         "newest_report" : "20111227",
+         "oldest_report" : "20030222",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 0,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-Test-crypt" : {
+      "0.02" : {
+         "all_results" : {
+            "fail" : 0,
+            "na" : 9,
+            "pass" : 123,
+            "total" : 132,
+            "unknown" : 0
+         },
+         "mtime" : 1586501696,
+         "newest_report" : "20190808",
+         "oldest_report" : "20160121",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 74,
+            "total" : 74,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-TestDist-Cpp-EUMM-EUCppGuess" : {
+      "0.03" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 81,
+            "total" : 81,
+            "unknown" : 0
+         },
+         "mtime" : 1586501697,
+         "newest_report" : "20190808",
+         "oldest_report" : "20160101",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 49,
+            "total" : 49,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-Testing" : {
+      "0.002" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 101,
+            "total" : 101,
+            "unknown" : 0
+         },
+         "mtime" : 1586502068,
+         "newest_report" : "20190812",
+         "oldest_report" : "20120622",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 20,
+            "total" : 20,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-Testing-Permissions" : {
+      "0.001" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 210,
+            "total" : 210,
+            "unknown" : 0
+         },
+         "mtime" : 1586502069,
+         "newest_report" : "20190807",
+         "oldest_report" : "20170531",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 77,
+            "total" : 77,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-Tests" : {
+      "0.03" : {
+         "all_results" : {
+            "fail" : 89,
+            "na" : 11,
+            "pass" : 1,
+            "total" : 103,
+            "unknown" : 2
+         },
+         "mtime" : 1586502070,
+         "newest_report" : "20171128",
+         "oldest_report" : "20060703",
+         "recent_perl_results" : {
+            "fail" : 18,
+            "pass" : 0,
+            "total" : 18,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-Text-Rhombus" : {
+      "0.20" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 235,
+            "total" : 235,
+            "unknown" : 0
+         },
+         "mtime" : 1586502071,
+         "newest_report" : "20190806",
+         "oldest_report" : "20181017",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 123,
+            "total" : 123,
+            "unknown" : 0
+         }
+      }
+   },
    "DBI" : {
       "1.643" : {
          "all_results" : {
