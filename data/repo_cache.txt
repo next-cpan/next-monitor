@@ -692,3 +692,4 @@ Acme-Test 1586159207
 Acme-Test-42 1586388544
 Acme-Test-Buffy 1586159211
 Acme-Test-DROLSKY 1586159215
+Acme-Test-LocaleTextDomain 1586501129

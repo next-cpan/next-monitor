@@ -26,7 +26,7 @@ use constant RECENT_REPORT_DATE => '20100101';
 use constant MINIMUM_ALL_PASS_THRESHOLD         => '0.5';
 use constant MINIMUM_RECENT_PERL_PASS_THRESHOLD => '0.5';
 
-use constant CACHE_AGE_INVALIDATION => 60 * 60 * 24 * 3;    # 3 days.
+use constant CACHE_AGE_INVALIDATION => 60 * 60 * 24 * 7;    # 7 days.
 
 use Data::Dumper;
 $Data::Dumper::Sortkeys = 1;
