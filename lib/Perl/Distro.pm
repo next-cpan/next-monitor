@@ -359,7 +359,7 @@ sub fix_special_repos ( $self ) {
     }
 
     $self->BUILD_json->{'license'} = 'unknown' if grep { $distro eq $_ } qw{ Acme-Code-FreedomFighter ACME-Error-Translate Acme-ESP Acme-Goatse AFS AFS-Command AI-Fuzzy AI-General AIS-client AIX-LPP-lpp_name
-      Acme-Lingua-Strine-Perl Acme-ManekiNeko Acme-Method-CaseInsensitive Acme-Remote-Strangulation-Protocol};
+      Acme-Lingua-Strine-Perl Acme-ManekiNeko Acme-Method-CaseInsensitive Acme-Remote-Strangulation-Protocol Acme-Turing Acme-URM Acme-Ukrop};
     $self->BUILD_json->{'license'} = 'perl' if grep { $distro eq $_ } qw{ ACME-Error-31337 ACME-Error-IgpayAtinlay Acme-OSDc Acme-PM-Berlin-Meetings };
     $self->BUILD_json->{'license'} = 'GPL'  if grep { $distro eq $_ } qw{ AI-LibNeural };
 
@@ -426,6 +426,7 @@ sub fix_special_repos ( $self ) {
         'Acme-Test-LocaleTextDomainUTF8IfEnv'       => [qw{LocaleData/id/LC_MESSAGES/Acme-Test-LocaleTextDomainUTF8IfEnv.mo po/Acme-Test-LocaleTextDomainUTF8IfEnv.pot po/id.po}],
         'Acme-Text-Rhombus'                         => [qw{scripts/print-rhombus.pl}],
         'Acme-Time-Asparagus'                       => [qw{VERSION}],
+        'Acme-Time-Constant'                        => [qw{misc/Changes.deps misc/Changes.deps.all misc/Changes.deps.dev misc/Changes.deps.opt misc/built_with.json misc/perlcritic.deps}],
 
     };
 
@@ -460,12 +461,12 @@ sub cleanup_tree ($self) {
 
     # Delete garbage files we don't want.
     foreach my $unwanted_file (
-        qw{ MANIFEST MANIFEST.SKIP MANIFEST.bak MANIFEST.skip INSTALL INSTALL.txt SIGNATURE dist.ini Makefile.PL Build.PL weaver.ini
+        qw{ MANIFEST MANIFEST.SKIP MANIFEST.bak MANIFEST.skip INSTALL INSTALL.txt INSTALL.skip INSTALL.SKIP SIGNATURE dist.ini Makefile.PL Build.PL weaver.ini
         README README.md README.pod README.txt README.markdown README.html
         META.yml META.json ignore.txt .gitignore .mailmap Changes.PL cpanfile cpanfile.snapshot minil.toml .cvsignore .travis.yml travis.yml
         .project t/boilerplate.t MYMETA.json MYMETA.yml Makefile Makefile.old maint/Makefile.PL.include metamerge.json README.bak dist.ini.bak
         CREDITS doap.ttl author_test.sh cpants.pl makeall.sh perlcritic.rc .perltidyrc .perltidy dist.ini.meta Changes.new Changes.old
-        CONTRIBUTORS INSTALL.skip tidyall.ini perlcriticrc perltidyrc README.mkdn .shipit example.pl pm_to_blib
+        CONTRIBUTORS tidyall.ini perlcriticrc perltidyrc README.mkdn .shipit example.pl pm_to_blib
         install.txt install.sh install.cmd install.bat .settings/org.eclipse.core.resources.prefs .includepath META.ttl Makefile.PL.back
         Artistic_License.txt GPL_License.txt LICENSE.GPL LICENSE.Artistic
         }
@@ -681,6 +682,14 @@ sub is_extra_files_we_ship ( $self, $file ) {
     return 0;
 }
 
+sub cleanup_and_grep ( $self, $grep ) {
+    $self->git->reset('.');
+    $self->git->checkout('.');
+    $self->git->clean('-dxf');
+    print "Grep:\n";
+    print `git grep -iP '$grep'`;
+}
+
 # We can assume we are checked out into the p5 branch but it is
 # Indeterminate if PAUSE has merged in or if the p5 branch has been
 # converted.
@@ -738,10 +747,8 @@ sub update_p5_branch_from_PAUSE ($self) {
         if (%files_copy) {
             my @unexpected_files = sort { $a cmp $b } keys %files_copy;
             printf( "Unexpected files found in    %s\n%s\n", $distro, Dumper( \%files_copy ) );
-            print "Grep: \n";
             my $grep = join( '|', @unexpected_files );
-            `git reset .; git co .; git clean -dxf`;
-            print `git grep -iP '$grep'`;
+            $self->cleanup_and_grep($grep);
             printf( "\n        '%s'                 => [qw{%s}],\n", $distro, join( " ", @unexpected_files ) );
             die;
         }
@@ -941,7 +948,7 @@ sub generate_build_json ($self) {
         if ( !$build_json->{'license'} ) {
             $self->dump_self;
             printf( "Missing license for   %s\n\n", $self->distro );
-            print `git grep -iP 'license|copyright'`;
+            $self->cleanup_and_grep('license|copyright');
             die;
         }
     }
@@ -1282,7 +1289,9 @@ sub get_ppi_doc ( $self, $filename ) {
     return $self->ppi_cache->{$filename} if exists $self->ppi_cache->{$filename};
 
     print "PPI $filename\n";
-    my $content = File::Slurper::read_text($filename);
+
+    #    my $content = File::Slurper::read_text($filename);
+    my $content = $self->try_to_read_file($filename);
 
     local $@;
     my $cache = $self->ppi_cache->{$filename} = PPI::Document->new( \$content );
@@ -1324,7 +1333,16 @@ sub parse_builders_for_share ($self) {
     my $DOTFILES = 0;
     my @share_directives;
 
-    if ( -f 'Build.PL' ) {
+    my $dist   = 0;
+    my $module = 0;
+    if ( $self->builder_builder eq 'minilla' ) {    # We can just assume minilla is going to support the share dir.
+        if ( -d 'share' ) {
+            push @share_directives, ['install_share'];
+            $dist = 1;
+        }
+
+    }
+    elsif ( -f 'Build.PL' ) {
         my $content = $self->try_to_read_file('Build.PL');
         if ( $content =~ m/share_dir/msi ) {
             print "Need to implement share_dir support in Build.PL";
@@ -1376,8 +1394,6 @@ sub parse_builders_for_share ($self) {
         }
     }
 
-    my $dist   = 0;
-    my $module = 0;
     foreach my $share (@share_directives) {
 
         # install_share;
