@@ -141,6 +141,7 @@ sub do_the_do ($self) {
     if ( $self->is_play ) {
         $self->parse_maker_for_scripts;
         $self->parse_builders_for_share;
+        $self->parse_specail_files_for_license;
         $self->cleanup_tree;
         $self->update_p5_branch_from_PAUSE;
     }
@@ -434,6 +435,8 @@ sub fix_special_repos ( $self ) {
         'Acme-Time-Constant'                        => [qw{misc/Changes.deps misc/Changes.deps.all misc/Changes.deps.dev misc/Changes.deps.opt misc/built_with.json misc/perlcritic.deps}],
         'Acme-XSS'                                  => [qw{xss.html}],
         'Acme-rafl-Everywhere'                      => [qw{a.pl changes.patch}],
+        'Activiti-Rest-Client'                      => [qw{test/*}],
+        'Agent-TCLI'                                => [qw{bin/agent_tail.pl}],
 
     };
 
@@ -1618,13 +1621,12 @@ sub parse_pod ( $self, $filename ) {
 
     my $abstract;
     my @author;
-    my $license_data     = '';
-    my $copyright_author = '';
 
     foreach my $pod (@$pods) {
         my @pod_lines = split( "\n", $pod->content );
         while (@pod_lines) {
-            my $line = shift @pod_lines;
+            my $license_data = '';
+            my $line         = shift @pod_lines;
             if ( $line =~ m{^=head1 NAME} ) {
                 while ( @pod_lines && $pod_lines[0] && $pod_lines[0] !~ m/^=/ ) {
                     my $line = shift @pod_lines;
@@ -1673,57 +1675,74 @@ sub parse_pod ( $self, $filename ) {
                 }
             }
 
-            if ( $license_data && !$self->BUILD_json->{'license'} ) {
-                $license_data =~ s/\s\s+/ /msg;                                                # Strip double spaces to make parsing the text easier.
-                $license_data =~ s/\s/ /msg;                                                   # Convert all white space to a single space.
-
-                if ( $license_data =~ m/(or|under) the Artistic License|/msi ) {
-                    $self->BUILD_json->{'license'} = 'perl';
-                }
-                elsif ( $license_data =~ m/Terms (of|as) Perl itself/msi ) {
-                    $self->BUILD_json->{'license'} = 'perl';
-                }
-                elsif ( $license_data =~ m{same as Perl itself|you can redistribute it and/or modify it under the same terms as the perl 5 programming language system itself|under the same terms as perl\.}msi ) {
-                    $self->BUILD_json->{'license'} = 'perl';
-                }
-                elsif ( $license_data =~ m/L<perlartistic>/msi ) {
-                    $self->BUILD_json->{'license'} = 'perl';
-                }
-                elsif ( $license_data =~ m{This distribution is free software; you can redistribute it and/or modify it under the Artistic License 2.0|licensed under: The Artistic License 2.0|artistic_license_2_0}msi ) {
-                    $self->BUILD_json->{'license'} = 'Artistic_2_0';
-                }
-                elsif ( $license_data =~ m/under the terms of the Perl Artistic License/msi ) {
-                    $self->BUILD_json->{'license'} = 'perl';
-                }
-                elsif ( $license_data =~ m/under the terms of GNU General Public License \(GPL\)/msi ) {
-                    $self->BUILD_json->{'license'} = 'GPL';
-                }
-                elsif ( $license_data =~ m/under the terms of GNU General Public License 3/msi ) {
-                    $self->BUILD_json->{'license'} = 'GPLv3+';
-                }
-                elsif ( $license_data =~ m/MIT License/msi ) {
-                    $self->BUILD_json->{'license'} = 'MIT';
-                }
-                elsif ( $license_data =~ m/the Mozilla Public License Version 1\.1/msi ) {
-                    $self->BUILD_json->{'license'} = 'Mozilla_1_1';
-                }
-                elsif ( $license_data =~ m/under the terms of the Apache 2.0 license/msi ) {
-                    $self->BUILD_json->{'license'} = 'Apache_2_0';
-                }
-                elsif ( $license_data =~ m/L<Software::License::(\S+)>/msi ) {
-                    $self->BUILD_json->{'license'} = "$1";
-                }
-                elsif ( $license_data =~ m/into the public domain|This module is in the public domain/msi ) {
-                    $self->BUILD_json->{'license'} = "PublicDomain";
-                }
-
-                else {
-                    1;    #die "Unknown license: $license_data==\n";
-                }
-                $license_data = '';    # Clear it for the next check.
-            }
+            $self->parse_text_for_license($license_data);
         }
     }
+
+    return;
+}
+
+sub parse_text_for_license ( $self, $license_data ) {
+
+    return unless $license_data;
+    my $current_license = $self->BUILD_json->{'license'};
+    return if $current_license;
+
+    $license_data =~ s/\s\s+/ /msg;    # Strip double spaces to make parsing the text easier.
+    $license_data =~ s/\s/ /msg;       # Convert all white space to a single space.
+
+    if ( $license_data =~ m/(or|under) the Artistic License|/msi ) {
+        return $self->BUILD_json->{'license'} = 'perl';
+    }
+    elsif ( $license_data =~ m/Terms (of|as) Perl itself/msi ) {
+        return $self->BUILD_json->{'license'} = 'perl';
+    }
+    elsif ( $license_data =~ m{same as Perl itself|you can redistribute it and/or modify it under the same terms as the perl 5 programming language system itself|under the same terms as perl\.}msi ) {
+        return $self->BUILD_json->{'license'} = 'perl';
+    }
+    elsif ( $license_data =~ m/L<perlartistic>/msi ) {
+        return $self->BUILD_json->{'license'} = 'perl';
+    }
+    elsif ( $license_data =~ m{This distribution is free software; you can redistribute it and/or modify it under the Artistic License 2.0|licensed under: The Artistic License 2.0|artistic_license_2_0}msi ) {
+        return $self->BUILD_json->{'license'} = 'Artistic_2_0';
+    }
+    elsif ( $license_data =~ m/under the terms of the Perl Artistic License/msi ) {
+        return $self->BUILD_json->{'license'} = 'perl';
+    }
+    elsif ( $license_data =~ m/under the terms of GNU General Public License \(GPL\)/msi ) {
+        return $self->BUILD_json->{'license'} = 'GPL';
+    }
+    elsif ( $license_data =~ m/under the terms of GNU General Public License 3/msi ) {
+        return $self->BUILD_json->{'license'} = 'GPLv3+';
+    }
+    elsif ( $license_data =~ m/MIT License/msi ) {
+        return $self->BUILD_json->{'license'} = 'MIT';
+    }
+    elsif ( $license_data =~ m/the Mozilla Public License Version 1\.1/msi ) {
+        return $self->BUILD_json->{'license'} = 'Mozilla_1_1';
+    }
+    elsif ( $license_data =~ m/under the terms of the Apache 2.0 license/msi ) {
+        return $self->BUILD_json->{'license'} = 'Apache_2_0';
+    }
+    elsif ( $license_data =~ m/L<Software::License::(\S+)>/msi ) {
+        return $self->BUILD_json->{'license'} = "$1";
+    }
+    elsif ( $license_data =~ m/into the public domain|This module is in the public domain/msi ) {
+        return $self->BUILD_json->{'license'} = "PublicDomain";
+    }
+
+    #die "Unknown license: $license_data==\n";
+    return;
+}
+
+sub parse_specail_files_for_license ($self) {
+    foreach my $file (qw/README/) {
+        next unless -f $file && !-z _;
+        my $c = File::Slurper::read_binary($file) || '';
+        return if $self->parse_text_for_license($c);
+    }
+
+    return;
 }
 
 sub parse_code ( $self, $filename ) {
