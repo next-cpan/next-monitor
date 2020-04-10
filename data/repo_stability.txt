@@ -13364,6 +13364,158 @@
          }
       }
    },
+   "Acme-Text-Shorten-ForTwitter" : {
+      "0.001" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 120,
+            "total" : 120,
+            "unknown" : 0
+         },
+         "mtime" : 1586502490,
+         "newest_report" : "20190808",
+         "oldest_report" : "20150425",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 66,
+            "total" : 66,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-Text-Viceversa" : {
+      "0.07" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 73,
+            "total" : 73,
+            "unknown" : 0
+         },
+         "mtime" : 1586502491,
+         "newest_report" : "20191018",
+         "oldest_report" : "20190927",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 57,
+            "total" : 57,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-TextLayout" : {
+      "0.01" : {
+         "all_results" : {
+            "fail" : 74,
+            "pass" : 249,
+            "total" : 323,
+            "unknown" : 0
+         },
+         "mtime" : 1586502492,
+         "newest_report" : "20171205",
+         "oldest_report" : "20090321",
+         "recent_perl_results" : {
+            "fail" : 46,
+            "pass" : 5,
+            "total" : 51,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-Thoroughly-Modern-Perl" : {
+      "v0.4.1" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 131,
+            "total" : 131,
+            "unknown" : 0
+         },
+         "mtime" : 1586502493,
+         "newest_report" : "20190810",
+         "oldest_report" : "20140401",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 48,
+            "total" : 48,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-Throw" : {
+      "0.002" : {
+         "all_results" : {
+            "fail" : 1,
+            "pass" : 123,
+            "total" : 124,
+            "unknown" : 0
+         },
+         "mtime" : 1586502494,
+         "newest_report" : "20190810",
+         "oldest_report" : "20131213",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 34,
+            "total" : 34,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-Tie-Eleet" : {
+      "1.0.2" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 254,
+            "total" : 254,
+            "unknown" : 0
+         },
+         "mtime" : 1586502495,
+         "newest_report" : "20190613",
+         "oldest_report" : "20071126",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 25,
+            "total" : 25,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-Tie-Formatted" : {
+      "0.06" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 75,
+            "total" : 75,
+            "unknown" : 0
+         },
+         "mtime" : 1586502496,
+         "newest_report" : "20200116",
+         "oldest_report" : "20200103",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 48,
+            "total" : 48,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-Time-Asparagus" : {
+      "1.18" : {
+         "all_results" : {
+            "fail" : 1,
+            "pass" : 233,
+            "total" : 234,
+            "unknown" : 0
+         },
+         "mtime" : 1586502497,
+         "newest_report" : "20190810",
+         "oldest_report" : "20130822",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 114,
+            "total" : 114,
+            "unknown" : 0
+         }
+      }
+   },
    "DBI" : {
       "1.643" : {
          "all_results" : {

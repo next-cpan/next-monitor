@@ -704,3 +704,11 @@ Acme-Test-crypt 1586159231
 Acme-TestDist-Cpp-EUMM-EUCppGuess 1586502056
 Acme-Testing 1586159235
 Acme-Testing-Permissions 1586159239
+Acme-Text-Rhombus 1586502477
+Acme-Text-Shorten-ForTwitter 1586159247
+Acme-Text-Viceversa 1586159250
+Acme-Thoroughly-Modern-Perl 1586159255
+Acme-Throw 1586159258
+Acme-Tie-Eleet 1586159262
+Acme-Tie-Formatted 1586159266
+Acme-Time-Asparagus 1586503018

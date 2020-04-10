@@ -424,6 +424,8 @@ sub fix_special_repos ( $self ) {
         'Acme-Test-LocaleTextDomain'                => [qw{LocaleData/id/LC_MESSAGES/Acme-Test-LocaleTextDomain.mo po/Acme-Test-LocaleTextDomain.pot po/id.po}],
         'Acme-Test-LocaleTextDomainIfEnv'           => [qw{LocaleData/id/LC_MESSAGES/Acme-Test-LocaleTextDomainIfEnv.mo po/Acme-Test-LocaleTextDomainIfEnv.pot po/id.po}],
         'Acme-Test-LocaleTextDomainUTF8IfEnv'       => [qw{LocaleData/id/LC_MESSAGES/Acme-Test-LocaleTextDomainUTF8IfEnv.mo po/Acme-Test-LocaleTextDomainUTF8IfEnv.pot po/id.po}],
+        'Acme-Text-Rhombus'                         => [qw{scripts/print-rhombus.pl}],
+        'Acme-Time-Asparagus'                       => [qw{VERSION}],
 
     };
 
@@ -870,8 +872,12 @@ sub determine_installer ( $self ) {
     }
 
     if ( $builder ne 'legacy' and -e 'Build.PL' ) {
-        ...;
-        $builder = 'legacy';
+        my $content = $self->try_to_read_file('Build.PL');
+        if ( $content =~ m/install_path|sys_files/msi ) {
+            print "Need to implement support for install_path, sys_files in Build.PL";
+            ...;
+            $builder = 'legacy';
+        }
 
         # Parse Build.PL for install_path or sys_files and ban the use of the module.
     }
@@ -1318,8 +1324,12 @@ sub parse_builders_for_share ($self) {
     my $DOTFILES = 0;
     my @share_directives;
 
-    if ( -e 'Build.PL' ) {
-        ...;
+    if ( -f 'Build.PL' ) {
+        my $content = $self->try_to_read_file('Build.PL');
+        if ( $content =~ m/share_dir/msi ) {
+            print "Need to implement share_dir support in Build.PL";
+            ...;
+        }
     }
     elsif ( -e 'Makefile.PL' ) {
         my $doc = $self->get_ppi_doc('Makefile.PL');
@@ -1529,9 +1539,16 @@ sub _ppi_find_and_parse_value_for_key ( $self, $doc, $key_name ) {
         return if $list_node->class eq 'PPI::Token::Word';         # Looks like code not a list. Forget it!
 
         next if $list_node->content =~ m/^\s*qw[\[(]\s*[\])]\s*\z/;    # qw()
-        $list_node->class =~ m{^PPI::Token::Quote::} or die( "Unexpected child node parsing $key_name: " . Dumper($list_node) );
 
-        push @list, strip_quotes( $list_node->content );
+        if ( $list_node->class eq 'PPI::Token::QuoteLike::Words' ) {   # qw( abc def )
+            my $content = $list_node->content;
+            $content =~ s{^qw[\[(/](.*)[)/\]]$}{$1}msi;                # Strip out qw()
+            push @list, split( " ", $content );                        # magical split on " "
+        }
+        else {
+            $list_node->class =~ m{^PPI::Token::Quote::} or die( "Unexpected child node parsing $key_name: " . Dumper($list_node) );
+            push @list, strip_quotes( $list_node->content );
+        }
     }
     return @list;
 }
