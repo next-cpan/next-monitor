@@ -12,6 +12,7 @@ use experimental 'state';
 use version          ();
 use Git::Wrapper     ();
 use File::Slurper    ();
+use File::BOM        ();
 use Cwd::Guard       ();
 use Cpanel::JSON::XS ();
 use CPAN::Meta::YAML ();
@@ -359,7 +360,7 @@ sub fix_special_repos ( $self ) {
     }
 
     $self->BUILD_json->{'license'} = 'unknown' if grep { $distro eq $_ } qw{ Acme-Code-FreedomFighter ACME-Error-Translate Acme-ESP Acme-Goatse AFS AFS-Command AI-Fuzzy AI-General AIS-client AIX-LPP-lpp_name
-      Acme-Lingua-Strine-Perl Acme-ManekiNeko Acme-Method-CaseInsensitive Acme-Remote-Strangulation-Protocol Acme-Turing Acme-URM Acme-Ukrop};
+      Acme-Lingua-Strine-Perl Acme-ManekiNeko Acme-Method-CaseInsensitive Acme-Remote-Strangulation-Protocol Acme-Turing Acme-URM Acme-Ukrop Acme-Void};
     $self->BUILD_json->{'license'} = 'perl' if grep { $distro eq $_ } qw{ ACME-Error-31337 ACME-Error-IgpayAtinlay Acme-OSDc Acme-PM-Berlin-Meetings };
     $self->BUILD_json->{'license'} = 'GPL'  if grep { $distro eq $_ } qw{ AI-LibNeural };
 
@@ -462,7 +463,7 @@ sub cleanup_tree ($self) {
     # Delete garbage files we don't want.
     foreach my $unwanted_file (
         qw{ MANIFEST MANIFEST.SKIP MANIFEST.bak MANIFEST.skip INSTALL INSTALL.txt INSTALL.skip INSTALL.SKIP SIGNATURE dist.ini Makefile.PL Build.PL weaver.ini
-        README README.md README.pod README.txt README.markdown README.html
+        README README.md README.pod README.txt README.markdown README.html BUGS
         META.yml META.json ignore.txt .gitignore .mailmap Changes.PL cpanfile cpanfile.snapshot minil.toml .cvsignore .travis.yml travis.yml
         .project t/boilerplate.t MYMETA.json MYMETA.yml Makefile Makefile.old maint/Makefile.PL.include metamerge.json README.bak dist.ini.bak
         CREDITS doap.ttl author_test.sh cpants.pl makeall.sh perlcritic.rc .perltidyrc .perltidy dist.ini.meta Changes.new Changes.old
@@ -1291,7 +1292,12 @@ sub get_ppi_doc ( $self, $filename ) {
     print "PPI $filename\n";
 
     #    my $content = File::Slurper::read_text($filename);
-    my $content = $self->try_to_read_file($filename);
+    #my $content = $self->try_to_read_file($filename);
+
+    # Some perl modules have a BOM in the head of their file.
+    File::BOM::open_bom( my $fh, $filename, ':utf8' );
+    my $content = do { local $/; <$fh> };
+    close $fh;
 
     local $@;
     my $cache = $self->ppi_cache->{$filename} = PPI::Document->new( \$content );

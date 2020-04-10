@@ -733,3 +733,16 @@ Acme-VOYAGEGROUP-ConferenceRoom 1586504232
 Acme-Version-Hex 1586159326
 Acme-Very-Modern-Perl 1586159329
 Acme-VerySign 1586159333
+Acme-Void 1586504371
+Acme-Vuvuzela 1586159341
+Acme-W 1586159345
+Acme-WTF 1586159349
+Acme-Wabby 1586504415
+Acme-WallisdsFirstModule 1586159353
+Acme-Want5000trillion 1586159358
+Acme-Warn-LOLCAT 1586159362
+Acme-Waterkip 1586159365
+Acme-Web-PodDisplay 1586505165
+Acme-Web20-Validator 1586159370
+Acme-What 1586505171
+Acme-XKCD-DebianRandom 1586159377

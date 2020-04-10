@@ -14017,6 +14017,298 @@
          }
       }
    },
+   "Acme-Voodoo" : {
+      "0.3" : {
+         "all_results" : {
+            "fail" : 104,
+            "na" : 12,
+            "pass" : 80,
+            "total" : 197,
+            "unknown" : 1
+         },
+         "mtime" : 1586504375,
+         "newest_report" : "20171103",
+         "oldest_report" : "20030808",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 32,
+            "total" : 32,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-Vuvuzela" : {
+      "0.04" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 851,
+            "total" : 851,
+            "unknown" : 0
+         },
+         "mtime" : 1586504376,
+         "newest_report" : "20190814",
+         "oldest_report" : "20140816",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 350,
+            "total" : 350,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-W" : {
+      "0.03" : {
+         "all_results" : {
+            "fail" : 4,
+            "pass" : 287,
+            "total" : 297,
+            "unknown" : 6
+         },
+         "mtime" : 1586504378,
+         "newest_report" : "20190813",
+         "oldest_report" : "20101209",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 96,
+            "total" : 96,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-WTF" : {
+      "0.03" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 101,
+            "total" : 101,
+            "unknown" : 0
+         },
+         "mtime" : 1586504379,
+         "newest_report" : "20190812",
+         "oldest_report" : "20120614",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 17,
+            "total" : 17,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-Wabby" : {
+      "0.13" : {
+         "all_results" : {
+            "fail" : 1,
+            "pass" : 192,
+            "total" : 194,
+            "unknown" : 1
+         },
+         "mtime" : 1586504380,
+         "newest_report" : "20190612",
+         "oldest_report" : "20050923",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 13,
+            "total" : 13,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-WallisdsFirstModule" : {
+      "0.03" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 146,
+            "total" : 146,
+            "unknown" : 0
+         },
+         "mtime" : 1586504418,
+         "newest_report" : "20190812",
+         "oldest_report" : "20120613",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 33,
+            "total" : 33,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-Want5000trillion" : {
+      "0.03" : {
+         "all_results" : {
+            "fail" : 0,
+            "na" : 13,
+            "pass" : 145,
+            "total" : 158,
+            "unknown" : 0
+         },
+         "mtime" : 1586504419,
+         "newest_report" : "20190807",
+         "oldest_report" : "20170613",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 78,
+            "total" : 78,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-Warn-LOLCAT" : {
+      "0.02" : {
+         "all_results" : {
+            "fail" : 6,
+            "na" : 12,
+            "pass" : 58,
+            "total" : 76,
+            "unknown" : 0
+         },
+         "mtime" : 1586504420,
+         "newest_report" : "20190601",
+         "oldest_report" : "20120806",
+         "recent_perl_results" : {
+            "fail" : 1,
+            "pass" : 18,
+            "total" : 19,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-Waterkip" : {
+      "0.001" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 71,
+            "total" : 71,
+            "unknown" : 0
+         },
+         "mtime" : 1586504421,
+         "newest_report" : "20191118",
+         "oldest_report" : "20191101",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 51,
+            "total" : 51,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-Web-PodDisplay" : {
+      "0.91" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 112,
+            "total" : 112,
+            "unknown" : 0
+         },
+         "mtime" : 1586504422,
+         "newest_report" : "20190811",
+         "oldest_report" : "20130314",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 27,
+            "total" : 27,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-Web20-Validator" : {
+      "0.01" : {
+         "all_results" : {
+            "fail" : 3,
+            "pass" : 195,
+            "total" : 200,
+            "unknown" : 2
+         },
+         "mtime" : 1586505169,
+         "newest_report" : "20190613",
+         "oldest_report" : "20051115",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 35,
+            "total" : 35,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-What" : {
+      "0.005" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 74,
+            "total" : 74,
+            "unknown" : 0
+         },
+         "mtime" : 1586505170,
+         "newest_report" : "20190809",
+         "oldest_report" : "20140916",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 31,
+            "total" : 31,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-Win32-PEPM" : {
+      "0.02" : {
+         "all_results" : {
+            "fail" : 0,
+            "na" : 85,
+            "pass" : 0,
+            "total" : 85,
+            "unknown" : 0
+         },
+         "mtime" : 1586505174,
+         "newest_report" : "20190808",
+         "oldest_report" : "20151009",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "na" : 47,
+            "pass" : 0,
+            "total" : 47,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-XKCD-DebianRandom" : {
+      "2.00" : {
+         "all_results" : {
+            "fail" : 0,
+            "na" : 16,
+            "pass" : 195,
+            "total" : 211,
+            "unknown" : 0
+         },
+         "mtime" : 1586505178,
+         "newest_report" : "20190811",
+         "oldest_report" : "20120915",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 57,
+            "total" : 57,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-XSS" : {
+      "0.03" : {
+         "all_results" : {
+            "fail" : 0,
+            "na" : 19,
+            "pass" : 100,
+            "total" : 119,
+            "unknown" : 0
+         },
+         "mtime" : 1586505179,
+         "newest_report" : "20190809",
+         "oldest_report" : "20140830",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 46,
+            "total" : 46,
+            "unknown" : 0
+         }
+      }
+   },
    "DBI" : {
       "1.643" : {
          "all_results" : {
