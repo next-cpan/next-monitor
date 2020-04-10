@@ -56,9 +56,11 @@ has 'requires_develop'   => ( isa => 'HashRef',  is => 'rw', default => sub { re
 has 'recommends_build'   => ( isa => 'HashRef',  is => 'rw', default => sub { return {} } );
 has 'recommends_runtime' => ( isa => 'HashRef',  is => 'rw', default => sub { return {} } );
 has 'provides'           => ( isa => 'HashRef',  is => 'rw', default => sub { return {} } );
-has 'ppi_cache'          => ( isa => 'HashRef',  is => 'rw', default => sub { return {} } );
-has 'BUILD_json'         => ( isa => 'HashRef',  is => 'rw', default => sub { return {} } );
-has 'BUILD_file'         => ( isa => 'Str',      is => 'rw', default => 'BUILD.json' );
+has 'test_provides'      => ( isa => 'HashRef',  is => 'rw', default => sub { return {} } );
+
+has 'ppi_cache'  => ( isa => 'HashRef', is => 'rw', default => sub { return {} } );
+has 'BUILD_json' => ( isa => 'HashRef', is => 'rw', default => sub { return {} } );
+has 'BUILD_file' => ( isa => 'Str',     is => 'rw', default => 'BUILD.json' );
 
 sub _build_builder_builder ($self) {
     return 'minilla' if -f 'minil.toml' && !-z _;
@@ -298,7 +300,7 @@ sub is_unnecessary_dep ( $self, $module ) {
         'Acme-MetaSyntactic-seinfeld'           => [qw{ Test::MetaSyntactic }],
         'Acme-MetaSyntactic-vim'                => [qw{ File::Find::Rule }],
         'Acme-YAPC-Asia-2012-LTthon-Hakushu'    => [qw{ Test::Requires }],
-        'Algorithm-BinPack-2D'            => [qw{ Test::Requires }],
+        'Algorithm-BinPack-2D'                  => [qw{ Test::Requires }],
 
     };
 
@@ -439,10 +441,7 @@ sub fix_special_repos ( $self ) {
         'Agent-TCLI'                                => [qw{bin/agent_tail.pl}],
         'Agent-TCLI-Package-Net'                    => [qw{bin/agent_net.pl}],
         'Album'                                     => [qw{helper/Makefile helper/README helper/autorun.inf helper/shellrun.c helper/shellrun.exe script/album}],
-        'Algorithm-BitVector'                 => [qw{Examples/BitVectorDemo.pl Examples/README Examples/testinput.txt}],
-
-
-
+        'Algorithm-BitVector'                       => [qw{Examples/BitVectorDemo.pl Examples/README Examples/testinput.txt}],
 
     };
 
@@ -1051,10 +1050,11 @@ sub generate_build_json ($self) {
     prune_ref($meta);
     $meta->{'prereqs'} and die( "Unexpected prereqs found:\n" . Dumper $meta);
 
-    my $provides = $self->provides;
+    my $provides      = $self->provides;
+    my $test_provides = $self->test_provides;
     foreach my $req ( $self->requires_build, $self->requires_runtime, $self->requires_develop ) {
         foreach my $module ( keys %$req ) {
-            delete $req->{$module} if $provides->{$module};
+            delete $req->{$module} if $provides->{$module} or $test_provides->{$module};
         }
     }
 
@@ -1583,16 +1583,26 @@ sub _ppi_find_and_parse_value_for_key ( $self, $doc, $key_name ) {
 
         next if $list_node->content =~ m/^\s*qw[\[(]\s*[\])]\s*\z/;    # qw()
 
-        if ( $list_node->class eq 'PPI::Token::QuoteLike::Words' ) {   # qw( abc def )
-            my $content = $list_node->content;
-            $content =~ s{^qw[\[(/](.*)[)/\]]$}{$1}msi;                # Strip out qw()
-            push @list, split( " ", $content );                        # magical split on " "
-        }
-        else {
-            $list_node->class =~ m{^PPI::Token::Quote::} or die( "Unexpected child node parsing $key_name: " . Dumper($list_node) );
-            push @list, strip_quotes( $list_node->content );
-        }
+        push @list, _get_list_from_quote_or_quote_like_words($list_node);
     }
+    return @list;
+}
+
+sub _get_list_from_quote_or_quote_like_words ($node) {
+    my @list;
+
+    if ( $node->class eq 'PPI::Token::QuoteLike::Words' ) {            # qw( abc def )
+        my $content = $node->content;
+        $content =~ s{^qw[\[(/](.*)[)/\]]$}{$1}msi;                    # Strip out qw()
+        push @list, split( " ", $content );                            # magical split on " "
+    }
+    elsif ( $node->class =~ m{^PPI::Token::Quote::} ) {
+        push @list, strip_quotes( $node->content );
+    }
+    else {
+        die( dump_tree( $node, "Unexpected class for quote/list node" ) );
+    }
+
     return @list;
 }
 
@@ -1773,55 +1783,78 @@ sub parse_code ( $self, $filename ) {
     # find use/require statements and parse them.
     my $use_find = $doc->find('PPI::Statement::Include') || [];
     foreach my $use_node (@$use_find) {
-        my $module = get_package_usage($use_node) or next;
-        $requires_runtime_hash->{$module} = 0;
+        my (@modules) = get_package_usage($use_node) or next;
+        $requires_runtime_hash->{$_} = 0 foreach @modules;
     }
 
     my $primary_module = $self->BUILD_json->{'primary'};
 
+    return unless $filename =~ m{\.(t|pm)$} && $filename =~ m{^(t|lib)/};
+    my $provides_hash = ( $filename =~ m/^lib/ ) ? $self->provides : $self->test_provides;
+
     # Find packages that are provides.
-    if ( $filename =~ m{\.pm$} && $filename =~ m{^lib/} ) {
-        my $packages_find = $doc->find('PPI::Statement::Package') || [];
-      PACKAGE: foreach my $pkg_token (@$packages_find) {
-            my $module = get_package_provided($pkg_token) or next;
+    my $packages_find = $doc->find('PPI::Statement::Package') || [];
 
-            $self->provides->{$module}->{'file'}    = $filename;
-            $self->provides->{$module}->{'version'} = 0;
+  PACKAGE: foreach my $pkg_token (@$packages_find) {
+        my $module = get_package_provided($pkg_token) or next;
 
-            # Try to determine the VERSION value in each package.
-            while ( $pkg_token = $pkg_token->snext_sibling ) {
+        $provides_hash->{$module}->{'file'}    = $filename;
+        $provides_hash->{$module}->{'version'} = 0;
 
-                #print dump_tree($pkg_token, "NEXT LINE\n");
-                my $class = $pkg_token->class;
-                last if $class eq 'PPI::Statement::Package';
-                next unless $class =~ m/^(PPI::Statement|PPI::Statement::Variable|PPI::Statement::Compound|PPI::Statement::Scheduled)$/;
+        # Try to determine the VERSION value in each package.
+        while ( $pkg_token = $pkg_token->snext_sibling ) {
 
-                my $nodes = $pkg_token->find( sub { ( $_[1]->content eq '$VERSION' | $_[1]->content eq "\$${module}::VERSION" ) && $_[1]->class eq 'PPI::Token::Symbol' } ) or next;
-                foreach my $node (@$nodes) {
-                    my $node = $nodes->[0];
-                    $node = $node->snext_sibling;
-                    if ( !ref $node ) {
+            #print dump_tree($pkg_token, "NEXT LINE\n");
+            my $class = $pkg_token->class;
+            last if $class eq 'PPI::Statement::Package';
+            next unless $class =~ m/^(PPI::Statement|PPI::Statement::Variable|PPI::Statement::Compound|PPI::Statement::Scheduled)$/;
 
-                        # Possibly ( $VERSION ) = ...
-                        eval { $node = $nodes->[0]->parent->parent->snext_sibling };
-                        ref $node or die;
+            my $nodes = $pkg_token->find( sub { ( $_[1]->content eq '$VERSION' | $_[1]->content eq "\$${module}::VERSION" ) && $_[1]->class eq 'PPI::Token::Symbol' } ) or next;
+            foreach my $node (@$nodes) {
+                my $node = $nodes->[0];
+                $node = $node->snext_sibling;
+                if ( !ref $node ) {
+
+                    # Possibly ( $VERSION ) = ...
+                    eval { $node = $nodes->[0]->parent->parent->snext_sibling };
+                    ref $node or die;
+                }
+                $node->class eq 'PPI::Token::Operator' or next;
+                $node->content eq '='                  or next;
+                $node = $node->snext_sibling;
+
+                my $version;
+
+                # Try to handle all the stupid things people have done with version lines :(
+                if ( $node->class =~ m/^PPI::Token::(Quote|Number)/ ) {
+                    $version = $node->content;
+                    $version = strip_quotes($version);
+                    if ( $version =~ m/Revision: ([0-9.]+)/ ) {    # ( $VERSION ) = '$Revision: 1.9 $ ' =~ /\$Revision:\s+([^\s]+)/;
+                        $version = $1;
                     }
-                    $node->class eq 'PPI::Token::Operator' or next;
-                    $node->content eq '='                  or next;
+                }
+                elsif ( $node->class eq 'PPI::Token::Word' && $node->content eq 'qv' ) {    # our $version = qv{v0.0.2}
                     $node = $node->snext_sibling;
+                    $node->class eq 'PPI::Structure::List' or die dump_tree($node);
 
-                    my $version;
+                    $node = $node->schild(0);
+                    $node->class eq 'PPI::Statement::Expression' or die dump_tree($node);
 
-                    # Try to handle all the stupid things people have done with version lines :(
-                    if ( $node->class =~ m/^PPI::Token::(Quote|Number)/ ) {
-                        $version = $node->content;
-                        $version = strip_quotes($version);
-                        if ( $version =~ m/Revision: ([0-9.]+)/ ) {    # ( $VERSION ) = '$Revision: 1.9 $ ' =~ /\$Revision:\s+([^\s]+)/;
-                            $version = $1;
-                        }
-                    }
-                    elsif ( $node->class eq 'PPI::Token::Word' && $node->content eq 'qv' ) {    # our $version = qv{v0.0.2}
-                        $node = $node->snext_sibling;
+                    $node = $node->schild(0);
+                    $node->class =~ m/^PPI::Token::Quote::/ or die dump_tree($node);
+
+                    $version = $node->content;
+                    $version =~ s/^\s*['"](.+)['"]\s*$/v$1/;                                # Make it a v-string since that's what they were going for.
+                    $version =~ s/^vv/v/;                                                   # Sometimes the v is already there. strip off the duplicate.
+                }
+                elsif ( $node->class eq 'PPI::Token::Word' && $node->content eq 'version' ) {    # our $VERSION = version->.....
+                    $node = $node->snext_sibling;                                                # ->
+                    $node->class eq 'PPI::Token::Operator' or die dump_tree($node);
+
+                    $node = $node->snext_sibling;                                                # declare
+                    if ( $node->class eq 'PPI::Token::Word' && $node->content eq 'declare' ) {   # our $VERSION = version->declare('v0.2.2');
+
+                        $node = $node->snext_sibling;                                            # ( ... )
                         $node->class eq 'PPI::Structure::List' or die dump_tree($node);
 
                         $node = $node->schild(0);
@@ -1831,75 +1864,55 @@ sub parse_code ( $self, $filename ) {
                         $node->class =~ m/^PPI::Token::Quote::/ or die dump_tree($node);
 
                         $version = $node->content;
-                        $version =~ s/^\s*['"](.+)['"]\s*$/v$1/;                                # Make it a v-string since that's what they were going for.
-                        $version =~ s/^vv/v/;                                                   # Sometimes the v is already there. strip off the duplicate.
+                        $version =~ s/^\s*['"](.+)['"]\s*$/v$1/;                                 # Make it a v-string since that's what they were going for.
                     }
-                    elsif ( $node->class eq 'PPI::Token::Word' && $node->content eq 'version' ) {    # our $VERSION = version->.....
-                        $node = $node->snext_sibling;                                                # ->
-                        $node->class eq 'PPI::Token::Operator' or die dump_tree($node);
+                    elsif ( $node->class eq 'PPI::Token::Word' && $node->content eq 'parse' ) {    # our $VERSION = version->parse('v0.2.2')->numify;
 
-                        $node = $node->snext_sibling;                                                # declare
-                        if ( $node->class eq 'PPI::Token::Word' && $node->content eq 'declare' ) {   # our $VERSION = version->declare('v0.2.2');
+                        my $next = $node = $node->snext_sibling;                                   # ( ... )
+                        $node->class eq 'PPI::Structure::List' or die dump_tree($node);
 
-                            $node = $node->snext_sibling;                                            # ( ... )
-                            $node->class eq 'PPI::Structure::List' or die dump_tree($node);
+                        $node = $node->schild(0);
+                        $node->class eq 'PPI::Statement::Expression' or die dump_tree($node);
 
-                            $node = $node->schild(0);
-                            $node->class eq 'PPI::Statement::Expression' or die dump_tree($node);
+                        $node = $node->schild(0);
+                        $node->class eq 'PPI::Token::Number::Version' or die dump_tree( $nodes->[0]->parent );
+                        $version = strip_quotes( $node->content );
 
-                            $node = $node->schild(0);
-                            $node->class =~ m/^PPI::Token::Quote::/ or die dump_tree($node);
+                        $node = $next->snext_sibling;
+                        $node->class eq 'PPI::Token::Operator' && $node->content eq '->' or die dump_tree( $nodes->[0]->parent );
 
-                            $version = $node->content;
-                            $version =~ s/^\s*['"](.+)['"]\s*$/v$1/;                                 # Make it a v-string since that's what they were going for.
-                        }
-                        elsif ( $node->class eq 'PPI::Token::Word' && $node->content eq 'parse' ) {    # our $VERSION = version->parse('v0.2.2')->numify;
-
-                            my $next = $node = $node->snext_sibling;                                   # ( ... )
-                            $node->class eq 'PPI::Structure::List' or die dump_tree($node);
-
-                            $node = $node->schild(0);
-                            $node->class eq 'PPI::Statement::Expression' or die dump_tree($node);
-
-                            $node = $node->schild(0);
-                            $node->class eq 'PPI::Token::Number::Version' or die dump_tree( $nodes->[0]->parent );
-                            $version = strip_quotes( $node->content );
-
-                            $node = $next->snext_sibling;
-                            $node->class eq 'PPI::Token::Operator' && $node->content eq '->' or die dump_tree( $nodes->[0]->parent );
-
-                            $node = $node->snext_sibling;
-                            $node->class eq 'PPI::Token::Word' && $node->content eq 'numify' or die dump_tree( $nodes->[0]->parent );
-                            $version = version->parse($version)->numify;
-                        }
-                        else {
-                            die dump_tree( $nodes->[0]->parent, "Failed to parse version-> declaration" );
-                        }
-                    }
-                    elsif ( $node->class eq 'PPI::Token::Symbol' && $node->content =~ m/"?\$\Q$primary_module\E::VERSION"?$/ ) {    # our $VERSION = $accessors::fast::VERSION;
-                        if ( !$self->provides->{$primary_module} ) {
-                            ...;                                                                                                    # Most of the time we process the primary module first...
-                        }
-                        $version = $self->provides->{$primary_module}->{'version'};
-                    }
-                    elsif ( $node->class eq 'PPI::Token::Word' && $node->content eq 'sprintf' && $pkg_token->content =~ m/Revision:\s*([0-9]+\.[0-9]+)\s*\$/ ) {    # our $VERSION = sprintf "%d.%02d", q$Revision: 0.2 $ =~ /(\d+)/g;
-                        $version = $1;
+                        $node = $node->snext_sibling;
+                        $node->class eq 'PPI::Token::Word' && $node->content eq 'numify' or die dump_tree( $nodes->[0]->parent );
+                        $version = version->parse($version)->numify;
                     }
                     else {
-                        #                    my $str = $pkg_token->content;
-                        #                    my ($version) = $str =~ m/sprintf.+Revision: ([0-9]+\.[0-9]+)/;
-
-                        $self->dump_self;
-                        $version or die sprintf( "TOKEN (%s=%s): %s--\n", $node->class, $node->content, $pkg_token->content ) . dump_tree( $pkg_token, "Unexpected content in VERSION statement" );
+                        die dump_tree( $nodes->[0]->parent, "Failed to parse version-> declaration" );
                     }
-
-                    print "PROVIDES $module ($version)\n";
-                    $self->provides->{$module}->{'version'} = $version;
-                    next PACKAGE;
                 }
+                elsif ( $node->class eq 'PPI::Token::Symbol' && $node->content =~ m/"?\$\Q$primary_module\E::VERSION"?$/ ) {    # our $VERSION = $accessors::fast::VERSION;
+                    if ( !$provides_hash->{$primary_module} ) {
+                        ...;                                                                                                    # Most of the time we process the primary module first...
+                    }
+                    $version = $provides_hash->{$primary_module}->{'version'};
+                }
+                elsif ( $node->class eq 'PPI::Token::Word' && $node->content eq 'sprintf' && $pkg_token->content =~ m/Revision:\s*([0-9]+\.[0-9]+)\s*\$/ ) {    # our $VERSION = sprintf "%d.%02d", q$Revision: 0.2 $ =~ /(\d+)/g;
+                    $version = $1;
+                }
+                else {
+                    #                    my $str = $pkg_token->content;
+                    #                    my ($version) = $str =~ m/sprintf.+Revision: ([0-9]+\.[0-9]+)/;
+
+                    $self->dump_self;
+                    $version or die sprintf( "TOKEN (%s=%s): %s--\n", $node->class, $node->content, $pkg_token->content ) . dump_tree( $pkg_token, "Unexpected content in VERSION statement" );
+                }
+
+                print "PROVIDES $module ($version)\n";
+                $provides_hash->{$module}->{'version'} = $version;
+                next PACKAGE;
             }
         }
     }
+
 }
 
 sub get_package_provided ($element) {
@@ -1947,11 +1960,28 @@ sub get_package_usage ($element) {
 
     # use base 'accessors';
     if ( $is_use eq 'use' and $module =~ /^(base|parent)$/ ) {
+        my @modules;
         $token = $token->snext_sibling;
         return if $token->class eq 'PPI::Token::Structure' and $token->content eq ';';    # use base;
-        $token->class =~ m/^PPI::Token::(Quote::|QuoteLike::Words|Word$)/ or die dump_tree( $top, "Unexpected sequence parsing use parent/base" );
-        $module = strip_quotes( $token->content );
-        return $module;
+        if ( $token->class eq 'PPI::Structure::List' ) {
+            $token = $token->schild(0);
+            $token->class eq 'PPI::Statement::Expression' or die;
+            $token = $token->schild(0);
+
+            push @modules, _get_list_from_quote_or_quote_like_words($token);
+
+            while ( $token = $token->snext_sibling ) {
+                next if $token->class eq 'PPI::Token::Operator';
+                push @modules, _get_list_from_quote_or_quote_like_words($token);
+            }
+
+            return @modules;    # In this case, it's more than one module.
+        }
+        else {
+            push @modules, _get_list_from_quote_or_quote_like_words($token);
+        }
+
+        return @modules;
     }
 
     # no imports for require.

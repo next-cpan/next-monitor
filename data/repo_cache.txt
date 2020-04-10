@@ -807,3 +807,4 @@ Algorithm-BloomFilter 1586186222
 Algorithm-BreakOverlappingRectangles 1586186226
 Algorithm-Bucketizer 1586508529
 Algorithm-Burg 1586186230
+Algorithm-C3 1586510951
