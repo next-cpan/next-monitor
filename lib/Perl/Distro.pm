@@ -58,7 +58,8 @@ has 'recommends_runtime' => ( isa => 'HashRef',  is => 'rw', default => sub { re
 has 'provides'           => ( isa => 'HashRef',  is => 'rw', default => sub { return {} } );
 has 'test_provides'      => ( isa => 'HashRef',  is => 'rw', default => sub { return {} } );
 
-has 'ppi_cache'  => ( isa => 'HashRef', is => 'rw', default => sub { return {} } );
+has 'ppi_cache' => ( isa => 'HashRef', is => 'rw', default => sub { return {} } );
+
 has 'BUILD_json' => ( isa => 'HashRef', is => 'rw', default => sub { return {} } );
 has 'BUILD_file' => ( isa => 'Str',     is => 'rw', default => 'BUILD.json' );
 
@@ -369,7 +370,7 @@ sub fix_special_repos ( $self ) {
     }
 
     $self->BUILD_json->{'license'} = 'unknown' if grep { $distro eq $_ } qw{ Acme-Code-FreedomFighter ACME-Error-Translate Acme-ESP Acme-Goatse AFS AFS-Command AI-Fuzzy AI-General AIS-client AIX-LPP-lpp_name
-      Acme-Lingua-Strine-Perl Acme-ManekiNeko Acme-Method-CaseInsensitive Acme-Remote-Strangulation-Protocol Acme-Turing Acme-URM Acme-Ukrop Acme-Void};
+      Acme-Lingua-Strine-Perl Acme-ManekiNeko Acme-Method-CaseInsensitive Acme-Remote-Strangulation-Protocol Acme-Turing Acme-URM Acme-Ukrop Acme-Void Algorithm-FEC};
     $self->BUILD_json->{'license'} = 'perl' if grep { $distro eq $_ } qw{ ACME-Error-31337 ACME-Error-IgpayAtinlay Acme-OSDc Acme-PM-Berlin-Meetings Acme-please Algorithm-Cluster};
     $self->BUILD_json->{'license'} = 'GPL'  if grep { $distro eq $_ } qw{ AI-LibNeural };
 
@@ -449,6 +450,9 @@ sub fix_special_repos ( $self ) {
         'Algorithm-CurveFit-Simple'                 => [qw{data/hra-bhn.tsv}],
         'Algorithm-DecisionTree'                    => [qw{Examples/* ExamplesBagging/* ExamplesBoosting/* ExamplesRandomizedTrees/* ExamplesRegression/*}],
         'Algorithm-Diff'                            => [qw{cdiff.pl diff.pl diffnew.pl htmldiff.pl}],
+        'Algorithm-Evolutionary-Simple'             => [qw{script/bitflip.pl script/onemax-benchmark.pl script/xover.pl}],
+        'Algorithm-FloodControl'                    => [qw{svn-commit.tmp}],
+        'Algorithm-GenerateSequence'                => [qw{bench_call}],
 
     };
 
@@ -1193,7 +1197,10 @@ sub generate_build_json ($self) {
         delete $meta->{'author'};
     }
 
-    $build_json->{'maintainers'} or die("Could not determine maintainers for this repo");
+    if ( !$build_json->{'maintainers'} ) {
+        $self->cleanup_and_grep('author|copyright');
+        die("Could not determine maintainers for this repo");
+    }
 
     # Verify everything we think we figured out matches META.
     if ( length $meta->{'abstract'} && $meta->{'abstract'} ne 'unknown' ) {
@@ -1545,6 +1552,12 @@ sub parse_maker_for_scripts ($self) {
     if ( -e 'Makefile.PL' ) {
         my $doc = $self->get_ppi_doc('Makefile.PL');
 
+        # my @scripts = grep {-f } glob("scripts/*.pl "); # Ripped from Text::PDF
+        if ( $doc->find( sub ( $self, $node ) { $node->class eq 'PPI::Statement::Variable' && $node->content =~ m{glob\(\s*"scripts/\*\.pl\s*"\)} } ) ) {
+            push @$scripts, glob('scripts/*.pl');
+            return;
+        }
+
         push @$scripts, $self->_ppi_find_and_parse_value_for_key( $doc, 'EXE_FILES' );
         return if @{$scripts};    # Must be EU::MM cause we got something!
 
@@ -1578,7 +1591,7 @@ sub _ppi_find_and_parse_value_for_key ( $self, $doc, $key_name ) {
 
     # Next sibling is [] right?
     $node = $node->snext_sibling();
-    $node->class eq 'PPI::Structure::Constructor' or die( "Unexpected sibling value EXE_FILES: " . dump_tree($node) );
+    $node->class eq 'PPI::Structure::Constructor' or die( "Unexpected sibling value $key_name: " . dump_tree($node) );
 
     my @list;
     my ($list_nodes) = $node->schildren;
@@ -1713,8 +1726,7 @@ sub parse_pod ( $self, $filename ) {
 sub parse_text_for_license ( $self, $license_data ) {
 
     return unless $license_data;
-    my $current_license = $self->BUILD_json->{'license'};
-    return if $current_license;
+    return if $self->BUILD_json->{'license'};
 
     $license_data =~ s/\s\s+/ /msg;    # Strip double spaces to make parsing the text easier.
     $license_data =~ s/\s/ /msg;       # Convert all white space to a single space.
@@ -1764,7 +1776,9 @@ sub parse_text_for_license ( $self, $license_data ) {
 }
 
 sub parse_specail_files_for_license ($self) {
-    foreach my $file (qw/README/) {
+    return if $self->BUILD_json->{'license'};
+
+    foreach my $file (qw/README LICENSE/) {
         next unless -f $file && !-z _;
         my $c = File::Slurper::read_binary($file) || '';
         return if $self->parse_text_for_license($c);
