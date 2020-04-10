@@ -18,6 +18,7 @@ use CPAN::Meta::YAML ();
 use File::Path qw/mkpath/;
 use Pod::Markdown::Github ();
 use Module::CoreList      ();
+use File::Find            ();
 
 use PPI::Document ();
 use PPI::Dumper   ();
@@ -34,7 +35,9 @@ has 'clean_dirty_repos' => ( isa => 'Bool', is => 'ro', default  => 1 );
 
 has 'git'       => ( isa => 'Object',  lazy => 1,    is   => 'ro', lazy    => 1, builder => '_build_git' );
 has 'dist_meta' => ( isa => 'HashRef', is   => 'rw', lazy => 1,    builder => '_build_meta' );
-has 'repo_files' => (
+
+has 'share_files' => ( isa => 'ArrayRef', is => 'rw', default => sub { return [] } );
+has 'repo_files'  => (
     isa     => 'HashRef',
     is      => 'rw',
     lazy    => 1,
@@ -275,6 +278,9 @@ sub checkout_p5_branch ($self) {
 sub is_unnecessary_dep ( $self, $module ) {
     my $distro = $self->distro;
 
+    # Play does File::ShareDir::Install by itself.
+    return 1 if $module eq 'File::ShareDir::Install' && $self->is_play;
+
     state $skips = {
         'Acme-CPANModules-CalculatingDayOfWeek' => [qw{ Bencher::Backend }],
         'Acme-CPANModules-TextTable'            => [qw{ Bencher::Backend }],
@@ -431,7 +437,8 @@ sub fix_special_repos ( $self ) {
 }
 
 sub _remove_files_by_pattern ( $self, $pattern ) {
-    foreach my $file ( keys %{ $self->repo_files } ) {
+    my $files = $self->repo_files;
+    foreach my $file ( keys %$files ) {
         next unless $file =~ $pattern;
         delete $files->{$file};
         $self->git->rm( '-f', $file );
@@ -652,7 +659,7 @@ sub is_extra_files_we_ship ( $self, $file ) {
     return 1 if ( grep { $file eq $_ } qw/Changelog LICENSE CONTRIBUTING.md Todo author.yml/ );
 
     # paths with example files we're going to ignore.
-    return 1 if $file =~ m{^(eg|examples?|ex|share)/};
+    return 1 if $file =~ m{^(eg|examples?|ex)/};
 
     my $distro = $self->distro;
 
@@ -715,6 +722,11 @@ sub update_p5_branch_from_PAUSE ($self) {
         # Files we know are ok, we'll delete from the hash.
         foreach my $file ( sort keys %files_copy ) {
             delete $files_copy{$file} if $self->is_extra_files_we_ship($file);
+        }
+
+        # Detected share files.
+        foreach my $file ( @{ $self->share_files } ) {
+            delete $files_copy{$file};
         }
 
         # Nothing was found.
@@ -1299,6 +1311,10 @@ sub is_xt_test ( $self, $filename ) {
 }
 
 sub parse_builders_for_share ($self) {
+    my $DOTDIRS  = 0;
+    my $DOTFILES = 0;
+    my @share_directives;
+
     if ( -e 'Build.PL' ) {
         ...;
     }
@@ -1315,7 +1331,8 @@ sub parse_builders_for_share ($self) {
             $node = $node->snext_sibling;
             $node->class eq 'PPI::Token::Number' or die( dump_tree( $sharedir_var->parent, "Unexpected value for \$File::ShareDir::Install::" ) );
 
-            $self->BUILD_json->{'share'}->{$var} = $node->content;
+            $DOTDIRS  = $node->content if $var eq 'INCLUDE_DOTDIRS';
+            $DOTFILES = $node->content if $var eq 'INCLUDE_DOTFILES';
         }
 
         # find: install_share dist => "share";
@@ -1329,7 +1346,6 @@ sub parse_builders_for_share ($self) {
             }
         );
 
-        my @share_directives;
         foreach my $node (@$install_shares) {
             $node = $node->schild(0);
             my @share_directive = qw/install_share/;
@@ -1340,19 +1356,81 @@ sub parse_builders_for_share ($self) {
                 next if $class eq 'PPI::Token::Operator';
                 last if $class eq 'PPI::Token::Structure' and $content eq ';';
 
-                print "$class => $content\n";
-
                 push @share_directive, strip_quotes( $node->content );
             }
             push @share_directives, [@share_directive];
-            $self->BUILD_json->{'share'}->{'directives'} = \@share_directives;
+
+        }
+    }
+
+    my $dist   = 0;
+    my $module = 0;
+    foreach my $share (@share_directives) {
+
+        # install_share;
+        # install_share dist => "share";
+        if ( @$share == 1 or ( @$share == 3 && $share->[1] eq 'dist' && $share->[2] eq 'share' ) ) {
+            $dist = 1;
         }
 
-        die Dumper $self->BUILD_json->{'share'};
-        return if @share_directives;
+        # install_share "images";
+        # install_share dist => 'config';
+        elsif ( ( @$share == 3 && $share->[1] eq 'dist' ) or @$share == 2 ) {
+            my $share_dist_path = shift @$share;
+            $self->merge_path( $share_dist_path, 'share' );
+
+            $dist = 1;
+        }
+        elsif ( @$share == 5 && $share->[1] eq 'module' ) {
+            my ( undef, undef, $module, $path ) = @$share;
+            $module =~ s/::/-/g;
+            $self->merge_paths( $path, "share-module/$module" );
+
+            $module = 1;
+        }
+        else {
+            die "Unknown share directive: ", join( " => ", @$share );
+        }
+    }
+
+    # share dir but no share directives. Let's remove share/
+    if ( !@share_directives && -d 'share' ) {
+        $self->git->rm( '-rf', 'share' );
+    }
+    elsif (@share_directives) {
+        my @share_dirs;
+        push @share_dirs, 'share'        if $dist;
+        push @share_dirs, 'share-module' if $module;
+
+        if ( !$DOTDIRS ) {
+            print "DDD=$DOTDIRS DDF=$DOTFILES\n";
+            ...;    # I need a repo that wants this.
+            my @dot_dirs_found;
+            File::Find::find( sub { next unless -d $_; next unless substr( $_, 0, 1 ) eq '.'; push @dot_dirs_found, $File::Find::name }, @share_dirs );
+        }
+        if ( !$DOTFILES ) {
+            print "DDD=$DOTDIRS DDF=$DOTFILES\n";
+            ...;
+        }
+
+        # Store the share files so we know to keep them later.
+        push @{ $self->share_files }, $self->git->ls_files('share')        if $dist;
+        push @{ $self->share_files }, $self->git->ls_files('share-module') if $module;
     }
 
     return;
+}
+
+sub merge_path ( $self, $from_dir, $to_dir ) {
+    return unless -d $from_dir;
+    mkpath($to_dir);
+
+    my $git = $self->git;
+
+    my @files = sort { length($a) <=> length($b) } $git->ls_files($from_dir);
+    print Dumper \@files;
+    ...;
+
 }
 
 sub parse_maker_for_scripts ($self) {
