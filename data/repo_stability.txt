@@ -15268,6 +15268,470 @@
          }
       }
    },
+   "Algorithm" : {
+      "0.05" : {
+         "all_results" : {
+            "fail" : 0,
+            "na" : 18,
+            "pass" : 114,
+            "total" : 132,
+            "unknown" : 0
+         },
+         "mtime" : 1586508385,
+         "newest_report" : "20190809",
+         "oldest_report" : "20140506",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 48,
+            "total" : 48,
+            "unknown" : 0
+         }
+      }
+   },
+   "Algorithm-AM" : {
+      "3.11" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 142,
+            "total" : 142,
+            "unknown" : 0
+         },
+         "mtime" : 1586508386,
+         "newest_report" : "20190807",
+         "oldest_report" : "20171115",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 68,
+            "total" : 68,
+            "unknown" : 0
+         }
+      }
+   },
+   "Algorithm-Accounting" : {
+      "0.08" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 226,
+            "total" : 228,
+            "unknown" : 2
+         },
+         "mtime" : 1586508387,
+         "newest_report" : "20171109",
+         "oldest_report" : "20061213",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 69,
+            "total" : 69,
+            "unknown" : 0
+         }
+      }
+   },
+   "Algorithm-AdaBoost" : {
+      "0.01" : {
+         "all_results" : {
+            "fail" : 0,
+            "na" : 6,
+            "pass" : 109,
+            "total" : 115,
+            "unknown" : 0
+         },
+         "mtime" : 1586508388,
+         "newest_report" : "20190811",
+         "oldest_report" : "20121020",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 34,
+            "total" : 34,
+            "unknown" : 0
+         }
+      }
+   },
+   "Algorithm-AdaGrad" : {
+      "0.03" : {
+         "all_results" : {
+            "fail" : 0,
+            "na" : 8,
+            "pass" : 52,
+            "total" : 80,
+            "unknown" : 20
+         },
+         "mtime" : 1586508389,
+         "newest_report" : "20190809",
+         "oldest_report" : "20140807",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 30,
+            "total" : 35,
+            "unknown" : 5
+         }
+      }
+   },
+   "Algorithm-AhoCorasick" : {
+      "0.03" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 390,
+            "total" : 390,
+            "unknown" : 0
+         },
+         "mtime" : 1586508389,
+         "newest_report" : "20190814",
+         "oldest_report" : "20100717",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 102,
+            "total" : 102,
+            "unknown" : 0
+         }
+      }
+   },
+   "Algorithm-AhoCorasick-XS" : {
+      "0.04" : {
+         "all_results" : {
+            "fail" : 22,
+            "na" : 17,
+            "pass" : 133,
+            "total" : 180,
+            "unknown" : 8
+         },
+         "mtime" : 1586508390,
+         "newest_report" : "20190807",
+         "oldest_report" : "20170820",
+         "recent_perl_results" : {
+            "fail" : 12,
+            "pass" : 61,
+            "total" : 78,
+            "unknown" : 5
+         }
+      }
+   },
+   "Algorithm-Annotate" : {
+      "0.10" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 474,
+            "total" : 475,
+            "unknown" : 1
+         },
+         "mtime" : 1586508391,
+         "newest_report" : "20190815",
+         "oldest_report" : "20030927",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 60,
+            "total" : 60,
+            "unknown" : 0
+         }
+      }
+   },
+   "Algorithm-BIT-XS" : {
+      "0.003" : {
+         "all_results" : {
+            "fail" : 0,
+            "na" : 29,
+            "pass" : 148,
+            "total" : 177,
+            "unknown" : 0
+         },
+         "mtime" : 1586508392,
+         "newest_report" : "20190807",
+         "oldest_report" : "20170617",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 94,
+            "total" : 94,
+            "unknown" : 0
+         }
+      }
+   },
+   "Algorithm-Backoff" : {
+      "0.009" : {
+         "all_results" : {
+            "fail" : 0,
+            "na" : 4,
+            "pass" : 302,
+            "total" : 306,
+            "unknown" : 0
+         },
+         "mtime" : 1586508393,
+         "newest_report" : "20200403",
+         "oldest_report" : "20190701",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 126,
+            "total" : 126,
+            "unknown" : 0
+         }
+      }
+   },
+   "Algorithm-BaumWelch" : {
+      "v0.0.2" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 423,
+            "total" : 425,
+            "unknown" : 2
+         },
+         "mtime" : 1586508394,
+         "newest_report" : "20190808",
+         "oldest_report" : "20100205",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 93,
+            "total" : 93,
+            "unknown" : 0
+         }
+      }
+   },
+   "Algorithm-Bayesian" : {
+      "0.5" : {
+         "all_results" : {
+            "fail" : 1,
+            "pass" : 392,
+            "total" : 393,
+            "unknown" : 0
+         },
+         "mtime" : 1586508395,
+         "newest_report" : "20190813",
+         "oldest_report" : "20101204",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 106,
+            "total" : 106,
+            "unknown" : 0
+         }
+      }
+   },
+   "Algorithm-Bertsekas" : {
+      "v0.87" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 97,
+            "total" : 205,
+            "unknown" : 108
+         },
+         "mtime" : 1586508396,
+         "newest_report" : "20190806",
+         "oldest_report" : "20180521",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 51,
+            "total" : 101,
+            "unknown" : 50
+         }
+      }
+   },
+   "Algorithm-BestChoice" : {
+      "0.01" : {
+         "all_results" : {
+            "fail" : 2,
+            "pass" : 283,
+            "total" : 285,
+            "unknown" : 0
+         },
+         "mtime" : 1586508397,
+         "newest_report" : "20181119",
+         "oldest_report" : "20090518",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 27,
+            "total" : 27,
+            "unknown" : 0
+         }
+      }
+   },
+   "Algorithm-BinPack" : {
+      "0.5" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 827,
+            "total" : 828,
+            "unknown" : 1
+         },
+         "mtime" : 1586508398,
+         "newest_report" : "20200105",
+         "oldest_report" : "20050317",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 217,
+            "total" : 217,
+            "unknown" : 0
+         }
+      }
+   },
+   "Algorithm-BinPack-2D" : {
+      "0.03" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 194,
+            "total" : 194,
+            "unknown" : 0
+         },
+         "mtime" : 1586508403,
+         "newest_report" : "20190811",
+         "oldest_report" : "20130129",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 32,
+            "total" : 32,
+            "unknown" : 0
+         }
+      }
+   },
+   "Algorithm-BinarySearch-Vec" : {
+      "0.08" : {
+         "all_results" : {
+            "fail" : 1,
+            "pass" : 870,
+            "total" : 877,
+            "unknown" : 6
+         },
+         "mtime" : 1586508492,
+         "newest_report" : "20200401",
+         "oldest_report" : "20160901",
+         "recent_perl_results" : {
+            "fail" : 1,
+            "pass" : 347,
+            "total" : 352,
+            "unknown" : 4
+         }
+      }
+   },
+   "Algorithm-BitVector" : {
+      "1.26" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 181,
+            "total" : 181,
+            "unknown" : 0
+         },
+         "mtime" : 1586508493,
+         "newest_report" : "20190807",
+         "oldest_report" : "20180115",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 81,
+            "total" : 81,
+            "unknown" : 0
+         }
+      }
+   },
+   "Algorithm-Bitonic-Sort" : {
+      "0.06" : {
+         "all_results" : {
+            "fail" : 0,
+            "na" : 26,
+            "pass" : 211,
+            "total" : 237,
+            "unknown" : 0
+         },
+         "mtime" : 1586508525,
+         "newest_report" : "20190807",
+         "oldest_report" : "20170212",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 107,
+            "total" : 107,
+            "unknown" : 0
+         }
+      }
+   },
+   "Algorithm-BloomFilter" : {
+      "0.02" : {
+         "all_results" : {
+            "fail" : 46,
+            "na" : 1,
+            "pass" : 331,
+            "total" : 384,
+            "unknown" : 6
+         },
+         "mtime" : 1586508526,
+         "newest_report" : "20190807",
+         "oldest_report" : "20150613",
+         "recent_perl_results" : {
+            "fail" : 7,
+            "pass" : 159,
+            "total" : 166,
+            "unknown" : 0
+         }
+      }
+   },
+   "Algorithm-BreakOverlappingRectangles" : {
+      "0.01" : {
+         "all_results" : {
+            "fail" : 31,
+            "pass" : 290,
+            "total" : 321,
+            "unknown" : 0
+         },
+         "mtime" : 1586508527,
+         "newest_report" : "20190614",
+         "oldest_report" : "20080225",
+         "recent_perl_results" : {
+            "fail" : 8,
+            "pass" : 40,
+            "total" : 48,
+            "unknown" : 0
+         }
+      }
+   },
+   "Algorithm-Bucketizer" : {
+      "0.13" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 113,
+            "total" : 113,
+            "unknown" : 0
+         },
+         "mtime" : 1586508528,
+         "newest_report" : "20190811",
+         "oldest_report" : "20130115",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 33,
+            "total" : 33,
+            "unknown" : 0
+         }
+      }
+   },
+   "Algorithm-Burg" : {
+      "0.001" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 129,
+            "total" : 129,
+            "unknown" : 0
+         },
+         "mtime" : 1586508532,
+         "newest_report" : "20190809",
+         "oldest_report" : "20141229",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 67,
+            "total" : 67,
+            "unknown" : 0
+         }
+      }
+   },
+   "Algorithm-C3" : {
+      "0.10" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 7379,
+            "total" : 7419,
+            "unknown" : 40
+         },
+         "mtime" : 1586508533,
+         "newest_report" : "20200408",
+         "oldest_report" : "20140816",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 1994,
+            "total" : 1995,
+            "unknown" : 1
+         }
+      }
+   },
    "DBI" : {
       "1.643" : {
          "all_results" : {

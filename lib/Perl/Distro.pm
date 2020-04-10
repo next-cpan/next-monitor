@@ -298,6 +298,7 @@ sub is_unnecessary_dep ( $self, $module ) {
         'Acme-MetaSyntactic-seinfeld'           => [qw{ Test::MetaSyntactic }],
         'Acme-MetaSyntactic-vim'                => [qw{ File::Find::Rule }],
         'Acme-YAPC-Asia-2012-LTthon-Hakushu'    => [qw{ Test::Requires }],
+        'Algorithm-BinPack-2D'            => [qw{ Test::Requires }],
 
     };
 
@@ -438,6 +439,10 @@ sub fix_special_repos ( $self ) {
         'Agent-TCLI'                                => [qw{bin/agent_tail.pl}],
         'Agent-TCLI-Package-Net'                    => [qw{bin/agent_net.pl}],
         'Album'                                     => [qw{helper/Makefile helper/README helper/autorun.inf helper/shellrun.c helper/shellrun.exe script/album}],
+        'Algorithm-BitVector'                 => [qw{Examples/BitVectorDemo.pl Examples/README Examples/testinput.txt}],
+
+
+
 
     };
 
@@ -1131,7 +1136,7 @@ sub generate_build_json ($self) {
                 elsif ( $module !~ m{^(CPAN::Meta|CPAN::Meta::Prereqs|Test::Pod|Test::MinimumVersion|Test::MinimumVersion::Fast|Test::PAUSE::Permissions|Test::Spellunker|Test::CPAN::Meta|Software::License|Catalyst|Pod::Coverage::TrustPod|Test::HasVersion|Test::Kwalitee|Test::Pod::Coverage)$} ) {    # Ignore stuff that's probably release testing.
                     $self->dump_self;
                     print "META specified requirement in  $distro  '$module' for '$req' was not detected. Found:\n";
-                    print `git grep $module`;
+                    $self->cleanup_and_grep($module);
                     printf( "\n        '%s'            => [qw{ %s }],\n", $distro, $module );
                     die;
                 }
