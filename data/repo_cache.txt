@@ -860,3 +860,4 @@ Algorithm-Genetic-Diploid 1586548114
 Algorithm-GoldenSection 1586548118
 Algorithm-GooglePolylineEncoding 1586548123
 Algorithm-Graphs-TransitiveClosure 1586548128
+Algorithm-HITS 1586551626

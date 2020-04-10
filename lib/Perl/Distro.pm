@@ -915,6 +915,12 @@ sub determine_installer ( $self ) {
         # Parse Build.PL for install_path or sys_files and ban the use of the module.
     }
 
+    # Force the cache on maker files. Often we need to peek back at the makers and we remove them early.
+    foreach my $builder (qw/Build.PL Makefile.PL/) {
+        next unless -f $builder && !-z _;
+        $self->get_ppi_doc($builder);
+    }
+
     # If the builder is play, then set it and return.
     if ( $builder eq 'play' ) {
         $build_json->{'builder'} = 'play';
@@ -1195,6 +1201,12 @@ sub generate_build_json ($self) {
             $build_json->{'maintainers'} = [$author];
         }
         delete $meta->{'author'};
+    }
+    if ( !$build_json->{'maintainers'} ) {
+        my $makedoc = $self->ppi_cache->{'Makefile.PL'};
+        if ($makedoc) {
+            ( $build_json->{'maintainers'} ) = $self->_ppi_find_and_parse_value_for_key( $makedoc, 'AUTHOR' );
+        }
     }
 
     if ( !$build_json->{'maintainers'} ) {
@@ -1591,30 +1603,32 @@ sub _ppi_find_and_parse_value_for_key ( $self, $doc, $key_name ) {
 
     # Next sibling is [] right?
     $node = $node->snext_sibling();
-    $node->class eq 'PPI::Structure::Constructor' or die( "Unexpected sibling value $key_name: " . dump_tree($node) );
+    if ( $node->class eq 'PPI::Structure::Constructor' ) {    # or die( "Unexpected sibling value $key_name: " . dump_tree($node) );
+        my @list;
+        my ($list_nodes) = $node->schildren;
+        $list_nodes or return;                                # Nothing in the list.
+        foreach my $list_node ( $list_nodes->children ) {
+            next   if $list_node->class eq 'PPI::Token::Operator';
+            next   if $list_node->class eq 'PPI::Token::Whitespace';
+            return if $list_node->class eq 'PPI::Token::Word';         # Looks like code not a list. Forget it!
 
-    my @list;
-    my ($list_nodes) = $node->schildren;
-    $list_nodes or return;    # Nothing in the list.
-    foreach my $list_node ( $list_nodes->children ) {
-        next   if $list_node->class eq 'PPI::Token::Operator';
-        next   if $list_node->class eq 'PPI::Token::Whitespace';
-        return if $list_node->class eq 'PPI::Token::Word';         # Looks like code not a list. Forget it!
+            next if $list_node->content =~ m/^\s*qw[\[(]\s*[\])]\s*\z/;    # qw()
 
-        next if $list_node->content =~ m/^\s*qw[\[(]\s*[\])]\s*\z/;    # qw()
-
-        push @list, _get_list_from_quote_or_quote_like_words($list_node);
+            push @list, _ppi_get_list_from_quote_or_quote_like_words($list_node);
+        }
+        return @list;
     }
-    return @list;
+
+    return _ppi_get_list_from_quote_or_quote_like_words($node);
 }
 
-sub _get_list_from_quote_or_quote_like_words ($node) {
+sub _ppi_get_list_from_quote_or_quote_like_words ($node) {
     my @list;
 
-    if ( $node->class eq 'PPI::Token::QuoteLike::Words' ) {            # qw( abc def )
+    if ( $node->class eq 'PPI::Token::QuoteLike::Words' ) {    # qw( abc def )
         my $content = $node->content;
-        $content =~ s{^qw[\[(/](.*)[)/\]]$}{$1}msi;                    # Strip out qw()
-        push @list, split( " ", $content );                            # magical split on " "
+        $content =~ s{^qw[\[(/](.*)[)/\]]$}{$1}msi;            # Strip out qw()
+        push @list, split( " ", $content );                    # magical split on " "
     }
     elsif ( $node->class =~ m{^PPI::Token::Quote::} ) {
         push @list, strip_quotes( $node->content );
@@ -2001,17 +2015,17 @@ sub get_package_usage ($element) {
             $token->class eq 'PPI::Statement::Expression' or die;
             $token = $token->schild(0);
 
-            push @modules, _get_list_from_quote_or_quote_like_words($token);
+            push @modules, _ppi_get_list_from_quote_or_quote_like_words($token);
 
             while ( $token = $token->snext_sibling ) {
                 next if $token->class eq 'PPI::Token::Operator';
-                push @modules, _get_list_from_quote_or_quote_like_words($token);
+                push @modules, _ppi_get_list_from_quote_or_quote_like_words($token);
             }
 
             return @modules;    # In this case, it's more than one module.
         }
         else {
-            push @modules, _get_list_from_quote_or_quote_like_words($token);
+            push @modules, _ppi_get_list_from_quote_or_quote_like_words($token);
         }
 
         return @modules;
