@@ -16504,6 +16504,25 @@
          }
       }
    },
+   "Algorithm-Evolutionary-Fitness" : {
+      "v3.102" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 120,
+            "total" : 120,
+            "unknown" : 0
+         },
+         "mtime" : 1586547212,
+         "newest_report" : "20190808",
+         "oldest_report" : "20160322",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 72,
+            "total" : 72,
+            "unknown" : 0
+         }
+      }
+   },
    "DBI" : {
       "1.643" : {
          "all_results" : {

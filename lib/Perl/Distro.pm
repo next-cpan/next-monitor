@@ -517,7 +517,7 @@ sub cleanup_tree ($self) {
     $self->_remove_files_by_pattern(qr{~$|/#.+#$|^#.+#$});
 
     # Normalize all TODO files to 'Todo' and throw out the boilerplate ones.
-    my @todo = sort grep { $_ =~ m/^todo$/i } keys %$files;
+    my @todo = sort grep { $_ =~ m/^todo(.md)?$/i } keys %$files;
     if (@todo) {
         scalar @todo == 1 or die( "Too many TODO files.\n" . Dumper($files) );
         my $todo = shift @todo;
@@ -1902,7 +1902,19 @@ sub parse_code ( $self, $filename ) {
                     }
                     $version = $provides_hash->{$primary_module}->{'version'};
                 }
-                elsif ( $node->class eq 'PPI::Token::Word' && $node->content eq 'sprintf' && $pkg_token->content =~ m/Revision:\s*([0-9]+\.[0-9]+)\s*\$/ ) {    # our $VERSION = sprintf "%d.%02d", q$Revision: 0.2 $ =~ /(\d+)/g;
+                elsif ( $node->class eq 'PPI::Token::Word' && $node->content eq 'sprintf' ) {                                   # our $VERSION = sprintf "%d.%02d", q$Revision: 0.2 $ =~ /(\d+)/g;
+                    my $pkg_token_content = $pkg_token->content;
+                    if ( $pkg_token_content =~ m/Revision:\s*([0-9]+\.[0-9]+)\s*\$/ ) {
+                        $version = $1;
+                    }
+                    elsif ( $pkg_token_content =~ m/([0-9.]+)/ ) {
+                        $version = $1;
+                    }
+                    else {
+                        die sprintf( "TOKEN (%s=%s): %s--\n", $node->class, $node->content, $pkg_token_content ) . dump_tree( $pkg_token, "Unexpected content in VERSION statement" );
+                    }
+                }
+                elsif ( $pkg_token->content =~ m/Revision:\s*([0-9]+\.[0-9]+)\s*\$/ ) {
                     $version = $1;
                 }
                 else {
