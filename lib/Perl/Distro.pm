@@ -109,6 +109,8 @@ sub _build_meta ($self) {
 sub dump_self ($self) {
     $self->ppi_cache( {} );
     print Dumper $self;
+
+    return '';
 }
 
 sub is_play ($self) {
@@ -139,6 +141,11 @@ sub do_the_do ($self) {
 
     $self->fix_special_repos;
     $self->determine_installer;
+
+    if ( $self->distro =~ m/^Alien-/ && $self->is_play ) {
+        $self->dump_self;
+        die;
+    }
 
     if ( $self->is_play ) {
         $self->parse_maker_for_scripts;
@@ -288,20 +295,22 @@ sub is_unnecessary_dep ( $self, $module ) {
     return 1 if $module eq 'File::ShareDir::Install' && $self->is_play;
 
     state $skips = {
-        'Acme-CPANModules-CalculatingDayOfWeek' => [qw{ Bencher::Backend }],
-        'Acme-CPANModules-TextTable'            => [qw{ Bencher::Backend }],
-        'Acme-MetaSyntactic-chinese_zodiac'     => [qw{ Test::MetaSyntactic }],
-        'Acme-MetaSyntactic-christmas'          => [qw{ Test::MetaSyntactic }],
-        'Acme-MetaSyntactic-countries'          => [qw{ Test::MetaSyntactic }],
-        'Acme-MetaSyntactic-dangdut'            => [qw{ Test::MetaSyntactic }],
-        'Acme-MetaSyntactic-display_resolution' => [qw{ Test::MetaSyntactic }],
-        'Acme-MetaSyntactic-frasier'            => [qw{ Test::MetaSyntactic }],
-        'Acme-MetaSyntactic-id_names'           => [qw{ Test::MetaSyntactic }],
-        'Acme-MetaSyntactic-nethack'            => [qw{ File::Find::Rule }],
-        'Acme-MetaSyntactic-seinfeld'           => [qw{ Test::MetaSyntactic }],
-        'Acme-MetaSyntactic-vim'                => [qw{ File::Find::Rule }],
-        'Acme-YAPC-Asia-2012-LTthon-Hakushu'    => [qw{ Test::Requires }],
-        'Algorithm-BinPack-2D'                  => [qw{ Test::Requires }],
+        'Acme-CPANModules-CalculatingDayOfWeek'   => [qw{ Bencher::Backend }],
+        'Acme-CPANModules-TextTable'              => [qw{ Bencher::Backend }],
+        'Acme-MetaSyntactic-chinese_zodiac'       => [qw{ Test::MetaSyntactic }],
+        'Acme-MetaSyntactic-christmas'            => [qw{ Test::MetaSyntactic }],
+        'Acme-MetaSyntactic-countries'            => [qw{ Test::MetaSyntactic }],
+        'Acme-MetaSyntactic-dangdut'              => [qw{ Test::MetaSyntactic }],
+        'Acme-MetaSyntactic-display_resolution'   => [qw{ Test::MetaSyntactic }],
+        'Acme-MetaSyntactic-frasier'              => [qw{ Test::MetaSyntactic }],
+        'Acme-MetaSyntactic-id_names'             => [qw{ Test::MetaSyntactic }],
+        'Acme-MetaSyntactic-nethack'              => [qw{ File::Find::Rule }],
+        'Acme-MetaSyntactic-seinfeld'             => [qw{ Test::MetaSyntactic }],
+        'Acme-MetaSyntactic-vim'                  => [qw{ File::Find::Rule }],
+        'Acme-YAPC-Asia-2012-LTthon-Hakushu'      => [qw{ Test::Requires }],
+        'Algorithm-BinPack-2D'                    => [qw{ Test::Requires }],
+        'Algorithm-TravelingSalesman-BitonicTour' => [qw{ Pod::Coverage }],
+        'Algorithm-VectorClocks'                  => [qw{ Test::NoWarnings }],
 
     };
 
@@ -331,6 +340,7 @@ sub fix_special_repos ( $self ) {
     $self->git->mv( glob('RTB/*'),     '.' ) if ( $distro eq 'Acme-RTB' );
     $self->git->mv( glob('Stegano/*'), '.' ) if ( $distro eq 'Acme-Stegano' );
     $self->git->rm( '-rf', 'local' ) if ( $distro eq 'Acme-Sort-Sleep' );
+    $self->git->mv( glob('Line/Bresenham/C/*'), '.' ) if ( $distro eq 'Algorithm-Line-Bresenham-C' );
 
     state $incorrect_case_files = {
         qw{
@@ -453,6 +463,15 @@ sub fix_special_repos ( $self ) {
         'Algorithm-Evolutionary-Simple'             => [qw{script/bitflip.pl script/onemax-benchmark.pl script/xover.pl}],
         'Algorithm-FloodControl'                    => [qw{svn-commit.tmp}],
         'Algorithm-GenerateSequence'                => [qw{bench_call}],
+        'Algorithm-Hamming-Perl'                    => [qw{example01 example02 example03 example04}],
+        'Algorithm-HowSimilar'                      => [qw{html/HowSimilar.html html/docs.css}],
+        'Algorithm-LCSS'                            => [qw{html/LCSS.html html/docs.css}],
+        'Algorithm-MarkovChain'                     => [qw{demos/dada demos/empty demos/textfile}],
+        'Algorithm-MasterMind'                      => [qw{app/evorank.yaml app/mm-eda.cgi app/process_experiment.pl app/run_experiment.pl app/run_experiment_all.pl}],
+        'Algorithm-Paxos'                           => [qw{docs/paxos-simple.pdf}],
+        'Algorithm-SAT-Backtracking'                => [qw{b/0-or.b b/1-xor.b b/2-and.b b/3-or-xor.b}],
+        'Algorithm-Tree-NCA'                        => [qw{Release e/execution.log e/timing.pl}],
+        'Alien-BWIPP'                               => [qw{AUTHORS}],
 
     };
 
@@ -487,14 +506,14 @@ sub cleanup_tree ($self) {
 
     # Delete garbage files we don't want.
     foreach my $unwanted_file (
-        qw{ MANIFEST MANIFEST.SKIP MANIFEST.bak MANIFEST.skip INSTALL INSTALL.txt INSTALL.skip INSTALL.SKIP SIGNATURE dist.ini Makefile.PL Build.PL weaver.ini
+        qw{ MANIFEST MANIFEST.SKIP MANIFEST.bak MANIFEST.skip INSTALL INSTALL.pod INSTALL.txt INSTALL.skip INSTALL.SKIP SIGNATURE dist.ini Makefile.PL Build.PL weaver.ini
         README README.md README.pod README.txt README.markdown README.html BUGS
         META.yml META.json ignore.txt .gitignore .mailmap Changes.PL cpanfile cpanfile.snapshot minil.toml .cvsignore .travis.yml travis.yml
         .project t/boilerplate.t MYMETA.json MYMETA.yml Makefile Makefile.old maint/Makefile.PL.include metamerge.json README.bak dist.ini.bak
         CREDITS doap.ttl author_test.sh cpants.pl makeall.sh perlcritic.rc .perltidyrc .perltidy dist.ini.meta Changes.new Changes.old
         CONTRIBUTORS tidyall.ini perlcriticrc perltidyrc README.mkdn .shipit example.pl pm_to_blib
         install.txt install.sh install.cmd install.bat .settings/org.eclipse.core.resources.prefs .includepath META.ttl Makefile.PL.back
-        Artistic_License.txt GPL_License.txt LICENSE.GPL LICENSE.Artistic
+        Artistic_License.txt GPL_License.txt LICENSE.txt LICENSE.GPL LICENSE.Artistic misc/make_manifest.pl GPL.txt
         }
     ) {
         next unless $files->{$unwanted_file};
@@ -515,7 +534,7 @@ sub cleanup_tree ($self) {
     $self->_remove_files_by_pattern(qr{^\.(svn|hg)/|/\.(svn|hg)/});
 
     # Get rid of directories we don't want.
-    $self->_remove_files_by_pattern(qr{^(?:inc|samples|Samples|demo|debian|tools|devdata|devscript|devscripts|_build|maint|ubuntu-)/});
+    $self->_remove_files_by_pattern(qr{^(?:inc|samples|Samples|demo|debian|tools|benchmark|devdata|devscript|devscripts|_build|maint|ubuntu-)/});
 
     # *~ or /#file# (emacs backups)
     $self->_remove_files_by_pattern(qr{~$|/#.+#$|^#.+#$});
@@ -859,7 +878,7 @@ sub determine_installer ( $self ) {
     my $meta = $self->dist_meta;
     if ( $meta->{'prereqs'} && ref $meta->{'prereqs'} eq 'HASH' ) {
         foreach my $prereq ( values %{ $meta->{'prereqs'} } ) {
-            next unless grep { defined $prereq->{'requires'}->{$_} } qw/Alien::Base Inline::C Inline::CPP/;
+            next unless grep { defined $prereq->{'requires'}->{$_} } qw/Alien::Base Inline::C Inline::CPP Alien::Build Alien::autoconf Alien::m4 Alien::automake Alien::libtool/;
             $builder = 'legacy';
             print "Alien/Inline modules are not supported as a play module\n";
             last;
@@ -882,31 +901,35 @@ sub determine_installer ( $self ) {
     }
 
     # No XS but maybe OBJECTS is mentioned in Makefile.PL?
-    if ( $builder ne 'legacy' and -e 'Makefile.PL' ) {
+    if ( $builder ne 'legacy' and -f 'Makefile.PL' ) {
         my $doc = $self->get_ppi_doc('Makefile.PL');
-
-        my $objects = $doc->find( sub { $_[1]->class =~ m/^PPI::Token::Quote::|^PPI::Token::Word$/ && $_[1]->content =~ m{^['"]?(OBJECT)['"]?$} } ) || [];
-
-        if (@$objects) {
-            my $node = $objects->[0];
-            my $key  = $node->content;
-            $node = $node->snext_sibling();
-            $node->content eq '=>' or die( "Unexpected sibling to $key: " . dump_tree($objects) );
-
-            $node = $node->snext_sibling();
-            if ( $node->class =~ m/^PPI::Token::Quote/ && $node->content =~ m/\.o/ ) {
-                $builder = 'legacy';
-                printf( "Detected a legacy build due to OBJECT => %s in Makefile.PL\n", $node->content );
-            }
-            else {
-                die( "Unexpected sibling value $key: " . dump_tree($node) );
-            }
+        my ($object) = $self->_ppi_find_and_parse_value_for_key( $doc, 'OBJECT' );
+        $object = strip_quotes($object) if length $object;
+        if ( length $object ) {
+            $builder = 'legacy';
+            printf( "Detected a legacy build due to OBJECT => %s in Makefile.PL\n", $object );
         }
+
+        if ( $doc->find( sub ( $self, $node ) { $node->class eq 'PPI::Token::Word' && $node->content eq 'postamble' } ) ) {
+            $builder = 'legacy';
+            printf("Detected a postamble in Makefile.PL. Something can't be installed with play.\n");
+        }
+
+        #        if($builder eq 'play') { die dump_tree($doc, "postamble stuff.") }
     }
 
     if ( $builder ne 'legacy' and -e 'Build.PL' ) {
         my $content = $self->try_to_read_file('Build.PL');
-        if ( $content =~ m/install_path|sys_files/msi ) {
+
+        if ( $content =~ m/(My::Builder\S+)/msi ) {
+            print "Custom build logic found in Build.PL: $1\n";
+            $builder = 'legacy';
+        }
+        elsif ( $distro =~ m/^Alien-/ && $content =~ m/use lib [^;]*inc/ ) {
+            print "Alien module via Build.PL is using inc/. I suspect it can be play\n";
+            $builder = 'legacy';
+        }
+        elsif ( $content =~ m/install_path|sys_files/msi ) {
             print "Need to implement support for install_path, sys_files in Build.PL";
             ...;
             $builder = 'legacy';
@@ -1030,6 +1053,10 @@ sub generate_build_json ($self) {
                 merge_dep_into_hash( $meta->{'prereqs'}->{$prereq_key}->{'recommends'}, $self->recommends_runtime );
                 delete $meta->{'prereqs'}->{$prereq_key}->{'recommends'};
             }
+            if ( $meta->{'prereqs'}->{$prereq_key}->{'suggests'} ) {
+                merge_dep_into_hash( $meta->{'prereqs'}->{$prereq_key}->{'suggests'}, $self->recommends_runtime );
+                delete $meta->{'prereqs'}->{$prereq_key}->{'suggests'};
+            }
         }
         if ( $prereq_key eq 'test' || $prereq_key eq 'build' ) {
             $meta->{'build_requires'} ||= {};
@@ -1037,6 +1064,10 @@ sub generate_build_json ($self) {
             if ( $meta->{'prereqs'}->{$prereq_key}->{'recommends'} ) {
                 merge_dep_into_hash( $meta->{'prereqs'}->{$prereq_key}->{'recommends'}, $self->recommends_build );
                 delete $meta->{'prereqs'}->{$prereq_key}->{'recommends'};
+            }
+            if ( $meta->{'prereqs'}->{$prereq_key}->{'suggests'} ) {
+                merge_dep_into_hash( $meta->{'prereqs'}->{$prereq_key}->{'suggests'}, $self->recommends_build );
+                delete $meta->{'prereqs'}->{$prereq_key}->{'suggests'};
             }
         }
         if ( $prereq_key eq 'develop' ) {
@@ -1057,6 +1088,7 @@ sub generate_build_json ($self) {
 
         delete $meta->{'prereqs'}->{$prereq_key}->{'requires'};
         prune_ref( $meta->{'prereqs'}->{$prereq_key} );
+
         keys %{ $meta->{'prereqs'}->{$prereq_key} } and die( "Unexpected prereqs found in $prereq_key:\n" . Dumper $meta);
     }
     foreach my $prereq_key ( grep { m/^x_/ } keys %{ $meta->{'prereqs'} } ) {
@@ -1235,7 +1267,11 @@ sub generate_build_json ($self) {
     if ( $meta->{'provides'} ) {
         foreach my $module ( sort { $a cmp $b } keys %{ $meta->{'provides'} } ) {
             $provides->{$module} or die( "Meta provides $module but it was not detected.\n" . Dumper( $meta, $provides ) );
-            $meta->{'provides'}->{$module}->{'file'} eq $provides->{$module}->{'file'} or die( "Meta provides $module file is not the same as was detected: " . Dumper( $meta, $provides ) );
+
+            # Only worry about the meta provides file being right if we didn't have to re-locate it.
+            if ( $meta->{'provides'}->{$module}->{'file'} =~ m{^lib/} ) {
+                $meta->{'provides'}->{$module}->{'file'} eq $provides->{$module}->{'file'} or die( "Meta provides $module file is not the same as was detected: " . Dumper( $meta, $provides ) );
+            }
 
             # use version.pm to be sure versions don't match if a simple eq doesn't work.
             if ( ( $meta->{'provides'}->{$module}->{'version'} // 0 ) ne ( $provides->{$module}->{'version'} // 0 ) ) {
@@ -1326,7 +1362,7 @@ sub prune_ref ($var) {
 }
 
 sub get_ppi_doc ( $self, $filename ) {
-    return if $filename =~ m{\.(bak|yml|json|yaml|txt|out|htm|html|xml|xhtml|po|mo|tt2|jpg|jpeg|png|gif|eye|eyp|doc|docm|ppt|c|cpp|h)$}i;
+    return if $filename =~ m{\.(bak|yml|json|yaml|txt|out|htm|html|js|css|ps|xml|xhtml|po|mo|tt2|jpg|jpeg|png|gif|eye|eyp|doc|docm|ppt|c|cpp|h|dat|zip|gz|tar)$}i;
     return if $self->is_extra_files_we_ship($filename);
 
     if ( -l $filename || -d _ || -z _ ) {
@@ -1366,7 +1402,7 @@ sub is_xt_test ( $self, $filename ) {
 
     my $doc = $self->get_ppi_doc($filename) or return 0;
 
-    return 1 if grep { $_ eq $filename } qw{t/release-distmeta.t t/release-has-version.t};
+    return 1 if grep { $_ eq $filename } qw{t/release-distmeta.t t/release-has-version.t t/pod-coverage.t};
 
     # remove pods
     my $quotes = $doc->find( sub { $_[1]->class =~ m/^PPI::Token::Quote::/ } ) || [];
@@ -1396,10 +1432,13 @@ sub parse_builders_for_share ($self) {
 
     }
     elsif ( -f 'Build.PL' ) {
-        my $content = $self->try_to_read_file('Build.PL');
-        if ( $content =~ m/share_dir/msi ) {
-            print "Need to implement share_dir support in Build.PL";
-            ...;
+        my $doc = $self->get_ppi_doc('Build.PL');
+        $doc or die;
+        my (@value) = $self->_ppi_find_and_parse_value_for_key( $doc, 'share_dir' );
+        if (@value) {
+            @value == 1 or die Dumper \@value;
+            push @share_directives, [ 'install_share', $value[0] ];
+            $DOTDIRS = $DOTFILES = 1;    # M::B doesn't seem to support dropping dot file/dirs.
         }
     }
     elsif ( -e 'Makefile.PL' ) {
@@ -1599,7 +1638,7 @@ sub _ppi_find_and_parse_value_for_key ( $self, $doc, $key_name ) {
 
     # Verify the next sibling is '=>'
     my $node = $key_nodes->[0]->snext_sibling();
-    $node->content eq '=>' or die( "Unexpected sibling to $key_name: " . dump_tree($key_nodes) );
+    $node->content eq '=>' or die dump_tree( $key_nodes, "Unexpected sibling to $key_name" );
 
     # Next sibling is [] right?
     $node = $node->snext_sibling();
@@ -1634,7 +1673,7 @@ sub _ppi_get_list_from_quote_or_quote_like_words ($node) {
         push @list, strip_quotes( $node->content );
     }
     else {
-        die( dump_tree( $node, "Unexpected class for quote/list node" ) );
+        die dump_tree( $node, "Unexpected class for quote/list node" );
     }
 
     return @list;
@@ -1811,7 +1850,7 @@ sub parse_code ( $self, $filename ) {
 
     my $doc = $self->get_ppi_doc($filename) or return;
     if ( $filename eq 'lib/ACME/QuoteDB/DB/DBI.pm' ) {
-        print dump_tree($doc);
+        die dump_tree( $doc, "QuoteDB" );
         exit;
     }
 
@@ -1870,13 +1909,13 @@ sub parse_code ( $self, $filename ) {
                 }
                 elsif ( $node->class eq 'PPI::Token::Word' && $node->content eq 'qv' ) {    # our $version = qv{v0.0.2}
                     $node = $node->snext_sibling;
-                    $node->class eq 'PPI::Structure::List' or die dump_tree($node);
+                    $node->class eq 'PPI::Structure::List' or die dump_tree( $node, "structure list wrong" );
 
                     $node = $node->schild(0);
-                    $node->class eq 'PPI::Statement::Expression' or die dump_tree($node);
+                    $node->class eq 'PPI::Statement::Expression' or die dump_tree( $node, "ppi-sta-express" );
 
                     $node = $node->schild(0);
-                    $node->class =~ m/^PPI::Token::Quote::/ or die dump_tree($node);
+                    $node->class =~ m/^PPI::Token::Quote::/ or die dump_tree( $node, "PPI::Token::Quote::" );
 
                     $version = $node->content;
                     $version =~ s/^\s*['"](.+)['"]\s*$/v$1/;                                # Make it a v-string since that's what they were going for.
@@ -1884,19 +1923,19 @@ sub parse_code ( $self, $filename ) {
                 }
                 elsif ( $node->class eq 'PPI::Token::Word' && $node->content eq 'version' ) {    # our $VERSION = version->.....
                     $node = $node->snext_sibling;                                                # ->
-                    $node->class eq 'PPI::Token::Operator' or die dump_tree($node);
+                    $node->class eq 'PPI::Token::Operator' or die dump_tree( $node, "PPI::Token::Operator" );
 
                     $node = $node->snext_sibling;                                                # declare
                     if ( $node->class eq 'PPI::Token::Word' && $node->content eq 'declare' ) {   # our $VERSION = version->declare('v0.2.2');
 
                         $node = $node->snext_sibling;                                            # ( ... )
-                        $node->class eq 'PPI::Structure::List' or die dump_tree($node);
+                        $node->class eq 'PPI::Structure::List' or die dump_tree( $node, 'PPI::Structure::List' );
 
                         $node = $node->schild(0);
-                        $node->class eq 'PPI::Statement::Expression' or die dump_tree($node);
+                        $node->class eq 'PPI::Statement::Expression' or die dump_tree( $node, 'PPI::Statement::Expression' );
 
                         $node = $node->schild(0);
-                        $node->class =~ m/^PPI::Token::Quote::/ or die dump_tree($node);
+                        $node->class =~ m/^PPI::Token::Quote::/ or die dump_tree( $node, '^PPI::Token::Quote::' );
 
                         $version = $node->content;
                         $version =~ s/^\s*['"](.+)['"]\s*$/v$1/;                                 # Make it a v-string since that's what they were going for.
@@ -1964,7 +2003,7 @@ sub parse_code ( $self, $filename ) {
 
 sub get_package_provided ($element) {
     my $token = $element->first_token;
-    $token eq 'package' or die( dump_tree( $element, "$token not a package?" ) );
+    $token eq 'package' or die dump_tree( $element, "$token not a package?" );
 
     # Package statements where the package is on a different line than the package indicates that they are trying to hide it from the PAUSE parser.
     # We're going to do the same.
@@ -1975,7 +2014,7 @@ sub get_package_provided ($element) {
     }
 
     $token = $token->snext_sibling;
-    $token and $token->class eq 'PPI::Token::Word' or die( dump_tree($element) );
+    $token and $token->class eq 'PPI::Token::Word' or die dump_tree( $element, "PPTOKWORD" );
 
     my $package = $token->content;
     $package =~ s/\\?'/::/g;         # Acme::Can't
@@ -2045,8 +2084,9 @@ sub get_package_usage ($element) {
 }
 
 sub strip_quotes ($string) {
-    $string =~ s/^(['"])(.+)\1\z/$2/ms;
-    $string =~ s/^qw[\[(](.+)[\])]\z/$1/ms;
+    $string =~ s/^qq?[\[(](.*)[)\]]\z/$1/ms and return $string;
+    $string =~ s/^qw[\[(](.*)[\])]\z/$1/ms  and return $string;
+    $string =~ s/^(['"])(.*)\1\z/$2/ms      and return $string;
     return $string;
 }
 
@@ -2054,7 +2094,7 @@ sub dump_tree ( $element, $die_msg = '' ) {
     my $dump = PPI::Dumper->new($element);
     print "\n";
     $dump->print;
-    return $die_msg ? $die_msg : ();
+    return $die_msg ? $die_msg : "WHA WHA";
 }
 
 1;
