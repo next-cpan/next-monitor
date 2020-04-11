@@ -488,6 +488,8 @@ sub rename_distro ( $self, $distro ) {
     return 'AI-Classifier-Text'                if $distro eq 'AI-Classifier';
     return 'AIX-LPP-lpp_name'                  if $distro eq 'AIX-LPP';
     return 'Algorithm-DependencySolver-Solver' if $distro eq 'Algorithm-DependencySolver';
+    return 'AI-FreeHAL-Class'                  if $distro eq 'FreeHAL';
+    return 'Alarm-Queued'                      if $distro eq 'libalarm';
 
     return $distro;
 }
