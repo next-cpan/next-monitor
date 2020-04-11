@@ -96,7 +96,7 @@ sub run ( $self, @optional_repos ) {
         next unless $repo_cache->needs_check($repo);
 
         # Skip failing repos.
-        if ( !$module_stability->is_passing($repo) ) {
+        if ( $repo ne 'Alarm-Queued' && !$module_stability->is_passing($repo) ) {
             print "--- Skipping $repo because it isn't passing\n";
             $repo_cache->update_cache_for_repo($repo);
             next;
