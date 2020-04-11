@@ -474,6 +474,9 @@ sub fix_special_repos ( $self ) {
         'Algorithm-SAT-Backtracking'                => [qw{b/0-or.b b/1-xor.b b/2-and.b b/3-or-xor.b}],
         'Algorithm-Tree-NCA'                        => [qw{Release e/execution.log e/timing.pl}],
         'Alien-BWIPP'                               => [qw{AUTHORS}],
+        'CPAN-Unwind'                               => [qw{adm/podok}],
+        'Perl-Maker'                                => [qw{share/Makefile.tt share/perl-maker.yaml}],
+        'Reflex'                                    => [qw{bench.pl bench/* docs/*}],
 
     };
 
@@ -879,22 +882,23 @@ sub determine_installer ( $self ) {
         $builder = 'legacy';
     }
 
-    # We can't support Alien or Inline::C* modules as they produce .so files
-    my @banned_modules = qw/Alien::Base Inline::C Inline::CPP Alien::Build Alien::autoconf Alien::m4 Alien::automake Alien::libtool/;
+    # These modules customize the default Maker in a way we can't simulate.
+    my @banned_modules = qw/Alien::Base Inline::C Inline::CPP Alien::Build Alien::autoconf Alien::m4 Alien::automake Alien::libtool FFI::Build::MM/;
     my $meta           = $self->dist_meta;
+    my @exceptions;
     if ( $meta->{'prereqs'} && ref $meta->{'prereqs'} eq 'HASH' ) {
         foreach my $prereq ( values %{ $meta->{'prereqs'} } ) {
-            next unless grep { defined $prereq->{'requires'}->{$_} } @banned_modules;
+            next unless @exceptions = grep { defined $prereq->{'requires'}->{$_} } @banned_modules;
             $builder = 'legacy';
-            print "Alien/Inline modules are not supported as a play module\n";
+            printf( "The Build/install modules (%s) make the installer unable to play.\n", join( ", ", @exceptions ) );
             last;
         }
     }
     foreach my $meta_requires (qw/configure_requires build_requires requires test_requires/) {
         next unless ref $meta->{$meta_requires} eq 'HASH';
-        next unless grep { defined $meta->{$meta_requires}->{$_} } @banned_modules;
+        next unless @exceptions = grep { defined $meta->{$meta_requires}->{$_} } @banned_modules;
         $builder = 'legacy';
-        print "Alien/Inline modules are not supported as a play module\n";
+        printf( "The Build/install modules (%s) make the installer unable to play.\n", join( ", ", @exceptions ) );
         last;
     }
 
@@ -1432,7 +1436,7 @@ sub prune_ref ($var) {
 }
 
 sub get_ppi_doc ( $self, $filename ) {
-    return if $filename =~ m{\.(bak|yml|json|yaml|txt|out|htm|html|js|css|ps|xml|xhtml|po|mo|tt2|jpg|jpeg|png|gif|eye|eyp|doc|docm|ppt|c|cpp|h|dat|zip|gz|tar)$}i;
+    return if $filename =~ m{\.(bak|yml|json|yaml|txt|out|htm|html|tt|tt2|pro|js|css|ps|xml|xhtml|po|mo|tt2|jpg|jpeg|png|gif|eye|eyp|doc|docm|ppt|c|cpp|h|dat|zip|gz|tar)$}i;
     return if $self->is_extra_files_we_ship($filename);
 
     if ( -l $filename || -d _ || -z _ ) {
