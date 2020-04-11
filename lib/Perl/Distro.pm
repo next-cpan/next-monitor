@@ -141,16 +141,17 @@ sub do_the_do ($self) {
 
     $self->fix_special_repos;
     $self->determine_installer;
+    $self->parse_specail_files_for_license;
 
-    if ( $self->distro =~ m/^Alien-/ && $self->is_play ) {
-        $self->dump_self;
-        die;
-    }
+    #if ( $self->distro ne 'Alien-libgeos' && $self->distro =~ m/^Alien-/ && $self->is_play ) {
+    #    $self->dump_self;
+    #    my $distro = $self->distro;
+    #    die("Somehow we didn't detect that   $distro   couldn't play.");
+    #}
 
     if ( $self->is_play ) {
         $self->parse_maker_for_scripts;
         $self->parse_builders_for_share;
-        $self->parse_specail_files_for_license;
         $self->cleanup_tree;
         $self->update_p5_branch_from_PAUSE;
     }
@@ -311,6 +312,7 @@ sub is_unnecessary_dep ( $self, $module ) {
         'Algorithm-BinPack-2D'                    => [qw{ Test::Requires }],
         'Algorithm-TravelingSalesman-BitonicTour' => [qw{ Pod::Coverage }],
         'Algorithm-VectorClocks'                  => [qw{ Test::NoWarnings }],
+        'Alien-libgeos'                           => [qw{ Test::Deep }],
 
     };
 
@@ -380,7 +382,7 @@ sub fix_special_repos ( $self ) {
     }
 
     $self->BUILD_json->{'license'} = 'unknown' if grep { $distro eq $_ } qw{ Acme-Code-FreedomFighter ACME-Error-Translate Acme-ESP Acme-Goatse AFS AFS-Command AI-Fuzzy AI-General AIS-client AIX-LPP-lpp_name
-      Acme-Lingua-Strine-Perl Acme-ManekiNeko Acme-Method-CaseInsensitive Acme-Remote-Strangulation-Protocol Acme-Turing Acme-URM Acme-Ukrop Acme-Void Algorithm-FEC};
+      Acme-Lingua-Strine-Perl Acme-ManekiNeko Acme-Method-CaseInsensitive Acme-Remote-Strangulation-Protocol Acme-Turing Acme-URM Acme-Ukrop Acme-Void Algorithm-FEC Alien-KentSrc Alien-MeCab Alien-HDF4 Alien-Iconv};
     $self->BUILD_json->{'license'} = 'perl' if grep { $distro eq $_ } qw{ ACME-Error-31337 ACME-Error-IgpayAtinlay Acme-OSDc Acme-PM-Berlin-Meetings Acme-please Algorithm-Cluster};
     $self->BUILD_json->{'license'} = 'GPL'  if grep { $distro eq $_ } qw{ AI-LibNeural };
 
@@ -864,7 +866,10 @@ sub determine_installer ( $self ) {
 
     $builder = 'legacy' if $distro =~ m/^(Acme-Padre-PlayCode)$/;
 
-    if ( grep { $_ =~ m/\.pm.PL$/ } keys %$files ) {
+    # .PL files usually indicate something that needs to be generated.
+    my @files;
+    if ( @files = grep { $_ =~ m/\.PL$/ && $_ !~ m/^(Build|Makefile)\.PL$/ } keys %$files ) {
+        printf( "Detected %s files which indicate a dynamic generation which can't play yet!\n", join( ", ", @files ) );
         $builder = 'legacy';
     }
 
@@ -875,15 +880,24 @@ sub determine_installer ( $self ) {
     }
 
     # We can't support Alien or Inline::C* modules as they produce .so files
-    my $meta = $self->dist_meta;
+    my @banned_modules = qw/Alien::Base Inline::C Inline::CPP Alien::Build Alien::autoconf Alien::m4 Alien::automake Alien::libtool/;
+    my $meta           = $self->dist_meta;
     if ( $meta->{'prereqs'} && ref $meta->{'prereqs'} eq 'HASH' ) {
         foreach my $prereq ( values %{ $meta->{'prereqs'} } ) {
-            next unless grep { defined $prereq->{'requires'}->{$_} } qw/Alien::Base Inline::C Inline::CPP Alien::Build Alien::autoconf Alien::m4 Alien::automake Alien::libtool/;
+            next unless grep { defined $prereq->{'requires'}->{$_} } @banned_modules;
             $builder = 'legacy';
             print "Alien/Inline modules are not supported as a play module\n";
             last;
         }
     }
+    foreach my $meta_requires (qw/configure_requires build_requires requires test_requires/) {
+        next unless ref $meta->{$meta_requires} eq 'HASH';
+        next unless grep { defined $meta->{$meta_requires}->{$_} } @banned_modules;
+        $builder = 'legacy';
+        print "Alien/Inline modules are not supported as a play module\n";
+        last;
+    }
+
     $builder = 'legacy' if defined $meta->{'requires'}->{'Alien::Base'};
     $builder = 'legacy' if defined $meta->{'configure_requires'}->{'Alien::Base'};
 
@@ -900,6 +914,52 @@ sub determine_installer ( $self ) {
         delete $meta->{'x_static_install'};
     }
 
+    if ( $builder ne 'legacy' and -e 'Build.PL' ) {
+
+        if ( $builder ne 'legacy' ) {
+            my @found = eval { $self->git->grep('ACTION_install') };
+            if (@found) {
+                print "Build.PL distro is using ACTION_install somewhere. Cannot play.\n";
+                $builder = 'legacy';
+            }
+        }
+
+        my $content = $self->try_to_read_file('Build.PL');
+
+        if ( $content =~ m/(My::Builder\S+)/msi ) {
+            print "Custom build logic found in Build.PL: $1\n";
+            $builder = 'legacy';
+        }
+        elsif ( $content =~ m/Module::Build->subclass/ms ) {
+            print "Build.PL is subclassing so it must be doing something wierd. Skipping play.\n";
+            $builder = 'legacy';
+        }
+        elsif ( $content =~ m/add_build_element/ms ) {
+            print "Build.PL is using add_build_element. Skipping play.\n";
+            $builder = 'legacy';
+        }
+        elsif ( $distro =~ m/^Alien-/ && $content =~ m/use lib [^;]*inc/ ) {
+            print "Alien module via Build.PL is using inc/. I suspect it can be play\n";
+            $builder = 'legacy';
+        }
+        elsif ( $content =~ m/use\s+ExtUtils::Liblist/ ) {
+            print "Build.PL is using ExtUtils::Liblist. Can't play!\n";
+            $builder = 'legacy';
+        }
+
+        if ( $content =~ m/install_path|sys_files/msi ) {
+            print "Need to implement support for install_path, sys_files in Build.PL";
+            ...;
+            $builder = 'legacy';
+        }
+        if ( $builder ne 'legacy' ) {
+
+            # die("Undetected legacy");
+        }
+
+        # Parse Build.PL for install_path or sys_files and ban the use of the module.
+    }
+
     # No XS but maybe OBJECTS is mentioned in Makefile.PL?
     if ( $builder ne 'legacy' and -f 'Makefile.PL' ) {
         my $doc = $self->get_ppi_doc('Makefile.PL');
@@ -909,33 +969,23 @@ sub determine_installer ( $self ) {
             $builder = 'legacy';
             printf( "Detected a legacy build due to OBJECT => %s in Makefile.PL\n", $object );
         }
-
-        if ( $doc->find( sub ( $self, $node ) { $node->class eq 'PPI::Token::Word' && $node->content eq 'postamble' } ) ) {
+        elsif ( $self->_ppi_find_class_and_content( $doc, 'PPI::Token::Word', 'postamble' ) ) {
             $builder = 'legacy';
             printf("Detected a postamble in Makefile.PL. Something can't be installed with play.\n");
         }
+        elsif ( $self->_ppi_find_class_and_content( $doc, 'PPI::Token::Word', 'prompt_script' ) ) {
+            $builder = 'legacy';
+            printf("Detected a M::I prompt_script  in Makefile.PL. Something can't be installed with play.\n");
+        }
+        elsif ( $distro =~ m/^Alien-/ and $self->_ppi_find_class_and_content( $doc, 'PPI::Token::QuoteLike::Backtick', qr/`/ ) ) {
+            $builder = 'legacy';
+            printf("Makefile.PL uses backticks.\n");
+        }
+        else {
+            #die; dump_tree($doc);
+        }
 
         #        if($builder eq 'play') { die dump_tree($doc, "postamble stuff.") }
-    }
-
-    if ( $builder ne 'legacy' and -e 'Build.PL' ) {
-        my $content = $self->try_to_read_file('Build.PL');
-
-        if ( $content =~ m/(My::Builder\S+)/msi ) {
-            print "Custom build logic found in Build.PL: $1\n";
-            $builder = 'legacy';
-        }
-        elsif ( $distro =~ m/^Alien-/ && $content =~ m/use lib [^;]*inc/ ) {
-            print "Alien module via Build.PL is using inc/. I suspect it can be play\n";
-            $builder = 'legacy';
-        }
-        elsif ( $content =~ m/install_path|sys_files/msi ) {
-            print "Need to implement support for install_path, sys_files in Build.PL";
-            ...;
-            $builder = 'legacy';
-        }
-
-        # Parse Build.PL for install_path or sys_files and ban the use of the module.
     }
 
     # Force the cache on maker files. Often we need to peek back at the makers and we remove them early.
@@ -955,9 +1005,29 @@ sub determine_installer ( $self ) {
     return;
 }
 
-# Determine if Build.PL usess a feature and possibly what its values are.
-sub Build_PL_uses ($self) {
+# $self->_ppi_find_class_and_content( $doc, 'PPI::Token::QuoteLike::Backtick', qr/`/
+# $self->_ppi_find_class_and_content( $doc, 'PPI::Token::Word', 'prompt_script'
 
+sub _ppi_find_class_and_content ( $self, $doc, $class, $content ) {
+
+    return $doc->find(
+        sub ( $self, $node ) {
+            if ( ref $class ) {
+                $node->class =~ $class or return 0;
+            }
+            else {
+                $node->class eq $class or return 0;
+            }
+
+            if ( ref $content ) {
+                $node->content =~ $content or return 0;
+            }
+            else {
+                $node->content eq $content or return 0;
+            }
+            return 1;
+        }
+    );
 }
 
 sub parse_license_file ($self) {
@@ -1379,7 +1449,36 @@ sub get_ppi_doc ( $self, $filename ) {
 
     # Some perl modules have a BOM in the head of their file.
     File::BOM::open_bom( my $fh, $filename, ':utf8' );
-    my $content = do { local $/; <$fh> };
+
+    my $content  = '';
+    my $encoding = 'utf8';
+    while ( my $line = <$fh> ) {
+        if ( $line =~ m/^=encoding\s+(\S+)/ ) {
+            $encoding = $1;
+            if ( $encoding =~ m/^utf\-?8\z/i ) {
+                $encoding = 'utf8';
+            }
+            else {
+                last;
+            }
+        }
+        $content .= $line;
+    }
+
+    # If we detected a change in encoding,
+    if ( $encoding ne 'utf8' ) {
+        close $fh;
+
+        if ( $encoding =~ m/iso8859/i ) {
+            open( $fh, '<', $filename );
+        }
+        else {
+            print "Switching encoding to $encoding\n";
+            File::BOM::open_bom( $fh, $filename, ":$encoding" );
+        }
+        $content = do { local $/; <$fh> };
+    }
+
     close $fh;
 
     local $@;
@@ -1389,12 +1488,19 @@ sub get_ppi_doc ( $self, $filename ) {
     return $cache;
 }
 
-sub _file_to_package ( $self, $filename ) {
+sub _file_to_package ( $filename ) {
     $filename or die;
     $filename =~ s{^lib/}{};
     $filename =~ s{\.(pm|pod)$}{};
     $filename =~ s{/}{::}g;
     return $filename;
+}
+
+sub _package_to_file ( $package ) {
+    $package or die;
+    $package =~ s{::}{/}g;
+    $package = "lib/$package.pm";
+    return $package;
 }
 
 sub is_xt_test ( $self, $filename ) {
@@ -1688,7 +1794,7 @@ sub parse_comments ( $self, $filename ) {
 
     # Search for abstract if the file is the primary package
     my $primary_package = $self->BUILD_json->{'primary'};
-    if ( $primary_package eq $self->_file_to_package($filename) ) {
+    if ( $primary_package eq _file_to_package($filename) ) {
         foreach my $comment (@$comments) {
             my $content = $comment->content;
             if ( $content =~ m/^# ABSTRACT:\s+(\S.+$)/ && !$self->BUILD_json->{'abstract'} ) {
@@ -1789,8 +1895,9 @@ sub parse_text_for_license ( $self, $license_data ) {
     }
     elsif ( $license_data =~ m/Terms (of|as) Perl itself/msi ) {
         return $self->BUILD_json->{'license'} = 'perl';
-    }
-    elsif ( $license_data =~ m{same as Perl itself|you can redistribute it and/or modify it under the same terms as the perl 5 programming language system itself|under the same terms as perl\.}msi ) {
+    }                                  # This module is licensed under the same terms as perl itself
+    elsif ( $license_data =~ m{same as Perl itself|you can redistribute it and/or modify it under the same terms as the perl 5 programming language system itself|under the same terms as perl\.|is licensed under the same terms as perl itself}msi ) {
+        print "HERE\n";
         return $self->BUILD_json->{'license'} = 'perl';
     }
     elsif ( $license_data =~ m/L<perlartistic>/msi ) {
@@ -1831,7 +1938,7 @@ sub parse_text_for_license ( $self, $license_data ) {
 sub parse_specail_files_for_license ($self) {
     return if $self->BUILD_json->{'license'};
 
-    foreach my $file (qw/README LICENSE/) {
+    foreach my $file (qw/README LICENSE COPYING/) {
         next unless -f $file && !-z _;
         my $c = File::Slurper::read_binary($file) || '';
         return if $self->parse_text_for_license($c);
@@ -1965,7 +2072,10 @@ sub parse_code ( $self, $filename ) {
                 }
                 elsif ( $node->class eq 'PPI::Token::Symbol' && $node->content =~ m/"?\$\Q$primary_module\E::VERSION"?$/ ) {    # our $VERSION = $accessors::fast::VERSION;
                     if ( !$provides_hash->{$primary_module} ) {
-                        ...;                                                                                                    # Most of the time we process the primary module first...
+
+                        # Most of the time we process the primary module first
+                        $self->parse_code( _package_to_file($primary_module) );
+                        $provides_hash->{$primary_module} or die("Could not determine a VERSION for primary module $primary_module");
                     }
                     $version = $provides_hash->{$primary_module}->{'version'};
                 }
