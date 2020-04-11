@@ -125,6 +125,9 @@ sub get_stats_for_module ( $self, $distro, $version ) {
     my $url = "http://api.cpantesters.org/v3/summary/${distro}/${version}?osname=linux&perl_maturity=stable";
     my $r   = $self->ua->get($url);
 
+    if ( !$r->is_success ) {
+        die( "Failed to retrieve $url: " . $r->status_line );
+    }
     my $json = Cpanel::JSON::XS::decode_json( $r->decoded_content );
     if ( ref $json eq 'HASH' ) {
         if ( $json->{'errors'} && $json->{'errors'}->[0]->{'message'} eq 'No results found' ) {
