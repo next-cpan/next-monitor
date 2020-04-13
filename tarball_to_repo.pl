@@ -10,6 +10,7 @@ with 'MooseX::SimpleConfig';
 with 'MooseX::Getopt';
 
 use experimental 'signatures';
+use experimental 'state';
 
 use FindBin;
 
@@ -40,6 +41,7 @@ has 'parallel_downloads'         => ( isa => 'Int',  is => 'ro', lazy => 1, defa
 has 'pause_base_url'             => ( isa => 'Str',  is => 'ro', lazy => 1, default => 'http://httpupdate.cpanel.net/CPAN', documentation => 'The base CPAN URL of upstream PAUSE. Defaults to http://httpupdate.cpanel.net/CPAN' );
 has 'validate_existing_archives' => ( isa => 'Bool', is => 'ro', lazy => 1, default => 0,                                   documentation => 'Do we need to validate the existing archives before we start? This takes a little while so is off by default.' );
 has 'git_binary'                 => ( isa => 'Str',  is => 'ro', lazy => 1, default => '/usr/bin/git',                      documentation => 'The location of the git binary that should be used.' );
+has 'maximum_modules_to_process' => ( isa => 'Str',  is => 'ro', lazy => 1, default => 1000,                                documentation => 'The maximum modules to process at a time.' );
 
 has 'repo_user_name' => ( isa => 'Str', is => 'ro', required => 1, documentation => 'The name that will be on commits for this repo.' );
 has 'repo_email'     => ( isa => 'Str', is => 'ro', required => 1, documentation => 'The email that will be on commits for this repo.' );
@@ -329,6 +331,11 @@ sub expand_distro ( $self, $tarball_file, $author_path ) {
         die;
     }
 
+    state @crazy_files = qw{
+      Alien-sqlite-1.02/Alien-sqlite-1.02.tar.gz
+      Alien-sqlite-1.02/Alien-sqlite-1.02
+    };
+
     # Collapse all
     my @files = glob('*');
     if ( scalar @files == 1 && -d $files[0] ) {
@@ -338,6 +345,9 @@ sub expand_distro ( $self, $tarball_file, $author_path ) {
         `find "$temp_dir" -name .git -exec /bin/rm -rf {} \\; 2>&1`;    # remove extracted .git dirs.
         `mv $temp_dir/"$dir"/* $temp_dir 2>&1`;
         `mv $temp_dir/"$dir"/.* $temp_dir 2>&1`;
+        unlink @crazy_files;
+        rmdir @crazy_files;
+
         rmdir "$temp_dir/$dir" or die("Files unexpectedly found in $temp_dir/$dir");
     }
     elsif ( scalar @files ) {
@@ -384,7 +394,7 @@ sub expand_distro ( $self, $tarball_file, $author_path ) {
         exec( $^X, "$FindBin::Bin/pause_to_p5.pl", $distro );
         exit;
     }
-    if ( $processed >= 2 ) {
+    if ( $processed >= $self->maximum_modules_to_process ) {
         print "Processed $processed distros. Stopping\n";
         exit;
     }
