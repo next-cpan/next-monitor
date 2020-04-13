@@ -55,6 +55,7 @@ has 'requires_runtime'   => ( isa => 'HashRef',  is => 'rw', default => sub { re
 has 'requires_develop'   => ( isa => 'HashRef',  is => 'rw', default => sub { return {} } );
 has 'recommends_build'   => ( isa => 'HashRef',  is => 'rw', default => sub { return {} } );
 has 'recommends_runtime' => ( isa => 'HashRef',  is => 'rw', default => sub { return {} } );
+has 'conflicts_runtime'  => ( isa => 'HashRef',  is => 'rw', default => sub { return {} } );
 has 'provides'           => ( isa => 'HashRef',  is => 'rw', default => sub { return {} } );
 has 'test_provides'      => ( isa => 'HashRef',  is => 'rw', default => sub { return {} } );
 
@@ -143,11 +144,11 @@ sub do_the_do ($self) {
     $self->determine_installer;
     $self->parse_specail_files_for_license;
 
-    #if ( $self->distro ne 'Alien-libgeos' && $self->distro =~ m/^Alien-/ && $self->is_play ) {
-    #    $self->dump_self;
-    #    my $distro = $self->distro;
-    #    die("Somehow we didn't detect that   $distro   couldn't play.");
-    #}
+    if ( $self->distro ne 'Alien-Win32-LZMA' && $self->distro =~ m/^Alien-/ && $self->is_play ) {
+        $self->dump_self;
+        my $distro = $self->distro;
+        die("Somehow we didn't detect that   $distro   couldn't play.");
+    }
 
     if ( $self->is_play ) {
         $self->parse_maker_for_scripts;
@@ -382,7 +383,9 @@ sub fix_special_repos ( $self ) {
     }
 
     $self->BUILD_json->{'license'} = 'unknown' if grep { $distro eq $_ } qw{ Acme-Code-FreedomFighter ACME-Error-Translate Acme-ESP Acme-Goatse AFS AFS-Command AI-Fuzzy AI-General AIS-client AIX-LPP-lpp_name
-      Acme-Lingua-Strine-Perl Acme-ManekiNeko Acme-Method-CaseInsensitive Acme-Remote-Strangulation-Protocol Acme-Turing Acme-URM Acme-Ukrop Acme-Void Algorithm-FEC Alien-KentSrc Alien-MeCab Alien-HDF4 Alien-Iconv};
+      Acme-Lingua-Strine-Perl Acme-ManekiNeko Acme-Method-CaseInsensitive Acme-Remote-Strangulation-Protocol Acme-Turing Acme-URM Acme-Ukrop Acme-Void Algorithm-FEC Alien-KentSrc Alien-MeCab Alien-HDF4 Alien-Iconv
+      Alien-Saxon
+    };
     $self->BUILD_json->{'license'} = 'perl' if grep { $distro eq $_ } qw{ ACME-Error-31337 ACME-Error-IgpayAtinlay Acme-OSDc Acme-PM-Berlin-Meetings Acme-please Algorithm-Cluster};
     $self->BUILD_json->{'license'} = 'GPL'  if grep { $distro eq $_ } qw{ AI-LibNeural };
 
@@ -477,6 +480,11 @@ sub fix_special_repos ( $self ) {
         'CPAN-Unwind'                               => [qw{adm/podok}],
         'Perl-Maker'                                => [qw{share/Makefile.tt share/perl-maker.yaml}],
         'Reflex'                                    => [qw{bench.pl bench/* docs/*}],
+        'AMF-Perl'                                  => [qw{doc/*}],
+        'AOL-TOC'                                   => [qw{tocbot/*}],
+        'AOLserver-CtrlPort'                        => [qw{adm/.cvsignore adm/MANIFEST.SKIP adm/release}],
+        'AlignDB-DeltaG'                            => [qw{dump/dG.yml dump/dump_dG.pl}],
+        'Alt-Data-Frame-ButMore'                    => [qw{TODO.otl data-raw/* utils/*}],
 
     };
 
@@ -512,8 +520,8 @@ sub cleanup_tree ($self) {
     # Delete garbage files we don't want.
     foreach my $unwanted_file (
         qw{ MANIFEST MANIFEST.SKIP MANIFEST.bak MANIFEST.skip INSTALL INSTALL.pod INSTALL.txt INSTALL.skip INSTALL.SKIP SIGNATURE dist.ini Makefile.PL Build.PL weaver.ini
-        README README.md README.pod README.txt README.markdown README.html BUGS
-        META.yml META.json ignore.txt .gitignore .mailmap Changes.PL cpanfile cpanfile.snapshot minil.toml .cvsignore .travis.yml travis.yml
+        README README.md README.pod README.txt README.markdown README.html README.old
+        BUGS META.yml META.json ignore.txt .gitignore .mailmap Changes.PL cpanfile cpanfile.snapshot minil.toml .cvsignore .travis.yml travis.yml appveyor.yml .appveyor.yml
         .project t/boilerplate.t MYMETA.json MYMETA.yml Makefile Makefile.old maint/Makefile.PL.include metamerge.json README.bak dist.ini.bak
         CREDITS doap.ttl author_test.sh cpants.pl makeall.sh perlcritic.rc .perltidyrc .perltidy dist.ini.meta Changes.new Changes.old
         CONTRIBUTORS tidyall.ini perlcriticrc perltidyrc README.mkdn .shipit example.pl pm_to_blib
@@ -638,6 +646,10 @@ sub cleanup_tree ($self) {
     return;
 }
 
+sub reset_repo_files ($self) {
+    $self->repo_files( { map { ( $_ => 1 ) } $self->git->ls_files } );
+}
+
 sub determine_primary_module ($self) {
     my $git        = $self->git;
     my $distro     = $self->distro;
@@ -663,7 +675,7 @@ sub determine_primary_module ($self) {
         $git->mv( $module[0], 'lib/' );
 
         # There's no easy way to update $self->repo_files. We're going to have to re-scan it.
-        $self->repo_files( { map { ( $_ => 1 ) } $git->ls_files } );
+        $self->reset_repo_files;
         $files = $self->repo_files;
     }
 
@@ -688,7 +700,7 @@ sub determine_primary_module ($self) {
             $git->mv( $dir, $dir_path );
 
             # There's no easy way to update $self->repo_files. We're going to have to re-scan it.
-            $self->repo_files( { map { ( $_ => 1 ) } $git->ls_files } );
+            $self->reset_repo_files;
             $files = $self->repo_files;
         }
     }
@@ -728,6 +740,7 @@ sub is_extra_files_we_ship ( $self, $file ) {
     return 1 if $file eq 'acmelsd.png'    && $distro eq 'Acme-LSD';
     return 1 if $file eq 'OSDc/prog.osdc' && $distro eq 'Acme-OSDc';
     return 1 if $file eq 'test.txt'       && $distro eq 'Acme-Stegano';
+    return 1 if $file eq 'sqltest.lib'    && $distro eq 'AlignDB-SQL';
 
     return 0;
 }
@@ -867,7 +880,7 @@ sub determine_installer ( $self ) {
         $build_json->{'XS'} = 0;
     }
 
-    $builder = 'legacy' if $distro =~ m/^(Acme-Padre-PlayCode)$/;
+    $builder = 'legacy' if $distro =~ m/^(Acme-Padre-PlayCode|Alien-TALib)$/;
 
     # .PL files usually indicate something that needs to be generated.
     my @files;
@@ -943,7 +956,7 @@ sub determine_installer ( $self ) {
             $builder = 'legacy';
         }
         elsif ( $distro =~ m/^Alien-/ && $content =~ m/use lib [^;]*inc/ ) {
-            print "Alien module via Build.PL is using inc/. I suspect it can be play\n";
+            print "Alien module via Build.PL is using inc/. I suspect it can't play\n";
             $builder = 'legacy';
         }
         elsif ( $content =~ m/use\s+ExtUtils::Liblist/ ) {
@@ -1131,6 +1144,10 @@ sub generate_build_json ($self) {
                 merge_dep_into_hash( $meta->{'prereqs'}->{$prereq_key}->{'suggests'}, $self->recommends_runtime );
                 delete $meta->{'prereqs'}->{$prereq_key}->{'suggests'};
             }
+            if ( $meta->{'prereqs'}->{$prereq_key}->{'conflicts'} ) {
+                merge_dep_into_hash( $meta->{'prereqs'}->{$prereq_key}->{'conflicts'}, $self->conflicts_runtime );
+                delete $meta->{'prereqs'}->{$prereq_key}->{'conflicts'};
+            }
         }
         if ( $prereq_key eq 'test' || $prereq_key eq 'build' ) {
             $meta->{'build_requires'} ||= {};
@@ -1287,6 +1304,7 @@ sub generate_build_json ($self) {
     # Sometimes we detect a recommends runtime we want to process.
     $build_json->{'recommends_runtime'} = $self->recommends_runtime if %{ $self->recommends_runtime };
     $build_json->{'recommends_build'}   = $self->recommends_build   if %{ $self->recommends_build };
+    $build_json->{'conflicts_runtime'}  = $self->conflicts_runtime  if %{ $self->conflicts_runtime };
 
     # Where this branch got its data from.
     $build_json->{'source'} = 'PAUSE';
@@ -1436,7 +1454,8 @@ sub prune_ref ($var) {
 }
 
 sub get_ppi_doc ( $self, $filename ) {
-    return if $filename =~ m{\.(bak|yml|json|yaml|txt|out|htm|html|tt|tt2|pro|js|css|ps|xml|xhtml|po|mo|tt2|jpg|jpeg|png|gif|eye|eyp|doc|docm|ppt|c|cpp|h|dat|zip|gz|tar)$}i;
+    return if $filename =~ m{\.(bak|yml|json|yaml|txt|out|htm|html|tt|tt2|pro|js|css|ps|xml|xhtml|po|mo|tt2|xls|xlsx|csv|tab|jpg|jpeg|png|gif|fla|swf|sql|eye|eyp|doc|docm|ppt|c|cpp|h|dat|zip|gz|tar|jar|java)$}i;
+    return if $filename =~ m{share/|share-module/};                                                                                                                                                                   # Skip share files. They're not perl code.
     return if $self->is_extra_files_we_ship($filename);
 
     if ( -l $filename || -d _ || -z _ ) {
@@ -1452,6 +1471,7 @@ sub get_ppi_doc ( $self, $filename ) {
     #my $content = $self->try_to_read_file($filename);
 
     # Some perl modules have a BOM in the head of their file.
+    print "Open $filename\n";
     File::BOM::open_bom( my $fh, $filename, ':utf8' );
 
     my $content  = '';
@@ -1474,6 +1494,7 @@ sub get_ppi_doc ( $self, $filename ) {
         close $fh;
 
         if ( $encoding =~ m/iso8859/i ) {
+            print "Re-open $filename latin1\n";
             open( $fh, '<', $filename );
         }
         else {
@@ -1594,6 +1615,11 @@ sub parse_builders_for_share ($self) {
             push @share_directives, [@share_directive];
 
         }
+
+        # Module::Install doesn't do DOTFILES or DOTDIRS exclusions
+        if ( $doc->find( sub ( $self, $node ) { $node->class eq 'PPI::Statement::Include' && $node->content =~ m{inc::Module::Install} } ) ) {
+            $DOTDIRS = $DOTFILES = 1;
+        }
     }
 
     foreach my $share (@share_directives) {
@@ -1607,7 +1633,7 @@ sub parse_builders_for_share ($self) {
         # install_share "images";
         # install_share dist => 'config';
         elsif ( ( @$share == 3 && $share->[1] eq 'dist' ) or @$share == 2 ) {
-            my $share_dist_path = shift @$share;
+            my $share_dist_path = $share->[-1];
             $self->merge_path( $share_dist_path, 'share' );
 
             $dist = 1;
@@ -1624,6 +1650,7 @@ sub parse_builders_for_share ($self) {
         }
     }
 
+    # $DOTDIRS = $DOTFILES = 1;
     # share dir but no share directives. Let's remove share/
     if ( !@share_directives && -d 'share' ) {
         $self->git->rm( '-rf', 'share' );
@@ -1647,6 +1674,7 @@ sub parse_builders_for_share ($self) {
         # Store the share files so we know to keep them later.
         push @{ $self->share_files }, $self->git->ls_files('share')        if $dist;
         push @{ $self->share_files }, $self->git->ls_files('share-module') if $module;
+        $self->reset_repo_files;
     }
 
     return;
@@ -1658,10 +1686,18 @@ sub merge_path ( $self, $from_dir, $to_dir ) {
 
     my $git = $self->git;
 
-    my @files = sort { length($a) <=> length($b) } $git->ls_files($from_dir);
-    print Dumper \@files;
-    ...;
+    my @files = map { substr( $_, length($from_dir) + 1 ) } sort { length($b) <=> length($a) } $git->ls_files($from_dir);
+    foreach my $file (@files) {
+        my $share_path = "$to_dir/$file";
 
+        mkpath($share_path);
+        rmdir $share_path;
+
+        $git->mv( '-f', "$from_dir/$file", $share_path );
+
+        my ( undef, $dir, undef ) = File::Spec->splitpath($file);
+        rmdir "$from_dir/$dir";
+    }
 }
 
 sub parse_maker_for_scripts ($self) {
@@ -1976,6 +2012,30 @@ sub parse_code ( $self, $filename ) {
 
     return unless $filename =~ m{\.(t|pm)$} && $filename =~ m{^(t|lib)/};
     my $provides_hash = ( $filename =~ m/^lib/ ) ? $self->provides : $self->test_provides;
+
+    # Find any DBI->connects.
+    my $dbi_nodes = $doc->find(
+        sub ( $self, $node ) {
+            $node->class eq 'PPI::Token::Word' or return 0;    # DBI
+            $node->content eq 'DBI' or return 0;
+
+            $node = $node->snext_sibling;
+            $node->class eq 'PPI::Token::Operator' or return 0;    # DBI->
+            $node->content eq '->' or return 0;
+
+            $node = $node->snext_sibling;
+            $node->class eq 'PPI::Token::Word' or return 0;        # DBI->connect
+            $node->content eq 'connect' or return 0;
+
+            return 1;
+
+        }
+    ) || [];
+    foreach my $dbi_node (@$dbi_nodes) {
+        my $c = $dbi_node->snext_sibling->snext_sibling->snext_sibling->content;
+        my ($DBD) = $c =~ m/[\"'\(\{]DBI:(\S+):/;
+        $requires_runtime_hash->{"DBD::$DBD"} = 0;
+    }
 
     # Find packages that are provides.
     my $packages_find = $doc->find('PPI::Statement::Package') || [];
