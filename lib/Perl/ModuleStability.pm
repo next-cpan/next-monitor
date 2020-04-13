@@ -63,7 +63,7 @@ sub is_passing ( $self, $distro, $version = undef ) {
 
     my $stats = $self->get_stats_for_module( $distro, $version );
 
-    defined $stats->{'oldest_report'} or return 0;    # Means there are no results.
+    defined $stats->{'oldest_report'} or return 1;    # Means there are no results.
 
     if (0) {
         print "*** $distro $version\n";
@@ -126,7 +126,7 @@ sub get_stats_for_module ( $self, $distro, $version ) {
     my $r   = $self->ua->get($url);
 
     if ( !$r->is_success ) {
-        die( "Failed to retrieve $url: " . $r->status_line );
+        warn( "Failed to retrieve $url: " . $r->status_line );
     }
     my $json = Cpanel::JSON::XS::decode_json( $r->decoded_content );
     if ( ref $json eq 'HASH' ) {
