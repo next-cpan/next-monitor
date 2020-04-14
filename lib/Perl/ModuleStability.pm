@@ -189,14 +189,20 @@ sub _build_cache ($self) {
     return Cpanel::JSON::XS::decode_json( File::Slurper::read_binary($file) );
 }
 
+sub save ($self) {
+    return unless $self->cache_modified;
+    print "Updating repo stability cache\n";
+
+    File::Slurper::write_text( $self->cache_file, Cpanel::JSON::XS->new->pretty->canonical( [1] )->encode( $self->cache ) );
+
+    $self->cache_modified(0);    # We just saved so we can clear this.
+    return;
+}
+
 sub DEMOLISH ( $self, $in_global_destruction ) {
     $in_global_destruction and die( "Unexpectedly in global destruction to clean up " . __PACKAGE__ );
 
-    return unless $self->cache_modified;
-    print "Updating repo stability cache\n";
-    open( my $fh, '>', $self->cache_file ) or die("Couldn't open cache file for write: $!");
-
-    File::Slurper::write_text( $self->cache_file, Cpanel::JSON::XS->new->pretty->canonical( [1] )->encode( $self->cache ) );
+    $self->save;
 
     return;
 }
