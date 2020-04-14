@@ -1453,7 +1453,6 @@ T/TH/THHAMON/Alvis-NLPPlatform-0.6.tar.gz
 W/WB/WBUNTINE/Alvis-QueryFilter-0.3.tar.gz
 W/WB/WBUNTINE/Alvis-Saa-0.2.tar.gz
 T/TH/THHAMON/Alvis-TermTagger-0.82.tar.gz
-W/WB/WBUNTINE/Alvis-Bags-0.3.tar.gz
 D/DR/DROLSKY/Alzabo-0.92.tar.gz
 S/ST/STEFAN/Alzabo-Display-SWF-0.01.tar.gz
 D/DR/DROLSKY/Alzabo-GUI-Mason-0.1201.tar.gz
@@ -2217,3 +2216,8 @@ B/BO/BOUBAKER/Apache-NNTPGateway-0.9.tar.gz
 M/MI/MIYAGAWA/Apache-No404Proxy-0.05.tar.gz
 S/SO/SOCK/Apache-No404Proxy-Mogile-0.1.tar.gz
 N/NE/NEILB/Apache-OneTimeURL-1.34.tar.gz
+L/LN/LNATION/Acme-Hospital-Bed-0.03.tar.gz
+J/JO/JOENIO/Alien-Doxyparse-0.16.tar.gz
+S/SL/SLAFFAN/Alien-sqlite-1.03.tar.gz
+P/PL/PLICEASE/Alien-wasmtime-0.06.tar.gz
+W/WB/WBUNTINE/Alvis-Bags-0.3.tar.gz

@@ -332,8 +332,7 @@ sub expand_distro ( $self, $tarball_file, $author_path ) {
     }
 
     state @crazy_files = qw{
-      Alien-sqlite-1.02/Alien-sqlite-1.02.tar.gz
-      Alien-sqlite-1.02/Alien-sqlite-1.02
+      dfjhfjhfjhf
     };
 
     # Collapse all
@@ -495,13 +494,20 @@ sub add_extracted_tarball_from_tmp_to_repo ( $self, $distro, $version ) {
 }
 
 sub rename_distro ( $self, $distro ) {
-    return 'AI-Classifier-Text'                if $distro eq 'AI-Classifier';
-    return 'AIX-LPP-lpp_name'                  if $distro eq 'AIX-LPP';
-    return 'Algorithm-DependencySolver-Solver' if $distro eq 'Algorithm-DependencySolver';
-    return 'AI-FreeHAL-Class'                  if $distro eq 'FreeHAL';
-    return 'Alarm-Queued'                      if $distro eq 'libalarm';
 
-    return $distro;
+    state $rename_hash = {
+        qw{
+          Algorithm-DependencySolver    Algorithm-DependencySolver-Solver
+
+          AI-Classifier   AI-Classifier-Text
+          AIX-LPP         AIX-LPP-lpp_name
+          FreeHAL         AI-FreeHAL-Class
+          libalarm        Alarm-Queued
+          Alvis-Bags      Alvis-URLs
+          }
+    };
+
+    return $rename_hash->{$distro} // $distro;
 }
 
 sub determine_distro_and_version ( $self, $extracted_dir, $author_path ) {
