@@ -498,6 +498,8 @@ sub rename_distro ( $self, $distro ) {
     state $rename_hash = {
         qw{
           Algorithm-DependencySolver    Algorithm-DependencySolver-Solver
+          Amazon-SQS-ProducerConsumer           Amazon-SQS-Producer
+
 
           AI-Classifier   AI-Classifier-Text
           AIX-LPP         AIX-LPP-lpp_name
