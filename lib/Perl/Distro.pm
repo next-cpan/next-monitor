@@ -48,6 +48,7 @@ has 'repo_files'  => (
 );
 
 has 'builder_builder' => ( isa => 'Str', is => 'rw', builder => '_build_builder_builder' );
+has 'cant_play'       => ( isa => 'Str', is => 'rw', default => '' );
 
 has 'scripts'            => ( isa => 'ArrayRef', is => 'rw', default => sub { return [] } );
 has 'requires_build'     => ( isa => 'HashRef',  is => 'rw', default => sub { return {} } );
@@ -314,6 +315,8 @@ sub is_unnecessary_dep ( $self, $module ) {
         'Algorithm-TravelingSalesman-BitonicTour' => [qw{ Pod::Coverage }],
         'Algorithm-VectorClocks'                  => [qw{ Test::NoWarnings }],
         'Alien-libgeos'                           => [qw{ Test::Deep }],
+        'Amazon-S3-Thin'                          => [qw{ Config::Tiny }],
+        'Analizo'                                 => [qw{ List::MoreUtils File::Share Git::Wrapper File::ShareDir}],
 
     };
 
@@ -328,6 +331,8 @@ sub is_necessary_dep ( $self, $module ) {
     state $keeps = {
         'AI-PredictionClient'            => [qw{ Inline::CPP Inline::MakeMaker }],    # hard to parse Inline use statement to detect Inline::CPP.
         'Acme-MathProfessor-RandomPrime' => [qw{Test::NoWarnings}],
+        'Amazon-MWS'                     => [qw{ DBD::SQLite }],
+        'Analizo'                        => [qw{ Alien::Doxyparse }],
     };
 
     return unless $keeps->{$distro};
@@ -377,6 +382,7 @@ sub fix_special_repos ( $self ) {
         'AIX-LPP-lpp_name'                  => 1,
         'Algorithm-DependencySolver-Solver' => 1,
         'Alvis-URLs'                        => 1,
+        'Amazon-SQS-Producer'               => 1,
     };
 
     if ( $repos_to_rename->{$distro} ) {
@@ -391,104 +397,114 @@ sub fix_special_repos ( $self ) {
     $self->BUILD_json->{'license'} = 'GPL'  if grep { $distro eq $_ } qw{ AI-LibNeural };
 
     state $files_to_delete = {
-        'Acme-Aheui'                                => [qw{bin/aheui}],
-        'Acme-BeCool'                               => [qw{example.pm}],
-        'Acme-Beatnik'                              => [qw{findwords.pl generate.pl}],
-        'Acme-Blarghy-McBlarghBlargh'               => [qw{blarghymcblarghblargh.pl}],
-        'Acme-Buckaroo'                             => [qw{retest.txt}],
-        'Acme-Buffy'                                => [qw{buffy}],
-        'Acme-CPAN-Testers-UNKNOWN'                 => [qw{messup.PL}],
-        'Acme-CPANAuthors-Acme-CPANAuthors-Authors' => [qw{scripts/author_info.pl scripts/basic_info.pl}],
-        'Acme-Cow-Interpreter'                      => ['bin/*'],
-        'Test-Unit'                                 => [ 'TestRunner.pl', 'TkTestRunner.pl' ],
-        'Acme-CPANAuthors-AnyEvent'                 => [qw{script/AnyEvent.tt script/generate.pl}],
-        'Acme-CPANAuthors-DualLife'                 => [qw{tools/duallife.pl}],
-        'Acme-CPANAuthors-GitHub'                   => [qw{scripts/generate-github-authors.pl}],
-        'Acme-CPANAuthors-Japanese'                 => [qw{bin/unregistered_japanese_authors}],
-        'Acme-CPANAuthors-MBTI'                     => [qw{authorlists/* misc/*}],
-        'Acme-CPANAuthors-Russian'                  => [qw{script/cpan-author.pl script/cpan-faces.pl}],
-        'Acme-CreatingCPANModules'                  => [qw{images/* slides/*}],
-        'Acme-Curses-Marquee'                       => [qw{scrolly}],
-        'Acme-Dahut-Call'                           => [qw{demo/synopsis.pl}],
-        'Acme-EvaTitlenize'                         => [qw{bin/eva-titlenize}],
-        'Acme-EyeDrops'                             => [qw{demo/findshapes.pl demo/gentable.pl demo/sightly.pl xBuild.PL}],
-        'Acme-Filter-Kenny'                         => [qw{bin/kennyfy}],
-        'Acme-Flat'                                 => [qw{misc/Changes.deps misc/Changes.deps.all misc/Changes.deps.dev misc/Changes.deps.opt misc/built_with.json misc/perlcritic.deps}],
-        'Acme-Futuristic-Perl'                      => [qw{COPYRIGHT}],
-        'Acme-Geo-Whitwell-Name'                    => [qw{demo/zip_to_whitwell}],
-        'Acme-Glue'                                 => [qw{snippets/LEEJO/hopscotch.p6 snippets/LEEJO/transform.pl snippets/SLU/MAZE.BAS snippets/SLU/schwartzian_transform.pl}],
-        'ADAMK-Release'                             => [qw{script/adamk-release share/LICENSE share/MANIFEST.SKIP share/pmv.t share/pod.t}],
-        'AFS-Command'                               => [qw{COPYRIGHT}],
-        'AI-Categorizer'                            => [qw{doc/classes-overview.png doc/classes.png}],
-        'AI-Evolve-Befunge'                         => [qw{example.conf}],
-        'AI-MXNetCAPI'                              => [qw{mxnet.i mxnet_typemaps.i}],
-        'AI-NaiveBayes'                             => [qw{a}],
-        'AI-NeuralNet-BackProp'                     => [qw{docs.htm}],
-        'AI-NeuralNet-Mesh'                         => [qw{mesh.htm}],
-        'AI-PSO'                                    => [qw{MPL-1.1.txt extradoc/ReactivePower-PSO-wks.pdf}],
-        'AI-Pathfinding-OptimizeMultiple'           => [qw{bin/optimize-game-ai-multi-tasking rejects.pod}],
-        'AI-Prolog'                                 => [qw{data/sleepy.pro data/spider.pro}],
-        'AI-XGBoost'                                => [qw{misc/using_capi.c}],
-        'AIX-LPP-lpp_name'                          => [qw{data/lpp_name scripts/mkcontrol}],
-        'Acme-Gosub'                                => [qw{scripts/bump-version-number.pl scripts/tag-release.pl}],
-        'Acme-Hodor'                                => [qw{unhodor.pl}],
-        'Acme-JTM-Experiment'                       => [qw{AUTHOR_PLEDGE CODE_OF_CONDUCT.md}],
-        'Acme-Jungle-CrawlerExample'                => [qw{data/sample}],
-        'Acme-KeyboardMarathon'                     => [qw{marathon.pl source-tree-marathon.pl}],
-        'Acme-Lambda-Expr'                          => [qw{tool/operators.pl}],
-        'Acme-MITHALDU-XSGrabBag'                   => [qw{README.PATCHING}],
-        'Acme-Mahjong-Rule-CC'                      => [qw{mj_series}],
-        'Acme-MetaSyntactic-legoindianajones'       => [qw{indie.txt}],
-        'Acme-MorningMusume-ShinMember'             => [qw{bin/genmusume}],
-        'Acme-Ook'                                  => [qw{ook/*.ook}],
-        'Acme-PIA-Export'                           => [qw{Acme-PIA-Export-0.019.html}],
-        'Acme-Pinoko'                               => [qw{benchmark/pinoko_vs_geso.pl}],
-        'Acme-PriPara'                              => [qw{etc/90_concept.t}],
-        'Acme-RandomEmoji'                          => [qw{author/RandomEmoji.pm author/generate.pl author/screenshot.png}],
-        'Acme-Resume'                               => [qw{iller.yaml}],
-        'Acme-RunDoc'                               => [qw{FAQ foo.pl foo2.pl word-examples/helloworld.doc word-lib/Hello/World.docm}],
-        'Acme-Signum'                               => [qw{signum.pl}],
-        'Acme-Test-LocaleTextDomain'                => [qw{LocaleData/id/LC_MESSAGES/Acme-Test-LocaleTextDomain.mo po/Acme-Test-LocaleTextDomain.pot po/id.po}],
-        'Acme-Test-LocaleTextDomainIfEnv'           => [qw{LocaleData/id/LC_MESSAGES/Acme-Test-LocaleTextDomainIfEnv.mo po/Acme-Test-LocaleTextDomainIfEnv.pot po/id.po}],
-        'Acme-Test-LocaleTextDomainUTF8IfEnv'       => [qw{LocaleData/id/LC_MESSAGES/Acme-Test-LocaleTextDomainUTF8IfEnv.mo po/Acme-Test-LocaleTextDomainUTF8IfEnv.pot po/id.po}],
-        'Acme-Text-Rhombus'                         => [qw{scripts/print-rhombus.pl}],
-        'Acme-Time-Asparagus'                       => [qw{VERSION}],
-        'Acme-Time-Constant'                        => [qw{misc/Changes.deps misc/Changes.deps.all misc/Changes.deps.dev misc/Changes.deps.opt misc/built_with.json misc/perlcritic.deps}],
-        'Acme-XSS'                                  => [qw{xss.html}],
-        'Acme-rafl-Everywhere'                      => [qw{a.pl changes.patch}],
-        'Activiti-Rest-Client'                      => [qw{test/*}],
-        'Agent-TCLI'                                => [qw{bin/agent_tail.pl}],
-        'Agent-TCLI-Package-Net'                    => [qw{bin/agent_net.pl}],
-        'Album'                                     => [qw{helper/Makefile helper/README helper/autorun.inf helper/shellrun.c helper/shellrun.exe script/album}],
-        'Algorithm-BitVector'                       => [qw{Examples/BitVectorDemo.pl Examples/README Examples/testinput.txt}],
-        'Algorithm-CheckDigits'                     => [qw{cgi-bin/checkdigits.cgi}],
-        'Algorithm-CouponCode'                      => [qw{html/cc_icons.png html/index.html html/jquery.couponcode.css html/jquery.couponcode.js html/style.css}],
-        'Algorithm-CurveFit-Simple'                 => [qw{data/hra-bhn.tsv}],
-        'Algorithm-DecisionTree'                    => [qw{Examples/* ExamplesBagging/* ExamplesBoosting/* ExamplesRandomizedTrees/* ExamplesRegression/*}],
-        'Algorithm-Diff'                            => [qw{cdiff.pl diff.pl diffnew.pl htmldiff.pl}],
-        'Algorithm-Evolutionary-Simple'             => [qw{script/bitflip.pl script/onemax-benchmark.pl script/xover.pl}],
-        'Algorithm-FloodControl'                    => [qw{svn-commit.tmp}],
-        'Algorithm-GenerateSequence'                => [qw{bench_call}],
-        'Algorithm-Hamming-Perl'                    => [qw{example01 example02 example03 example04}],
-        'Algorithm-HowSimilar'                      => [qw{html/HowSimilar.html html/docs.css}],
-        'Algorithm-LCSS'                            => [qw{html/LCSS.html html/docs.css}],
-        'Algorithm-MarkovChain'                     => [qw{demos/dada demos/empty demos/textfile}],
-        'Algorithm-MasterMind'                      => [qw{app/evorank.yaml app/mm-eda.cgi app/process_experiment.pl app/run_experiment.pl app/run_experiment_all.pl}],
-        'Algorithm-Paxos'                           => [qw{docs/paxos-simple.pdf}],
-        'Algorithm-SAT-Backtracking'                => [qw{b/0-or.b b/1-xor.b b/2-and.b b/3-or-xor.b}],
-        'Algorithm-Tree-NCA'                        => [qw{Release e/execution.log e/timing.pl}],
-        'Alien-BWIPP'                               => [qw{AUTHORS}],
-        'CPAN-Unwind'                               => [qw{adm/podok}],
-        'Perl-Maker'                                => [qw{share/Makefile.tt share/perl-maker.yaml}],
-        'Reflex'                                    => [qw{bench.pl bench/* docs/*}],
-        'AMF-Perl'                                  => [qw{doc/*}],
-        'AOL-TOC'                                   => [qw{tocbot/*}],
-        'AOLserver-CtrlPort'                        => [qw{adm/.cvsignore adm/MANIFEST.SKIP adm/release}],
-        'AlignDB-DeltaG'                            => [qw{dump/dG.yml dump/dump_dG.pl}],
-        'Alt-Data-Frame-ButMore'                    => [qw{TODO.otl data-raw/* utils/*}],
-        'Alvis-Pipeline'                            => [qw{bin/README etc/db/alvis.xml etc/db/xml-core.xml}],
-        'Alzabo-Display-SWF'                        => [qw{etc/Tahoma-B.fdb etc/Tahoma.fdb etc/Verdana-B.fdb etc/Verdana.fdb etc/create.pl etc/my_conf.yml}],
-        'Amazon-Dash-Button'                        => [qw{systemctl/Makefile systemctl/amazon-dash-button.service}],
+        'Acme-Aheui'                                 => [qw{bin/aheui}],
+        'Acme-BeCool'                                => [qw{example.pm}],
+        'Acme-Beatnik'                               => [qw{findwords.pl generate.pl}],
+        'Acme-Blarghy-McBlarghBlargh'                => [qw{blarghymcblarghblargh.pl}],
+        'Acme-Buckaroo'                              => [qw{retest.txt}],
+        'Acme-Buffy'                                 => [qw{buffy}],
+        'Acme-CPAN-Testers-UNKNOWN'                  => [qw{messup.PL}],
+        'Acme-CPANAuthors-Acme-CPANAuthors-Authors'  => [qw{scripts/author_info.pl scripts/basic_info.pl}],
+        'Acme-Cow-Interpreter'                       => ['bin/*'],
+        'Test-Unit'                                  => [ 'TestRunner.pl', 'TkTestRunner.pl' ],
+        'Acme-CPANAuthors-AnyEvent'                  => [qw{script/AnyEvent.tt script/generate.pl}],
+        'Acme-CPANAuthors-DualLife'                  => [qw{tools/duallife.pl}],
+        'Acme-CPANAuthors-GitHub'                    => [qw{scripts/generate-github-authors.pl}],
+        'Acme-CPANAuthors-Japanese'                  => [qw{bin/unregistered_japanese_authors}],
+        'Acme-CPANAuthors-MBTI'                      => [qw{authorlists/* misc/*}],
+        'Acme-CPANAuthors-Russian'                   => [qw{script/cpan-author.pl script/cpan-faces.pl}],
+        'Acme-CreatingCPANModules'                   => [qw{images/* slides/*}],
+        'Acme-Curses-Marquee'                        => [qw{scrolly}],
+        'Acme-Dahut-Call'                            => [qw{demo/synopsis.pl}],
+        'Acme-EvaTitlenize'                          => [qw{bin/eva-titlenize}],
+        'Acme-EyeDrops'                              => [qw{demo/findshapes.pl demo/gentable.pl demo/sightly.pl xBuild.PL}],
+        'Acme-Filter-Kenny'                          => [qw{bin/kennyfy}],
+        'Acme-Flat'                                  => [qw{misc/Changes.deps misc/Changes.deps.all misc/Changes.deps.dev misc/Changes.deps.opt misc/built_with.json misc/perlcritic.deps}],
+        'Acme-Futuristic-Perl'                       => [qw{COPYRIGHT}],
+        'Acme-Geo-Whitwell-Name'                     => [qw{demo/zip_to_whitwell}],
+        'Acme-Glue'                                  => [qw{snippets/LEEJO/hopscotch.p6 snippets/LEEJO/transform.pl snippets/SLU/MAZE.BAS snippets/SLU/schwartzian_transform.pl}],
+        'ADAMK-Release'                              => [qw{script/adamk-release share/LICENSE share/MANIFEST.SKIP share/pmv.t share/pod.t}],
+        'AFS-Command'                                => [qw{COPYRIGHT}],
+        'AI-Categorizer'                             => [qw{doc/classes-overview.png doc/classes.png}],
+        'AI-Evolve-Befunge'                          => [qw{example.conf}],
+        'AI-MXNetCAPI'                               => [qw{mxnet.i mxnet_typemaps.i}],
+        'AI-NaiveBayes'                              => [qw{a}],
+        'AI-NeuralNet-BackProp'                      => [qw{docs.htm}],
+        'AI-NeuralNet-Mesh'                          => [qw{mesh.htm}],
+        'AI-PSO'                                     => [qw{MPL-1.1.txt extradoc/ReactivePower-PSO-wks.pdf}],
+        'AI-Pathfinding-OptimizeMultiple'            => [qw{bin/optimize-game-ai-multi-tasking rejects.pod}],
+        'AI-Prolog'                                  => [qw{data/sleepy.pro data/spider.pro}],
+        'AI-XGBoost'                                 => [qw{misc/using_capi.c}],
+        'AIX-LPP-lpp_name'                           => [qw{data/lpp_name scripts/mkcontrol}],
+        'Acme-Gosub'                                 => [qw{scripts/bump-version-number.pl scripts/tag-release.pl}],
+        'Acme-Hodor'                                 => [qw{unhodor.pl}],
+        'Acme-JTM-Experiment'                        => [qw{AUTHOR_PLEDGE CODE_OF_CONDUCT.md}],
+        'Acme-Jungle-CrawlerExample'                 => [qw{data/sample}],
+        'Acme-KeyboardMarathon'                      => [qw{marathon.pl source-tree-marathon.pl}],
+        'Acme-Lambda-Expr'                           => [qw{tool/operators.pl}],
+        'Acme-MITHALDU-XSGrabBag'                    => [qw{README.PATCHING}],
+        'Acme-Mahjong-Rule-CC'                       => [qw{mj_series}],
+        'Acme-MetaSyntactic-legoindianajones'        => [qw{indie.txt}],
+        'Acme-MorningMusume-ShinMember'              => [qw{bin/genmusume}],
+        'Acme-Ook'                                   => [qw{ook/*.ook}],
+        'Acme-PIA-Export'                            => [qw{Acme-PIA-Export-0.019.html}],
+        'Acme-Pinoko'                                => [qw{benchmark/pinoko_vs_geso.pl}],
+        'Acme-PriPara'                               => [qw{etc/90_concept.t}],
+        'Acme-RandomEmoji'                           => [qw{author/RandomEmoji.pm author/generate.pl author/screenshot.png}],
+        'Acme-Resume'                                => [qw{iller.yaml}],
+        'Acme-RunDoc'                                => [qw{FAQ foo.pl foo2.pl word-examples/helloworld.doc word-lib/Hello/World.docm}],
+        'Acme-Signum'                                => [qw{signum.pl}],
+        'Acme-Test-LocaleTextDomain'                 => [qw{LocaleData/id/LC_MESSAGES/Acme-Test-LocaleTextDomain.mo po/Acme-Test-LocaleTextDomain.pot po/id.po}],
+        'Acme-Test-LocaleTextDomainIfEnv'            => [qw{LocaleData/id/LC_MESSAGES/Acme-Test-LocaleTextDomainIfEnv.mo po/Acme-Test-LocaleTextDomainIfEnv.pot po/id.po}],
+        'Acme-Test-LocaleTextDomainUTF8IfEnv'        => [qw{LocaleData/id/LC_MESSAGES/Acme-Test-LocaleTextDomainUTF8IfEnv.mo po/Acme-Test-LocaleTextDomainUTF8IfEnv.pot po/id.po}],
+        'Acme-Text-Rhombus'                          => [qw{scripts/print-rhombus.pl}],
+        'Acme-Time-Asparagus'                        => [qw{VERSION}],
+        'Acme-Time-Constant'                         => [qw{misc/Changes.deps misc/Changes.deps.all misc/Changes.deps.dev misc/Changes.deps.opt misc/built_with.json misc/perlcritic.deps}],
+        'Acme-XSS'                                   => [qw{xss.html}],
+        'Acme-rafl-Everywhere'                       => [qw{a.pl changes.patch}],
+        'Activiti-Rest-Client'                       => [qw{test/*}],
+        'Agent-TCLI'                                 => [qw{bin/agent_tail.pl}],
+        'Agent-TCLI-Package-Net'                     => [qw{bin/agent_net.pl}],
+        'Album'                                      => [qw{helper/Makefile helper/README helper/autorun.inf helper/shellrun.c helper/shellrun.exe script/album}],
+        'Algorithm-BitVector'                        => [qw{Examples/BitVectorDemo.pl Examples/README Examples/testinput.txt}],
+        'Algorithm-CheckDigits'                      => [qw{cgi-bin/checkdigits.cgi}],
+        'Algorithm-CouponCode'                       => [qw{html/cc_icons.png html/index.html html/jquery.couponcode.css html/jquery.couponcode.js html/style.css}],
+        'Algorithm-CurveFit-Simple'                  => [qw{data/hra-bhn.tsv}],
+        'Algorithm-DecisionTree'                     => [qw{Examples/* ExamplesBagging/* ExamplesBoosting/* ExamplesRandomizedTrees/* ExamplesRegression/*}],
+        'Algorithm-Diff'                             => [qw{cdiff.pl diff.pl diffnew.pl htmldiff.pl}],
+        'Algorithm-Evolutionary-Simple'              => [qw{script/bitflip.pl script/onemax-benchmark.pl script/xover.pl}],
+        'Algorithm-FloodControl'                     => [qw{svn-commit.tmp}],
+        'Algorithm-GenerateSequence'                 => [qw{bench_call}],
+        'Algorithm-Hamming-Perl'                     => [qw{example01 example02 example03 example04}],
+        'Algorithm-HowSimilar'                       => [qw{html/HowSimilar.html html/docs.css}],
+        'Algorithm-LCSS'                             => [qw{html/LCSS.html html/docs.css}],
+        'Algorithm-MarkovChain'                      => [qw{demos/dada demos/empty demos/textfile}],
+        'Algorithm-MasterMind'                       => [qw{app/evorank.yaml app/mm-eda.cgi app/process_experiment.pl app/run_experiment.pl app/run_experiment_all.pl}],
+        'Algorithm-Paxos'                            => [qw{docs/paxos-simple.pdf}],
+        'Algorithm-SAT-Backtracking'                 => [qw{b/0-or.b b/1-xor.b b/2-and.b b/3-or-xor.b}],
+        'Algorithm-Tree-NCA'                         => [qw{Release e/execution.log e/timing.pl}],
+        'Alien-BWIPP'                                => [qw{AUTHORS}],
+        'CPAN-Unwind'                                => [qw{adm/podok}],
+        'Perl-Maker'                                 => [qw{share/Makefile.tt share/perl-maker.yaml}],
+        'Reflex'                                     => [qw{bench.pl bench/* docs/*}],
+        'AMF-Perl'                                   => [qw{doc/*}],
+        'AOL-TOC'                                    => [qw{tocbot/*}],
+        'AOLserver-CtrlPort'                         => [qw{adm/.cvsignore adm/MANIFEST.SKIP adm/release}],
+        'AlignDB-DeltaG'                             => [qw{dump/dG.yml dump/dump_dG.pl}],
+        'Alt-Data-Frame-ButMore'                     => [qw{TODO.otl data-raw/* utils/*}],
+        'Alvis-Pipeline'                             => [qw{bin/README etc/db/alvis.xml etc/db/xml-core.xml}],
+        'Alzabo-Display-SWF'                         => [qw{etc/Tahoma-B.fdb etc/Tahoma.fdb etc/Verdana-B.fdb etc/Verdana.fdb etc/create.pl etc/my_conf.yml}],
+        'Amazon-Dash-Button'                         => [qw{systemctl/Makefile systemctl/amazon-dash-button.service}],
+        'Amazon-S3-FastUploader'                     => [qw{s3uploader.pl}],
+        'Amazon-SQS-Simple'                          => [qw{bin/sqs-toolkit}],
+        'Ambrosia'                                   => [qw{Example/MusicS.sql Example/README script/ambrosia}],
+        'Amethyst'                                   => [qw{factpacks/* dump.pl import.pl import.sh }],
+        'Amon2-Plugin-L10N'                          => [qw{script/amon2-xgettext.pl}],
+        'Amon2-Web-Dispatcher-RouterSimple-Extended' => [qw{.dimconfig}],
+        'Analizo'                                    => [qw{development-setup.sh profile.pl refresh-authors}],
+        'Android-Build'                              => [qw{SampleApp/perl/generateAKey.pl SampleApp/perl/makeWithPerl.pl SampleApp/src/Activity.java}],
+        'Aniki'                                      => [qw{author/*}],
+        'Anki-Import'                                => [qw{out}],
 
     };
 
@@ -523,15 +539,16 @@ sub cleanup_tree ($self) {
 
     # Delete garbage files we don't want.
     foreach my $unwanted_file (
-        qw{ MANIFEST MANIFEST.SKIP MANIFEST.bak MANIFEST.skip INSTALL INSTALL.pod INSTALL.txt INSTALL.skip INSTALL.SKIP INSTALL.Debian SIGNATURE dist.ini Makefile.PL Build.PL weaver.ini
+        qw{ MANIFEST MANIFEST.SKIP MANIFEST.bak MANIFEST.skip INSTALL INSTALL.md INSTALL.pod INSTALL.txt INSTALL.skip INSTALL.SKIP INSTALL.Debian
+        SIGNATURE dist.ini Makefile.PL Build.PL weaver.ini PROFILING.md RELEASE.md
         README README.md README.pod README.txt README.markdown README.html README.old
-        BUGS META.yml META.json ignore.txt .gitignore .mailmap Changes.PL cpanfile cpanfile.snapshot minil.toml .cvsignore .travis.yml travis.yml appveyor.yml .appveyor.yml
+        BUGS META.yml META.json ignore.txt .mailmap Changes.PL cpanfile cpanfile.snapshot minil.toml
+        .gitignore .gitattributes  .cvsignore .travis.yml travis.yml appveyor.yml .appveyor.yml
         .project t/boilerplate.t MYMETA.json MYMETA.yml Makefile Makefile.old maint/Makefile.PL.include metamerge.json README.bak dist.ini.bak
-        AUTHORS
-        CREDITS doap.ttl author_test.sh cpants.pl makeall.sh perlcritic.rc .perltidyrc .perltidy dist.ini.meta Changes.new Changes.old
+        AUTHORS CREDITS doap.ttl author_test.sh cpants.pl makeall.sh perlcritic.rc .perltidyrc .perltidy dist.ini.meta Changes.new Changes.old
         CONTRIBUTORS tidyall.ini perlcriticrc perltidyrc README.mkdn .shipit example.pl pm_to_blib
         install.txt install.sh install.cmd install.bat .settings/org.eclipse.core.resources.prefs .includepath META.ttl Makefile.PL.back
-        Artistic_License.txt GPL_License.txt LICENSE.txt LICENSE.GPL LICENSE.Artistic misc/make_manifest.pl GPL.txt
+        Artistic_License.txt GPL_License.txt LICENSE.txt LICENSE.GPL LICENSE.Artistic misc/make_manifest.pl GPL.txt Dockerfile HACKING.md
         }
     ) {
         next unless $files->{$unwanted_file};
@@ -612,7 +629,7 @@ sub cleanup_tree ($self) {
     }
 
     # Normalize all Changelog files to a common 'Changelog'
-    foreach my $changes_variant (qw/CHANGES CHANGELOG Changes ChangeLog/) {
+    foreach my $changes_variant (qw/CHANGES CHANGELOG Changes ChangeLog CHANGELOG.md/) {
         next unless $files->{$changes_variant};
 
         $files->{'Changelog'} && die("Unexpectedly saw Changelog and $changes_variant in the same repo. I don't know what to do");
@@ -880,6 +897,7 @@ sub determine_installer ( $self ) {
     if ( grep { $_ =~ m/\.xs(.inc)?$/ } keys %$files ) {
         $build_json->{'XS'} = 1;
         $builder = 'legacy';
+        $self->cant_play('xs');
         print "Detected .xs files in distro\n";
     }
     else {
@@ -892,12 +910,14 @@ sub determine_installer ( $self ) {
     my @files;
     if ( @files = grep { $_ =~ m/\.PL$/ && $_ !~ m/^(Build|Makefile)\.PL$/ } keys %$files ) {
         printf( "Detected %s files which indicate a dynamic generation which can't play yet!\n", join( ", ", @files ) );
+        $self->cant_play('.PL files');
         $builder = 'legacy';
     }
 
     # This isn't really a builder builder but since we had the file open we detected
     # that it doesn't really support play right now.
     if ( $self->builder_builder eq 'Module::Build::SysPath' ) {
+        $self->cant_play('Module::Build::SysPath');
         $builder = 'legacy';
     }
 
@@ -909,7 +929,9 @@ sub determine_installer ( $self ) {
         foreach my $prereq ( values %{ $meta->{'prereqs'} } ) {
             next unless @exceptions = grep { defined $prereq->{'requires'}->{$_} } @banned_modules;
             $builder = 'legacy';
-            printf( "The Build/install modules (%s) make the installer unable to play.\n", join( ", ", @exceptions ) );
+            my $banned_modules = join( ", ", @exceptions );
+            $self->cant_play("banned $banned_modules");
+            print "The Build/install modules ($banned_modules) make the installer unable to play.\n";
             last;
         }
     }
@@ -917,12 +939,11 @@ sub determine_installer ( $self ) {
         next unless ref $meta->{$meta_requires} eq 'HASH';
         next unless @exceptions = grep { defined $meta->{$meta_requires}->{$_} } @banned_modules;
         $builder = 'legacy';
-        printf( "The Build/install modules (%s) make the installer unable to play.\n", join( ", ", @exceptions ) );
+        my $banned_modules = join( ", ", @exceptions );
+        $self->cant_play("banned $banned_modules");
+        print "The Build/install modules ($banned_modules) make the installer unable to play.\n";
         last;
     }
-
-    $builder = 'legacy' if defined $meta->{'requires'}->{'Alien::Base'};
-    $builder = 'legacy' if defined $meta->{'configure_requires'}->{'Alien::Base'};
 
     # Validate x_static_install matches our own decision.
     if ( defined $meta->{'x_static_install'} ) {
@@ -932,7 +953,8 @@ sub determine_installer ( $self ) {
         else {
             $builder eq 'legacy' or warn(q{x_static_install says this distro isn't static but I don't know why it is play at this point?});
             $builder = 'legacy';
-            print "Detected x_static_install=1\n";
+            $self->cant_play("x_static_install=0");
+            print "Detected x_static_install=0\n";
         }
         delete $meta->{'x_static_install'};
     }
@@ -943,6 +965,7 @@ sub determine_installer ( $self ) {
             my @found = eval { $self->git->grep('ACTION_install') };
             if (@found) {
                 print "Build.PL distro is using ACTION_install somewhere. Cannot play.\n";
+                $self->cant_play("ACTION_install");
                 $builder = 'legacy';
             }
         }
@@ -951,26 +974,32 @@ sub determine_installer ( $self ) {
 
         if ( $content =~ m/(My::Builder\S+)/msi ) {
             print "Custom build logic found in Build.PL: $1\n";
+            $self->cant_play("My::Builder");
             $builder = 'legacy';
         }
         elsif ( $content =~ m/Module::Build->subclass/ms ) {
             print "Build.PL is subclassing so it must be doing something wierd. Skipping play.\n";
+            $self->cant_play("Module::Build->subclass");
             $builder = 'legacy';
         }
         elsif ( $content =~ m/add_build_element/ms ) {
             print "Build.PL is using add_build_element. Skipping play.\n";
+            $self->cant_play("add_build_element");
             $builder = 'legacy';
         }
         elsif ( $distro =~ m/^Alien-/ && $content =~ m/use lib [^;]*inc/ ) {
             print "Alien module via Build.PL is using inc/. I suspect it can't play\n";
+            $self->cant_play("use of inc/ with Alien modules");
             $builder = 'legacy';
         }
         elsif ( $content =~ m/use\s+ExtUtils::Liblist/ ) {
             print "Build.PL is using ExtUtils::Liblist. Can't play!\n";
+            $self->cant_play("ExtUtils::Liblist");
             $builder = 'legacy';
         }
         elsif ( $content =~ m/install_path/msi ) {
             print "Build.PL is using install_path. Can't play!\n";
+            $self->cant_play("install_path");
             $builder = 'legacy';
         }
 
@@ -990,22 +1019,29 @@ sub determine_installer ( $self ) {
     # No XS but maybe OBJECTS is mentioned in Makefile.PL?
     if ( $builder ne 'legacy' and -f 'Makefile.PL' ) {
         my $doc = $self->get_ppi_doc('Makefile.PL');
+        dump_tree($doc);
+        exit;
+
         my ($object) = $self->_ppi_find_and_parse_value_for_key( $doc, 'OBJECT' );
         $object = strip_quotes($object) if length $object;
         if ( length $object ) {
             $builder = 'legacy';
+            $self->cant_play("OBJECT => $object");
             printf( "Detected a legacy build due to OBJECT => %s in Makefile.PL\n", $object );
         }
         elsif ( $self->_ppi_find_class_and_content( $doc, 'PPI::Token::Word', 'postamble' ) ) {
             $builder = 'legacy';
+            $self->cant_play("postamble in Makefile.PL");
             printf("Detected a postamble in Makefile.PL. Something can't be installed with play.\n");
         }
         elsif ( $self->_ppi_find_class_and_content( $doc, 'PPI::Token::Word', 'prompt_script' ) ) {
             $builder = 'legacy';
+            $self->cant_play("Module::Install prompt_script");
             printf("Detected a M::I prompt_script  in Makefile.PL. Something can't be installed with play.\n");
         }
         elsif ( $distro =~ m/^Alien-/ and $self->_ppi_find_class_and_content( $doc, 'PPI::Token::QuoteLike::Backtick', qr/`/ ) ) {
             $builder = 'legacy';
+            $self->cant_play("Backticks in Makefile.PL");
             printf("Makefile.PL uses backticks.\n");
         }
         else {
@@ -1320,6 +1356,7 @@ sub generate_build_json ($self) {
     $build_json->{'source'} = 'PAUSE';
 
     $build_json->{'builder_API_version'} = '1';
+    $build_json->{'cant_play'}           = $self->cant_play if $self->cant_play;
 
     $build_json->{'primary'} or die("Never determined primary module name?");
     $build_json->{'name'} = $build_json->{'primary'};
@@ -1349,6 +1386,7 @@ sub generate_build_json ($self) {
     }
 
     # Verify everything we think we figured out matches META.
+    $meta->{'abstract'} && $meta->{'abstract'} =~ s/\r//g;
     if ( length $meta->{'abstract'} && $meta->{'abstract'} ne 'unknown' ) {
 
         if ( $build_json->{'abstract'} ) {
@@ -1362,7 +1400,7 @@ sub generate_build_json ($self) {
     }
 
     # This module doesn't use packages. let's just copy provides over.
-    $provides = $meta->{'provides'} if $distro eq 'Acme-Resume';
+    $provides = $meta->{'provides'} if grep { $_ eq $distro } qw/ Acme-Resume Amazon-SES/;
     delete $meta->{'provides'}->{'Acme::XSSism'} if $distro eq 'Acme-XSS';
 
     # Validate provides is what we detected
@@ -1481,11 +1519,12 @@ sub get_ppi_doc ( $self, $filename ) {
     #my $content = $self->try_to_read_file($filename);
 
     # Some perl modules have a BOM in the head of their file.
-    print "Open $filename\n";
-    File::BOM::open_bom( my $fh, $filename, ':utf8' );
-
-    my $content  = '';
     my $encoding = 'utf8';
+    File::BOM::open_bom( my $fh, $filename, ":$encoding" );
+    binmode( $fh, ':encoding(Latin1)' ) if ( $filename eq 'lib/Ananke/Template.pm' );
+    binmode( $fh, ':encoding(Latin1)' ) if ( $filename eq 'lib/Ananke/Utils.pm' );
+
+    my $content = '';
     while ( my $line = <$fh> ) {
         if ( $line =~ m/^=encoding\s+(\S+)/ ) {
             $encoding = $1;
@@ -1829,7 +1868,7 @@ sub _ppi_get_list_from_quote_or_quote_like_words ($node) {
         push @list, strip_quotes( $node->content );
     }
     else {
-        die dump_tree( $node, "Unexpected class for quote/list node" );
+        die dump_tree( $node->parent, "Unexpected class for quote/list node" );
     }
 
     return @list;
@@ -1947,7 +1986,6 @@ sub parse_text_for_license ( $self, $license_data ) {
         return $self->BUILD_json->{'license'} = 'perl';
     }                                  # This module is licensed under the same terms as perl itself
     elsif ( $license_data =~ m{same as Perl itself|you can redistribute it and/or modify it under the same terms as the perl 5 programming language system itself|under the same terms as perl\.|is licensed under the same terms as perl itself}msi ) {
-        print "HERE\n";
         return $self->BUILD_json->{'license'} = 'perl';
     }
     elsif ( $license_data =~ m/L<perlartistic>/msi ) {
@@ -2018,6 +2056,9 @@ sub parse_code ( $self, $filename ) {
         $requires_runtime_hash->{$_} = 0 foreach @modules;
     }
 
+    # Moops uses class instead of package *sigh*
+    my $moops = exists $requires_runtime_hash->{'Moops'} ? 1 : 0;
+
     my $primary_module = $self->BUILD_json->{'primary'};
 
     return unless $filename =~ m{\.(t|pm)$} && $filename =~ m{^(t|lib)/};
@@ -2048,7 +2089,13 @@ sub parse_code ( $self, $filename ) {
     }
 
     # Find packages that are provides.
-    my $packages_find = $doc->find('PPI::Statement::Package') || [];
+    my $packages_find;
+    if ($moops) {
+        $packages_find = $doc->find( sub ( $self, $node ) { $node->class eq 'PPI::Token::Word' && $node->content eq 'class' } ) || [];
+    }
+    else {
+        $packages_find = $doc->find('PPI::Statement::Package') || [];
+    }
 
   PACKAGE: foreach my $pkg_token (@$packages_find) {
         my $module = get_package_provided($pkg_token) or next;
@@ -2187,7 +2234,8 @@ sub parse_code ( $self, $filename ) {
 
 sub get_package_provided ($element) {
     my $token = $element->first_token;
-    $token eq 'package' or die dump_tree( $element, "$token not a package?" );
+
+    $token =~ m/^(package|class)\z/ or die dump_tree( $element, "$token not a package?" );
 
     # Package statements where the package is on a different line than the package indicates that they are trying to hide it from the PAUSE parser.
     # We're going to do the same.
@@ -2204,6 +2252,7 @@ sub get_package_provided ($element) {
     $package =~ s/\\?'/::/g;         # Acme::Can't
     return if $package eq 'main';    # main is not a supported package on CPAN.
 
+    print "Found package: $package\n";
     return $package;
 }
 
@@ -2229,11 +2278,23 @@ sub get_package_usage ($element) {
     $module =~ s/'/::/g;                            # Acme::Can't
 
     # use base 'accessors';
-    if ( $is_use eq 'use' and $module =~ /^(base|parent)$/ ) {
-        my @modules;
+    if ( $is_use eq 'use' and $module =~ /^(base|parent|Test::Requires)$/ ) {
+        my @modules = ($1);
         $token = $token->snext_sibling;
-        return if $token->class eq 'PPI::Token::Structure' and $token->content eq ';';    # use base;
-        if ( $token->class eq 'PPI::Structure::List' ) {
+        return if $token->class eq 'PPI::Token::Word'      and $token->content eq '-norequire';    # use parent --norequire ...
+        return if $token->class eq 'PPI::Token::Structure' and $token->content eq ';';             # use base;
+
+        $token = $token->snext_sibling if ( $token->content eq '+' );                              # use Test::Requires +{ ... };
+                                                                                                   # use Test::Requires +{ 'YAML::Tiny' => '1.46' };
+        if ( $token->class eq 'PPI::Structure::Constructor' ) {
+            $token = $token->schild(0);
+            $token->class eq 'PPI::Statement' or die( dump_tree( $token->parent, "unexpected class in Test::Requires requires." ) );
+            $token = $token->schild(0);
+
+            $token->class =~ m/^PPI::Token::Quote::|^PPI::Token::Word$/ or die;
+            push @modules, strip_quotes( $token->content );
+        }
+        elsif ( $token->class eq 'PPI::Structure::List' ) {
             $token = $token->schild(0);
             $token->class eq 'PPI::Statement::Expression' or die;
             $token = $token->schild(0);
