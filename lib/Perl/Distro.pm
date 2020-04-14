@@ -376,6 +376,7 @@ sub fix_special_repos ( $self ) {
         'AI-Classifier-Text'                => 1,
         'AIX-LPP-lpp_name'                  => 1,
         'Algorithm-DependencySolver-Solver' => 1,
+        'Alvis-URLs'                        => 1,
     };
 
     if ( $repos_to_rename->{$distro} ) {
@@ -485,6 +486,9 @@ sub fix_special_repos ( $self ) {
         'AOLserver-CtrlPort'                        => [qw{adm/.cvsignore adm/MANIFEST.SKIP adm/release}],
         'AlignDB-DeltaG'                            => [qw{dump/dG.yml dump/dump_dG.pl}],
         'Alt-Data-Frame-ButMore'                    => [qw{TODO.otl data-raw/* utils/*}],
+        'Alvis-Pipeline'                            => [qw{bin/README etc/db/alvis.xml etc/db/xml-core.xml}],
+        'Alzabo-Display-SWF'                        => [qw{etc/Tahoma-B.fdb etc/Tahoma.fdb etc/Verdana-B.fdb etc/Verdana.fdb etc/create.pl etc/my_conf.yml}],
+        'Amazon-Dash-Button'                        => [qw{systemctl/Makefile systemctl/amazon-dash-button.service}],
 
     };
 
@@ -519,10 +523,11 @@ sub cleanup_tree ($self) {
 
     # Delete garbage files we don't want.
     foreach my $unwanted_file (
-        qw{ MANIFEST MANIFEST.SKIP MANIFEST.bak MANIFEST.skip INSTALL INSTALL.pod INSTALL.txt INSTALL.skip INSTALL.SKIP SIGNATURE dist.ini Makefile.PL Build.PL weaver.ini
+        qw{ MANIFEST MANIFEST.SKIP MANIFEST.bak MANIFEST.skip INSTALL INSTALL.pod INSTALL.txt INSTALL.skip INSTALL.SKIP INSTALL.Debian SIGNATURE dist.ini Makefile.PL Build.PL weaver.ini
         README README.md README.pod README.txt README.markdown README.html README.old
         BUGS META.yml META.json ignore.txt .gitignore .mailmap Changes.PL cpanfile cpanfile.snapshot minil.toml .cvsignore .travis.yml travis.yml appveyor.yml .appveyor.yml
         .project t/boilerplate.t MYMETA.json MYMETA.yml Makefile Makefile.old maint/Makefile.PL.include metamerge.json README.bak dist.ini.bak
+        AUTHORS
         CREDITS doap.ttl author_test.sh cpants.pl makeall.sh perlcritic.rc .perltidyrc .perltidy dist.ini.meta Changes.new Changes.old
         CONTRIBUTORS tidyall.ini perlcriticrc perltidyrc README.mkdn .shipit example.pl pm_to_blib
         install.txt install.sh install.cmd install.bat .settings/org.eclipse.core.resources.prefs .includepath META.ttl Makefile.PL.back
@@ -741,6 +746,7 @@ sub is_extra_files_we_ship ( $self, $file ) {
     return 1 if $file eq 'OSDc/prog.osdc' && $distro eq 'Acme-OSDc';
     return 1 if $file eq 'test.txt'       && $distro eq 'Acme-Stegano';
     return 1 if $file eq 'sqltest.lib'    && $distro eq 'AlignDB-SQL';
+    return 1 if $distro eq 'Alvis-TermTagger' and grep { $_ eq $file } qw{ bin/TermTagger-brat.pl bin/TermTagger.pl etc/corpus-test-lem.txt etc/corpus-test.txt etc/termlist-test.lst };
 
     return 0;
 }
@@ -963,8 +969,12 @@ sub determine_installer ( $self ) {
             print "Build.PL is using ExtUtils::Liblist. Can't play!\n";
             $builder = 'legacy';
         }
+        elsif ( $content =~ m/install_path/msi ) {
+            print "Build.PL is using install_path. Can't play!\n";
+            $builder = 'legacy';
+        }
 
-        if ( $content =~ m/install_path|sys_files/msi ) {
+        if ( $builder ne 'legacy' and $content =~ m/sys_files/msi ) {
             print "Need to implement support for install_path, sys_files in Build.PL";
             ...;
             $builder = 'legacy';
@@ -1454,8 +1464,8 @@ sub prune_ref ($var) {
 }
 
 sub get_ppi_doc ( $self, $filename ) {
-    return if $filename =~ m{\.(bak|yml|json|yaml|txt|out|htm|html|tt|tt2|pro|js|css|ps|xml|xhtml|po|mo|tt2|xls|xlsx|csv|tab|jpg|jpeg|png|gif|fla|swf|sql|eye|eyp|doc|docm|ppt|c|cpp|h|dat|zip|gz|tar|jar|java)$}i;
-    return if $filename =~ m{share/|share-module/};                                                                                                                                                                   # Skip share files. They're not perl code.
+    return if $filename =~ m{\.(bak|yml|json|yaml|txt|out|htm|html|tt|tt2|pro|js|css|ps|xml|xhtml|po|mo|tt2|fdb|xls|xlsx|csv|tab|jpg|jpeg|png|gif|fla|swf|sql|eye|eyp|doc|docm|ppt|c|cpp|h|dat|zip|gz|tar|jar|java)$}i;
+    return if $filename =~ m{share/|share-module/};                                                                                                                                                                       # Skip share files. They're not perl code.
     return if $self->is_extra_files_we_ship($filename);
 
     if ( -l $filename || -d _ || -z _ ) {
