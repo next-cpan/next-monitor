@@ -1635,7 +1635,6 @@ S/SJ/SJDY/AnyEvent-DNS-Nameserver-1.2.tar.gz
 X/XS/XSAWYERX/AnyEvent-EC2-Tiny-0.002.tar.gz
 E/EL/ELMEX/AnyEvent-EditText-0.2.tar.gz
 F/FU/FUKAI/AnyEvent-Emitter-0.02.tar.gz
-X/XS/XSAWYERX/AnyEvent-Eris-0.000002.tar.gz
 M/ML/MLEHMANN/AnyEvent-FastPing-2.1.tar.gz
 V/VK/VKRAMSKIH/AnyEvent-FCGI-0.04.tar.gz
 M/ML/MLEHMANN/AnyEvent-FCP-0.5.tar.gz
@@ -2221,3 +2220,11 @@ S/SL/SLAFFAN/Alien-sqlite-1.03.tar.gz
 P/PL/PLICEASE/Alien-wasmtime-0.06.tar.gz
 W/WB/WBUNTINE/Alvis-Bags-0.3.tar.gz
 N/NI/NICWOLFF/Amazon-SQS-ProducerConsumer-0.04.tar.gz
+P/PE/PERLANCAR/Acme-CPANModules-HashUtilities-0.002.tar.gz
+K/KI/KIWIROY/tmp/Alien-MUSCLE-0.01.tar.gz
+F/FR/FROGGS/Alien-PNG-0.2.tar.gz
+S/SL/SLAFFAN/Alien-sqlite-1.04.tar.gz
+P/PL/PLICEASE/Alien-wasmtime-0.07.tar.gz
+T/TO/TOKUHIROM/Amon2-6.14.tar.gz
+X/XS/XSAWYERX/AnyEvent-Eris-0.000002.tar.gz
+M/MS/MSCHOUT/Apache-AuthCookie-3.30.tar.gz

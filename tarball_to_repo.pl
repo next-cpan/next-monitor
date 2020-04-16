@@ -506,6 +506,7 @@ sub rename_distro ( $self, $distro ) {
           FreeHAL         AI-FreeHAL-Class
           libalarm        Alarm-Queued
           Alvis-Bags      Alvis-URLs
+          AnyEvent-Eris   AnyEvent-eris
           }
     };
 
