@@ -297,6 +297,9 @@ sub is_unnecessary_dep ( $self, $module ) {
     # Play does File::ShareDir::Install by itself.
     return 1 if $module eq 'File::ShareDir::Install' && $self->is_play;
 
+    # We don't need this since we figure out deps on our own.
+    return 1 if $module eq 'Module::Build::Prereqs::FromCPANfile' && $self->is_play;
+
     state $skips = {
         'Acme-CPANModules-CalculatingDayOfWeek'   => [qw{ Bencher::Backend }],
         'Acme-CPANModules-TextTable'              => [qw{ Bencher::Backend }],
@@ -317,6 +320,9 @@ sub is_unnecessary_dep ( $self, $module ) {
         'Alien-libgeos'                           => [qw{ Test::Deep }],
         'Amazon-S3-Thin'                          => [qw{ Config::Tiny }],
         'Analizo'                                 => [qw{ List::MoreUtils File::Share Git::Wrapper File::ShareDir}],
+        'AnyEvent-IMAP'                           => [qw{ Test::Requires }],
+        'AnyEvent-Inotify-Simple'                 => [qw{ Test::Exception }],
+        'AnyEvent-MessagePack'                    => [qw{ Test::Requires }],
 
     };
 
@@ -328,11 +334,17 @@ sub is_unnecessary_dep ( $self, $module ) {
 sub is_necessary_dep ( $self, $module ) {
     my $distro = $self->distro;
 
+    # This is Mark's way of forcing a perl version dep. It's probably a bad idea to take it away.
+    return 1 if $module eq 'Canary::Stability';
+
     state $keeps = {
         'AI-PredictionClient'            => [qw{ Inline::CPP Inline::MakeMaker }],    # hard to parse Inline use statement to detect Inline::CPP.
         'Acme-MathProfessor-RandomPrime' => [qw{Test::NoWarnings}],
         'Amazon-MWS'                     => [qw{ DBD::SQLite }],
         'Analizo'                        => [qw{ Alien::Doxyparse }],
+        'AnyEvent-Callback'              => [qw{ AnyEvent }],
+        'AnyEvent-Inotify-Simple'        => [qw{ EV }],
+
     };
 
     return unless $keeps->{$distro};
@@ -349,6 +361,7 @@ sub fix_special_repos ( $self ) {
     $self->git->mv( glob('Stegano/*'), '.' ) if ( $distro eq 'Acme-Stegano' );
     $self->git->rm( '-rf', 'local' ) if ( $distro eq 'Acme-Sort-Sleep' );
     $self->git->mv( glob('Line/Bresenham/C/*'), '.' ) if ( $distro eq 'Algorithm-Line-Bresenham-C' );
+    $self->git->mv( glob('01_use.t'),           't' ) if ( $distro eq 'AnyEvent-Ident' );
 
     state $incorrect_case_files = {
         qw{
@@ -375,6 +388,8 @@ sub fix_special_repos ( $self ) {
     $self->BUILD_json->{'maintainers'} = 'Paul Fenwick.'                         if $distro eq 'Acme-OSDc';
     $self->BUILD_json->{'maintainers'} = 'David Nicol.'                          if $distro eq 'Acme-landmine';
     $self->BUILD_json->{'maintainers'} = 'Salvador Fandino <sfandino@yahoo.com>' if $distro eq 'Algorithm-ClusterPoints';
+    $self->BUILD_json->{'maintainers'} = 'Say Media'                             if $distro eq 'AnyEvent-Blackboard';
+    $self->BUILD_json->{'maintainers'} = 'Yuval Kogman'                          if $distro eq 'AnyEvent-Kanye';
 
     # Repos where their tarball doesn't match their primary module.
     state $repos_to_rename = {
@@ -383,6 +398,7 @@ sub fix_special_repos ( $self ) {
         'Algorithm-DependencySolver-Solver' => 1,
         'Alvis-URLs'                        => 1,
         'Amazon-SQS-Producer'               => 1,
+        'AnyEvent-eris'                     => 1,
     };
 
     if ( $repos_to_rename->{$distro} ) {
@@ -391,7 +407,7 @@ sub fix_special_repos ( $self ) {
 
     $self->BUILD_json->{'license'} = 'unknown' if grep { $distro eq $_ } qw{ Acme-Code-FreedomFighter ACME-Error-Translate Acme-ESP Acme-Goatse AFS AFS-Command AI-Fuzzy AI-General AIS-client AIX-LPP-lpp_name
       Acme-Lingua-Strine-Perl Acme-ManekiNeko Acme-Method-CaseInsensitive Acme-Remote-Strangulation-Protocol Acme-Turing Acme-URM Acme-Ukrop Acme-Void Algorithm-FEC Alien-KentSrc Alien-MeCab Alien-HDF4 Alien-Iconv
-      Alien-Saxon
+      Alien-Saxon AnyEvent-Kanye
     };
     $self->BUILD_json->{'license'} = 'perl' if grep { $distro eq $_ } qw{ ACME-Error-31337 ACME-Error-IgpayAtinlay Acme-OSDc Acme-PM-Berlin-Meetings Acme-please Algorithm-Cluster};
     $self->BUILD_json->{'license'} = 'GPL'  if grep { $distro eq $_ } qw{ AI-LibNeural };
@@ -505,6 +521,16 @@ sub fix_special_repos ( $self ) {
         'Android-Build'                              => [qw{SampleApp/perl/generateAKey.pl SampleApp/perl/makeWithPerl.pl SampleApp/src/Activity.java}],
         'Aniki'                                      => [qw{author/*}],
         'Anki-Import'                                => [qw{out}],
+        'AnnoCPAN-Perldoc-SyncDB'                    => [qw{index.html}],
+        'Any-Template-ProcessDir'                    => [qw{git/config}],
+        'AnyEvent-Connection'                        => [qw{.portupload.yml}],
+        'AnyEvent-CouchDB'                           => [qw{edit}],
+        'AnyEvent-FTP'                               => [qw{corpus/nlst/one.txt corpus/nlst/three.txt corpus/nlst/two.txt}],
+        'AnyEvent-ForkManager'                       => [qw{author/requires.cpanm}],
+        'AnyEvent-GnuPG'                             => [qw{COPYING}],
+        'AnyEvent-ITM'                               => [qw{bundle.bat}],
+        'AnyEvent-MQTT'                              => [qw{misc/*}],
+        'AnyEvent-OWNet'                             => [qw{.build/* AnyEvent-OWNet-1.142000/.travis.yml}],
 
     };
 
@@ -517,6 +543,34 @@ sub fix_special_repos ( $self ) {
     if (@files) {
         $self->git->rm( '-f', @files );
     }
+}
+
+sub is_extra_files_we_ship ( $self, $file, $distro = undef ) {
+
+    # Explicit files we're going to ignore.
+    return 1 if ( grep { $file eq $_ } qw/Changelog LICENSE CONTRIBUTING.md Todo author.yml/ );
+
+    # paths with example files we're going to ignore.
+    return 1 if $file =~ m{^(eg|examples?|ex)/};
+
+    $distro //= $self->distro;
+
+    # Wierd files for specific distros.
+    return 1 if $file =~ m{^proto\b} && $distro =~ m/^AC-/;
+    return 1 if $file =~ m{^fortune/}          && $distro eq 'Acme-24';
+    return 1 if $file =~ m{^Roms/}             && $distro eq 'Acme-6502';
+    return 1 if $file =~ m{^ascii-art\.pl$}    && $distro eq 'Acme-AsciiArtinator';
+    return 1 if $file =~ m{^demo/|unbleach.pl} && $distro eq 'Acme-Bleach';
+    return 1 if $file =~ m{^testlib/}          && $distro eq 'abbreviation';
+    return 1 if $file eq 'acmelsd.png'    && $distro eq 'Acme-LSD';
+    return 1 if $file eq 'OSDc/prog.osdc' && $distro eq 'Acme-OSDc';
+    return 1 if $file eq 'test.txt'       && $distro eq 'Acme-Stegano';
+    return 1 if $file eq 'sqltest.lib'    && $distro eq 'AlignDB-SQL';
+    return 1 if $distro eq 'Alvis-TermTagger' and grep { $_ eq $file } qw{ bin/TermTagger-brat.pl bin/TermTagger.pl etc/corpus-test-lem.txt etc/corpus-test.txt etc/termlist-test.lst };
+    return 1 if $file eq 'sqltest.lib' && $distro eq 'AlignDB-SQL';
+    return 1 if $file =~ m{^test/} && $distro eq 'AnyEvent-GnuPG';
+
+    return 0;
 }
 
 sub _remove_files_by_pattern ( $self, $pattern ) {
@@ -548,7 +602,8 @@ sub cleanup_tree ($self) {
         AUTHORS CREDITS doap.ttl author_test.sh cpants.pl makeall.sh perlcritic.rc .perltidyrc .perltidy dist.ini.meta Changes.new Changes.old
         CONTRIBUTORS tidyall.ini perlcriticrc perltidyrc README.mkdn .shipit example.pl pm_to_blib
         install.txt install.sh install.cmd install.bat .settings/org.eclipse.core.resources.prefs .includepath META.ttl Makefile.PL.back
-        Artistic_License.txt GPL_License.txt LICENSE.txt LICENSE.GPL LICENSE.Artistic misc/make_manifest.pl GPL.txt Dockerfile HACKING.md
+        Artistic_License.txt GPL_License.txt LICENSE.txt LICENSE.GPL LICENSE.Artistic misc/make_manifest.pl GPL.txt ARTISTIC-1.0 GPL-1
+        Dockerfile HACKING.md
         }
     ) {
         next unless $files->{$unwanted_file};
@@ -742,32 +797,6 @@ sub update_p5_branch_to_not_play ($self) {
     $self->determine_primary_module;
 }
 
-sub is_extra_files_we_ship ( $self, $file ) {
-
-    # Explicit files we're going to ignore.
-    return 1 if ( grep { $file eq $_ } qw/Changelog LICENSE CONTRIBUTING.md Todo author.yml/ );
-
-    # paths with example files we're going to ignore.
-    return 1 if $file =~ m{^(eg|examples?|ex)/};
-
-    my $distro = $self->distro;
-
-    # Wierd files for specific distros.
-    return 1 if $file =~ m{^proto\b} && $distro =~ m/^AC-/;
-    return 1 if $file =~ m{^fortune/}          && $distro eq 'Acme-24';
-    return 1 if $file =~ m{^Roms/}             && $distro eq 'Acme-6502';
-    return 1 if $file =~ m{^ascii-art\.pl$}    && $distro eq 'Acme-AsciiArtinator';
-    return 1 if $file =~ m{^demo/|unbleach.pl} && $distro eq 'Acme-Bleach';
-    return 1 if $file =~ m{^testlib/}          && $distro eq 'abbreviation';
-    return 1 if $file eq 'acmelsd.png'    && $distro eq 'Acme-LSD';
-    return 1 if $file eq 'OSDc/prog.osdc' && $distro eq 'Acme-OSDc';
-    return 1 if $file eq 'test.txt'       && $distro eq 'Acme-Stegano';
-    return 1 if $file eq 'sqltest.lib'    && $distro eq 'AlignDB-SQL';
-    return 1 if $distro eq 'Alvis-TermTagger' and grep { $_ eq $file } qw{ bin/TermTagger-brat.pl bin/TermTagger.pl etc/corpus-test-lem.txt etc/corpus-test.txt etc/termlist-test.lst };
-
-    return 0;
-}
-
 sub cleanup_and_grep ( $self, $grep ) {
     $self->git->reset('.');
     $self->git->checkout('.');
@@ -820,7 +849,7 @@ sub update_p5_branch_from_PAUSE ($self) {
 
         # Files we know are ok, we'll delete from the hash.
         foreach my $file ( sort keys %files_copy ) {
-            delete $files_copy{$file} if $self->is_extra_files_we_ship($file);
+            delete $files_copy{$file} if $self->is_extra_files_we_ship( $file, $distro );
         }
 
         # Detected share files.
@@ -959,15 +988,14 @@ sub determine_installer ( $self ) {
         delete $meta->{'x_static_install'};
     }
 
-    if ( $builder ne 'legacy' and -e 'Build.PL' ) {
+    # we ignore all the wierd in minilla
+    if ( $builder ne 'legacy' and -e 'Build.PL' && $self->builder_builder ne 'minilla' ) {
 
-        if ( $builder ne 'legacy' ) {
-            my @found = eval { $self->git->grep('ACTION_install') };
-            if (@found) {
-                print "Build.PL distro is using ACTION_install somewhere. Cannot play.\n";
-                $self->cant_play("ACTION_install");
-                $builder = 'legacy';
-            }
+        my @found = eval { $self->git->grep('ACTION_install') };
+        if (@found) {
+            print "Build.PL distro is using ACTION_install somewhere. Cannot play.\n";
+            $self->cant_play("ACTION_install");
+            $builder = 'legacy';
         }
 
         my $content = $self->try_to_read_file('Build.PL');
@@ -1019,8 +1047,6 @@ sub determine_installer ( $self ) {
     # No XS but maybe OBJECTS is mentioned in Makefile.PL?
     if ( $builder ne 'legacy' and -f 'Makefile.PL' ) {
         my $doc = $self->get_ppi_doc('Makefile.PL');
-        dump_tree($doc);
-        exit;
 
         my ($object) = $self->_ppi_find_and_parse_value_for_key( $doc, 'OBJECT' );
         $object = strip_quotes($object) if length $object;
@@ -1033,6 +1059,11 @@ sub determine_installer ( $self ) {
             $builder = 'legacy';
             $self->cant_play("postamble in Makefile.PL");
             printf("Detected a postamble in Makefile.PL. Something can't be installed with play.\n");
+        }
+        elsif ( $self->_ppi_find_class_and_content( $doc, 'PPI::Token::Word', 'MY::postamble' ) ) {
+            $builder = 'legacy';
+            $self->cant_play("MY::postamble in Makefile.PL");
+            printf("Detected MY::postamble in Makefile.PL. Can't play.\n");
         }
         elsif ( $self->_ppi_find_class_and_content( $doc, 'PPI::Token::Word', 'prompt_script' ) ) {
             $builder = 'legacy';
@@ -1193,6 +1224,10 @@ sub generate_build_json ($self) {
             if ( $meta->{'prereqs'}->{$prereq_key}->{'conflicts'} ) {
                 merge_dep_into_hash( $meta->{'prereqs'}->{$prereq_key}->{'conflicts'}, $self->conflicts_runtime );
                 delete $meta->{'prereqs'}->{$prereq_key}->{'conflicts'};
+            }
+            if ( $meta->{'x_conflicts'} ) {
+                merge_dep_into_hash( $meta->{'x_conflicts'}, $self->conflicts_runtime );
+                delete $meta->{'x_conflicts'};
             }
         }
         if ( $prereq_key eq 'test' || $prereq_key eq 'build' ) {
@@ -1867,6 +1902,9 @@ sub _ppi_get_list_from_quote_or_quote_like_words ($node) {
     elsif ( $node->class =~ m{^PPI::Token::Quote::} ) {
         push @list, strip_quotes( $node->content );
     }
+    elsif ( $node->class eq 'PPI::Token::Word' ) {
+        push @list, $node->content;
+    }
     else {
         die dump_tree( $node->parent, "Unexpected class for quote/list node" );
     }
@@ -2049,6 +2087,11 @@ sub parse_code ( $self, $filename ) {
         exit;
     }
 
+    # A list of modules who don't know how to mention a simple version. Serenity NOW!!!
+    state $cray_version = {
+        'AnyEvent::Handle::Throttle' => '0.000002005',
+    };
+
     # find use/require statements and parse them.
     my $use_find = $doc->find('PPI::Statement::Include') || [];
     foreach my $use_node (@$use_find) {
@@ -2085,7 +2128,32 @@ sub parse_code ( $self, $filename ) {
     foreach my $dbi_node (@$dbi_nodes) {
         my $c = $dbi_node->snext_sibling->snext_sibling->snext_sibling->content;
         my ($DBD) = $c =~ m/[\"'\(\{]DBI:(\S+):/;
-        $requires_runtime_hash->{"DBD::$DBD"} = 0;
+        $requires_runtime_hash->{"DBD::$DBD"} = 0 if length $DBD;
+    }
+
+    # Find eval q{ require HTTP::Server::Simple::CGI }
+    my $eval_requires = $doc->find(
+        sub ( $self, $node ) {
+            $node->class eq 'PPI::Statement' or return 0;    # .
+
+            $node = $node->schild(0) or return 0;
+            $node->class eq 'PPI::Token::Word' or return 0;    # eval
+            $node->content eq 'eval' or return 0;
+
+            $node = $node->snext_sibling;
+            $node->class eq 'PPI::Token::Quote::Literal' or return 0;    # eval q{...}
+
+            return 1;
+
+        }
+    ) || [];
+    foreach my $er (@$eval_requires) {
+        my $c = $er->schild(0)->snext_sibling->content;
+        my ( $require, $module ) = $c =~ m/(require|use)\s+(\S+)/;
+        $module =~ s/;.+\z//msg;                                         # Strip off everything after the ;
+
+        print "Found eval q{ $require $module ...}\n";
+        $requires_runtime_hash->{$module} = 0;
     }
 
     # Find packages that are provides.
@@ -2215,13 +2283,17 @@ sub parse_code ( $self, $filename ) {
                 elsif ( $pkg_token->content =~ m/Revision:\s*([0-9]+\.[0-9]+)\s*\$/ ) {
                     $version = $1;
                 }
+
                 else {
                     #                    my $str = $pkg_token->content;
                     #                    my ($version) = $str =~ m/sprintf.+Revision: ([0-9]+\.[0-9]+)/;
 
-                    $self->dump_self;
-                    $version or die sprintf( "TOKEN (%s=%s): %s--\n", $node->class, $node->content, $pkg_token->content ) . dump_tree( $pkg_token, "Unexpected content in VERSION statement" );
+                    #$self->dump_self;
+                    #$version or die sprintf( "TOKEN (%s=%s): %s--\n", $node->class, $node->content, $pkg_token->content ) . dump_tree( $pkg_token, "Unexpected content in VERSION statement" );
                 }
+
+                # Sometimes we can't trust what we see.
+                $version = $cray_version->{$module} // $version // 0;
 
                 print "PROVIDES $module ($version)\n";
                 $provides_hash->{$module}->{'version'} = $version;
@@ -2267,8 +2339,8 @@ sub get_package_usage ($element) {
 
     $token = $token->snext_sibling;
 
-    return if ( $token->content =~ m/^5\.\d+/ );    # skip use 5.xx
-    if ( $token->content =~ m/^\s*\$/ ) {           # Dynamic require can't be parsed.
+    return if ( $token->content =~ m/^5\.\d+/ );    # skip use 5.x
+    if ( $token->content =~ m/[\$\%\@]/ ) {         # Dynamic require can't be parsed.
         printf( "Failed to parse require: %s\n", $token->content );
         return;
     }
