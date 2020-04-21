@@ -2347,6 +2347,12 @@ sub get_package_usage ($element) {
 
     my $module = $token->content;
     return if $module eq 'main';                    # Main is not a legal CPAN package.
+
+    if ( $module =~ m/^['"]/ ) {                    # require 'AC/protobuf/auth.pl';
+        $module = strip_quotes($module);
+        return if -e "lib/$module";                 # we don't care if it's just a local file.
+    }
+
     $module =~ s/'/::/g;                            # Acme::Can't
 
     # use base 'accessors';
