@@ -50,6 +50,8 @@ has 'repo_files'  => (
     }
 );
 
+has 'code_is_parseable' => ( isa => 'Bool', is => 'rw', default => 1 );
+
 has 'builder_builder' => ( isa => 'Str', is => 'rw', builder => '_build_builder_builder' );
 has 'cant_play'       => ( isa => 'Str', is => 'rw', default => '' );
 
@@ -122,6 +124,28 @@ sub is_play ($self) {
     return $self->BUILD_json->{'builder'} eq 'play';
 }
 
+sub unexpected_alien_play_check ($self) {
+
+    # It isn't play so nothing to be worried about.
+    return unless $self->is_play;
+
+    # It's not an alient module so we're not worried.
+    return unless $self->distro =~ m/^Alien-/;
+
+    # These modules have been vetted to be safe with play. They're just installing share or something.
+    return if grep { $_ eq $self->distro } qw{
+      Alien-BWIPP
+      Alien-Build-Plugin-Build-Premake5
+      Alien-Microsoft-Outlook
+      Alien-Packages
+      Alien-Saxon
+    };
+
+    $self->dump_self;
+    my $distro = $self->distro;
+    die("Somehow we didn't detect that   $distro   couldn't play.");
+}
+
 sub do_the_do ($self) {
     $self->check_if_dirty_and_die;
     $self->checkout_p5_branch;
@@ -148,11 +172,7 @@ sub do_the_do ($self) {
     $self->determine_installer;
     $self->parse_specail_files_for_license;
 
-    if ( $self->distro ne 'Alien-Win32-LZMA' && $self->distro =~ m/^Alien-/ && $self->is_play ) {
-        $self->dump_self;
-        my $distro = $self->distro;
-        die("Somehow we didn't detect that   $distro   couldn't play.");
-    }
+    $self->unexpected_alien_play_check;    # Most alien modules aren't play compatible.
 
     if ( $self->is_play ) {
         $self->parse_maker_for_scripts;
@@ -359,6 +379,8 @@ sub fix_special_repos ( $self ) {
 
     my $distro = $self->distro;
 
+    $self->code_is_parseable(0) if grep { $distro eq $_ } qw/Acme-Resume Amazon-SES/;
+
     $self->git->mv( glob('PGPSign/*'), '.' ) if ( $distro eq 'Acme-PGPSign' );
     $self->git->mv( glob('RTB/*'),     '.' ) if ( $distro eq 'Acme-RTB' );
     $self->git->mv( glob('Stegano/*'), '.' ) if ( $distro eq 'Acme-Stegano' );
@@ -451,10 +473,10 @@ sub fix_special_repos ( $self ) {
         'AI-NeuralNet-BackProp'                      => [qw{docs.htm}],
         'AI-NeuralNet-Mesh'                          => [qw{mesh.htm}],
         'AI-PSO'                                     => [qw{MPL-1.1.txt extradoc/ReactivePower-PSO-wks.pdf}],
-        'AI-Pathfinding-OptimizeMultiple'            => [qw{bin/optimize-game-ai-multi-tasking rejects.pod}],
+        'AI-Pathfinding-OptimizeMultiple'            => [qw{rejects.pod}],
         'AI-Prolog'                                  => [qw{data/sleepy.pro data/spider.pro}],
         'AI-XGBoost'                                 => [qw{misc/using_capi.c}],
-        'AIX-LPP-lpp_name'                           => [qw{data/lpp_name scripts/mkcontrol}],
+        'AIX-LPP-lpp_name'                           => [qw{scripts/mkcontrol}],
         'Acme-Gosub'                                 => [qw{scripts/bump-version-number.pl scripts/tag-release.pl}],
         'Acme-Hodor'                                 => [qw{unhodor.pl}],
         'Acme-JTM-Experiment'                        => [qw{AUTHOR_PLEDGE CODE_OF_CONDUCT.md}],
@@ -534,6 +556,8 @@ sub fix_special_repos ( $self ) {
         'AnyEvent-ITM'                               => [qw{bundle.bat}],
         'AnyEvent-MQTT'                              => [qw{misc/*}],
         'AnyEvent-OWNet'                             => [qw{.build/* AnyEvent-OWNet-1.142000/.travis.yml}],
+        'ALBD'                                       => [qw{FAQ FDL.txt config/association config/interface config/interfaceConfig config/lbd utils/datasetCreator/applyMaxThreshold.pl utils/*}],
+        'Acme-AllThePerlIsAStage'                    => [qw{share/and_one_man_in_his_time_plays_many_parts.pl share/they_have_their_exits_and_their_entrances.pl}],
 
     };
 
@@ -572,6 +596,7 @@ sub is_extra_files_we_ship ( $self, $file, $distro = undef ) {
     return 1 if $distro eq 'Alvis-TermTagger' and grep { $_ eq $file } qw{ bin/TermTagger-brat.pl bin/TermTagger.pl etc/corpus-test-lem.txt etc/corpus-test.txt etc/termlist-test.lst };
     return 1 if $file eq 'sqltest.lib' && $distro eq 'AlignDB-SQL';
     return 1 if $file =~ m{^test/} && $distro eq 'AnyEvent-GnuPG';
+    return 1 if $file =~ m{^data/} && $distro eq 'AIX-LPP-lpp_name';
 
     return 0;
 }
@@ -830,9 +855,11 @@ sub update_p5_branch_from_PAUSE ($self) {
         }
     }
 
+    $self->gather_non_play_provides_from_meta unless $self->code_is_parseable;
+
     my $files = $self->repo_files;
     foreach my $file ( sort { $a cmp $b } keys %$files ) {
-        $self->parse_code($file);
+        $self->parse_code($file) if $self->code_is_parseable;
         $self->parse_comments($file);
         $self->parse_pod($file);
     }
@@ -1182,8 +1209,15 @@ sub generate_build_json ($self) {
     }
 
     # Put provides into BUILD.json
-    %{ $self->provides } or die("Every module should provide something. This provides nothing?");
+    if ( !$self->code_is_parseable ) {
+        $build_json->{'unparseable'} = 1;
+    }
+
     $build_json->{'provides'} = $self->provides;
+
+    if ( $self->is_play ) {
+        %{ $self->provides } or die("Every module should provide something. This provides nothing?");
+    }
 
     # Decode the resource urls. These have been inconsistently stored over the years.
     foreach my $resource (qw/bugtracker repository/) {
@@ -1246,6 +1280,12 @@ sub generate_build_json ($self) {
             next unless _is_a_hash_ref( $prereq_hash->{$prereq_key}->{$require_type} );
             merge_dep_into_hash( $prereq_hash->{$prereq_key}->{$require_type}, $prereq_map->{$prereq_key}->{$require_type} );
             delete $prereq_hash->{$prereq_key}->{$require_type};
+        }
+
+        # Look for x_* keys in this prereq which we don't know or care about.
+        foreach my $garbage_key ( grep { m/^x_/ } keys %{ $prereq_hash->{$prereq_key} } ) {
+            print "Deleting unsupported prereq for '$prereq_key' key '$garbage_key'\n";
+            delete $prereq_hash->{$prereq_key}->{$garbage_key};
         }
         prune_ref( $prereq_hash->{$prereq_key} );
         keys %{ $prereq_hash->{$prereq_key} } and die( "Unexpected prereqs found in $prereq_key:\n" . Dumper $meta);
@@ -1424,10 +1464,6 @@ sub generate_build_json ($self) {
         delete $meta->{'abstract'};
     }
 
-    # This module doesn't use packages. let's just copy provides over.
-    $provides = $meta->{'provides'} if grep { $_ eq $distro } qw/ Acme-Resume Amazon-SES/;
-    delete $meta->{'provides'}->{'Acme::XSSism'} if $distro eq 'Acme-XSS';
-
     # Validate provides is what we detected
     if ( $meta->{'provides'} ) {
         foreach my $module ( sort { $a cmp $b } keys %{ $meta->{'provides'} } ) {
@@ -1445,6 +1481,11 @@ sub generate_build_json ($self) {
                 if ( $provides->{$module}->{'version'} =~ m/[0-9]\.$/ ) {
                     $provides->{$module}->{'version'} = $meta->{'provides'}->{$module}->{'version'};
                 }
+
+                $provides->{$module}->{'version'} =~ s/^vv/v/;           # Fix bug where the version is sometimes vv0.2.2
+                $provides->{$module}->{'version'} =~ s/0\.10E0/0.10/;    # Damn it Audrey!
+
+                #printf("%s ne %s\n", $meta->{'provides'}->{$module}->{'version'} // 0,  $provides->{$module}->{'version'} // 0);
                 my $detected_version = version->parse( $provides->{$module}->{'version'}           // 0 );
                 my $meta_version     = version->parse( $meta->{'provides'}->{$module}->{'version'} // 0 );
                 $detected_version == $meta_version or die( "Meta provides $module version ($meta_version) is not the same as was detected ($detected_version): " . $self->dump_self );
@@ -1534,7 +1575,7 @@ sub get_ppi_doc ( $self, $filename ) {
     return if $self->is_extra_files_we_ship($filename);
 
     if ( -l $filename || -d _ || -z _ ) {
-        warn("$filename isn't a normal file. Skipping PPI parse");
+        print "$filename isn't a normal file. Skipping PPI parse\n";
         return;
     }
 
@@ -1545,21 +1586,29 @@ sub get_ppi_doc ( $self, $filename ) {
     #    my $content = File::Slurper::read_text($filename);
     #my $content = $self->try_to_read_file($filename);
 
+    state @latin_modules = qw {
+      lib/Ananke/Template.pm lib/Ananke/Utils.pm lib/Acme/Flip.pm lib/Acme/HOIGAN.pm lib/Acme/LeetSpeak.pm lib/Acme/Mobile/Therbligs.pm
+      lib/Acme/Ukrop.pm
+    };
+
     # Some perl modules have a BOM in the head of their file.
     my $encoding = 'utf8';
     File::BOM::open_bom( my $fh, $filename, ":$encoding" );
-    binmode( $fh, ':encoding(Latin1)' ) if ( $filename eq 'lib/Ananke/Template.pm' );
-    binmode( $fh, ':encoding(Latin1)' ) if ( $filename eq 'lib/Ananke/Utils.pm' );
+    binmode( $fh, ':encoding(Latin1)' ) if grep { $filename eq $_ } @latin_modules;
 
     my $content = '';
     while ( my $line = <$fh> ) {
         if ( $line =~ m/^=encoding\s+(\S+)/ ) {
-            $encoding = $1;
-            if ( $encoding =~ m/^utf\-?8\z/i ) {
+            my $new_encoding = $1;
+            if ( $new_encoding =~ m/^utf-?8\z/i ) {
                 $encoding = 'utf8';
             }
-            else {
+            elsif ( $new_encoding =~ m/iso-?8859/i ) {
+                $encoding = 'iso-8859';
                 last;
+            }
+            else {
+                die("Unknown encoding '$new_encoding'");
             }
         }
         $content .= $line;
@@ -1569,7 +1618,7 @@ sub get_ppi_doc ( $self, $filename ) {
     if ( $encoding ne 'utf8' ) {
         close $fh;
 
-        if ( $encoding =~ m/iso8859/i ) {
+        if ( $encoding =~ m/iso-?8859/i ) {
             print "Re-open $filename latin1\n";
             open( $fh, '<', $filename );
         }
@@ -1760,6 +1809,8 @@ sub merge_path ( $self, $from_dir, $to_dir ) {
     return unless -d $from_dir;
     mkpath($to_dir);
 
+    return if $from_dir eq $to_dir;    # no need to move files in share to the share dir.
+
     my $git = $self->git;
 
     my @files = map { substr( $_, length($from_dir) + 1 ) } sort { length($b) <=> length($a) } $git->ls_files($from_dir);
@@ -1925,6 +1976,15 @@ sub _ppi_get_list_from_quote_or_quote_like_words ($node) {
     }
     elsif ( $node->class eq 'PPI::Token::Word' ) {
         push @list, $node->content;
+    }
+    elsif ( $node->class eq 'PPI::Structure::List' ) {         # [("utils/runDiscovery.pl")],
+        $node = $node->schild(0);
+        $node->class eq 'PPI::Statement::Expression' or die dump_tree( $node->parent, "Unexpected class for quote/list node" );
+        $node = $node->schild(0);
+        $node->class =~ m{^PPI::Token::Quote::} or die dump_tree( $node->parent->parent, "Unexpected class for quote/list node" );
+        push @list, strip_quotes( $node->content );
+        $node = $node->snext_sibling;
+        $node and die dump_tree( $node->parent->parent, "Unexpected sequence in quote/list node" );
     }
     else {
         die dump_tree( $node->parent, "Unexpected class for quote/list node" );
@@ -2095,7 +2155,6 @@ sub parse_specail_files_for_license ($self) {
 }
 
 sub parse_code ( $self, $filename ) {
-
     my $requires_runtime_hash;
     $requires_runtime_hash = $self->requires_build   if $filename =~ m{^t/.+\.(pl|pm|t)$}i;
     $requires_runtime_hash = $self->requires_runtime if $filename =~ m{\.pm$} && $filename !~ m{^t/};
@@ -2111,12 +2170,13 @@ sub parse_code ( $self, $filename ) {
     # A list of modules who don't know how to mention a simple version. Serenity NOW!!!
     state $cray_version = {
         'AnyEvent::Handle::Throttle' => '0.000002005',
+        'Acme::Version::Hex'         => '0.000976562',
     };
 
     # find use/require statements and parse them.
     my $use_find = $doc->find('PPI::Statement::Include') || [];
     foreach my $use_node (@$use_find) {
-        my (@modules) = get_package_usage($use_node) or next;
+        my (@modules) = _ppi_get_package_usage($use_node) or next;
         $requires_runtime_hash->{$_} = 0 foreach @modules;
     }
 
@@ -2170,7 +2230,8 @@ sub parse_code ( $self, $filename ) {
     ) || [];
     foreach my $er (@$eval_requires) {
         my $c = $er->schild(0)->snext_sibling->content;
-        my ( $require, $module ) = $c =~ m/(require|use)\s+(\S+)/;
+        my ( $require, $module ) = $c =~ m/(require|use)\s+(\S+)/ or next;
+
         $module =~ s/;.+\z//msg;                                         # Strip off everything after the ;
 
         print "Found eval q{ $require $module ...}\n";
@@ -2180,7 +2241,7 @@ sub parse_code ( $self, $filename ) {
     # Find packages that are provides.
     my $packages_find;
     if ($moops) {
-        $packages_find = $doc->find( sub ( $self, $node ) { $node->class eq 'PPI::Token::Word' && $node->content eq 'class' } ) || [];
+        $packages_find = $doc->find( sub ( $self, $node ) { $node->class eq 'PPI::Token::Word' && $node->content eq 'class' || $node->content eq 'library' } ) || [];
     }
     else {
         $packages_find = $doc->find('PPI::Statement::Package') || [];
@@ -2191,6 +2252,17 @@ sub parse_code ( $self, $filename ) {
 
         $provides_hash->{$module}->{'file'}    = $filename;
         $provides_hash->{$module}->{'version'} = 0;
+
+        # Try to detect package foo 1.x {...}
+        my $package_braces_version = $pkg_token->schild(0)->snext_sibling->snext_sibling;
+        if ( $package_braces_version && $package_braces_version->content ne ';' ) {
+            my $number = 0;
+            if ( $package_braces_version->class ne 'PPI::Structure::Block' ) {
+                $number = ppi_extract_number($package_braces_version);
+            }
+
+            $provides_hash->{$module}->{'version'} = $number;
+        }
 
         # Try to determine the VERSION value in each package.
         while ( $pkg_token = $pkg_token->snext_sibling ) {
@@ -2349,7 +2421,19 @@ sub get_package_provided ($element) {
     return $package;
 }
 
-sub get_package_usage ($element) {
+sub ppi_extract_number ($node) {
+    my $class = $node->class;
+    return if ( $class eq 'PPI::Token::Structure' );
+
+    if ( $class =~ m{^PPI::Token::Number::} ) {
+        return $node->content;
+    }
+
+    die dump_tree( $node, "Unexpected data in number node" );
+
+}
+
+sub _ppi_get_package_usage ($element) {
     my $top = $element;
 
     my $token       = $element->first_token;
@@ -2360,21 +2444,22 @@ sub get_package_usage ($element) {
 
     $token = $token->snext_sibling;
 
-    return if ( $token->content =~ m/^5\.\d+/ );    # skip use 5.x
-    if ( $token->content =~ m/[\$\%\@]/ ) {         # Dynamic require can't be parsed.
+    return if ( $token->content =~ m/^5(\.[0-9]+)?\z/ );    # skip use 5.x and use 5
+    if ( $token->content =~ m/[\$\%\@]/ ) {                 # Dynamic require can't be parsed.
         printf( "Failed to parse require: %s\n", $token->content );
         return;
     }
 
     my $module = $token->content;
-    return if $module eq 'main';                    # Main is not a legal CPAN package.
 
-    if ( $module =~ m/^['"]/ ) {                    # require 'AC/protobuf/auth.pl';
+    return if $module eq 'main';                            # Main is not a legal CPAN package.
+
+    if ( $module =~ m/^['"]/ ) {                            # require 'AC/protobuf/auth.pl';
         $module = strip_quotes($module);
-        return if -e "lib/$module";                 # we don't care if it's just a local file.
+        return if -e "lib/$module";                         # we don't care if it's just a local file.
     }
 
-    $module =~ s/'/::/g;                            # Acme::Can't
+    $module =~ s/'/::/g;                                    # Acme::Can't
 
     # use base 'accessors';
     if ( $is_use eq 'use' and $module =~ /^(base|parent|Test::Requires)$/ ) {
