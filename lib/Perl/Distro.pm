@@ -1135,6 +1135,12 @@ sub parse_license_file ($self) {
 
 }
 
+sub _is_a_hash_ref ($ref) {
+    return unless $ref;
+    return unless ref($ref) eq 'HASH';
+    return 1;
+}
+
 sub generate_build_json ($self) {
     my $build_json = $self->BUILD_json;
     my $meta       = $self->dist_meta;
@@ -1194,80 +1200,61 @@ sub generate_build_json ($self) {
         x_test_requires x_authority_from_module x_permissions_from_module x_BuiltWith module_name x_contributor_covenant
         x_provides_scripts/
     );
-    foreach my $prereq_key (qw/configure build runtime test develop/) {
-        next unless $meta->{'prereqs'};
-        next unless $meta->{'prereqs'}->{$prereq_key};
-        next unless $meta->{'prereqs'}->{$prereq_key}->{'requires'};
 
-        if ( $prereq_key eq 'configure' ) {
-            $meta->{'configure_requires'} ||= {};
-            merge_dep_into_hash( $meta->{'prereqs'}->{$prereq_key}->{'requires'}, $meta->{'configure_requires'} );
-            foreach my $extra_cfg (qw/recommends suggests/) {
-                if ( $meta->{'prereqs'}->{$prereq_key}->{$extra_cfg} ) {
-                    merge_dep_into_hash( $meta->{'prereqs'}->{$prereq_key}->{$extra_cfg}, $self->recommends_build );
-                    delete $meta->{'prereqs'}->{$prereq_key}->{$extra_cfg};
-                }
-            }
-        }
-        if ( $prereq_key eq 'runtime' ) {
-            $meta->{'requires'} ||= {};
-            merge_dep_into_hash( $meta->{'prereqs'}->{$prereq_key}->{'requires'}, $meta->{'requires'} );
+    # Initialize the misc meta fields into hashes if they're missing.
+    $meta->{$_} ||= {} foreach qw/configure_requires requires build_requires develop_requires/;
 
-            if ( $meta->{'prereqs'}->{$prereq_key}->{'recommends'} ) {
-                merge_dep_into_hash( $meta->{'prereqs'}->{$prereq_key}->{'recommends'}, $self->recommends_runtime );
-                delete $meta->{'prereqs'}->{$prereq_key}->{'recommends'};
-            }
-            if ( $meta->{'prereqs'}->{$prereq_key}->{'suggests'} ) {
-                merge_dep_into_hash( $meta->{'prereqs'}->{$prereq_key}->{'suggests'}, $self->recommends_runtime );
-                delete $meta->{'prereqs'}->{$prereq_key}->{'suggests'};
-            }
-            if ( $meta->{'prereqs'}->{$prereq_key}->{'conflicts'} ) {
-                merge_dep_into_hash( $meta->{'prereqs'}->{$prereq_key}->{'conflicts'}, $self->conflicts_runtime );
-                delete $meta->{'prereqs'}->{$prereq_key}->{'conflicts'};
-            }
-            if ( $meta->{'x_conflicts'} ) {
-                merge_dep_into_hash( $meta->{'x_conflicts'}, $self->conflicts_runtime );
-                delete $meta->{'x_conflicts'};
-            }
-        }
-        if ( $prereq_key eq 'test' || $prereq_key eq 'build' ) {
-            $meta->{'build_requires'} ||= {};
-            merge_dep_into_hash( $meta->{'prereqs'}->{$prereq_key}->{'requires'}, $meta->{'build_requires'} );
-            if ( $meta->{'prereqs'}->{$prereq_key}->{'recommends'} ) {
-                merge_dep_into_hash( $meta->{'prereqs'}->{$prereq_key}->{'recommends'}, $self->recommends_build );
-                delete $meta->{'prereqs'}->{$prereq_key}->{'recommends'};
-            }
-            if ( $meta->{'prereqs'}->{$prereq_key}->{'suggests'} ) {
-                merge_dep_into_hash( $meta->{'prereqs'}->{$prereq_key}->{'suggests'}, $self->recommends_build );
-                delete $meta->{'prereqs'}->{$prereq_key}->{'suggests'};
-            }
-        }
-        if ( $prereq_key eq 'develop' ) {
-            $meta->{'develop_requires'} ||= {};
-            merge_dep_into_hash( $meta->{'prereqs'}->{$prereq_key}->{'requires'}, $meta->{'develop_requires'} );
-            foreach my $extra_dev (qw/recommends suggests/) {
-                if ( $meta->{'prereqs'}->{$prereq_key}->{$extra_dev} ) {
-                    merge_dep_into_hash( $meta->{'prereqs'}->{$prereq_key}->{$extra_dev}, $meta->{'develop_requires'} );
-                    delete $meta->{'prereqs'}->{$prereq_key}->{$extra_dev};
-                }
-            }
-            foreach my $additional_key ( keys %{ $meta->{'prereqs'}->{$prereq_key} } ) {
-                next unless $additional_key =~ m/^x_/;
-                print "Deleting develop prereq section $additional_key\n";
-                delete $meta->{'prereqs'}->{$prereq_key}->{$additional_key};
-            }
-        }
+    # We need to merge the prereq map into various destinations.
+    my $prereq_map = {
+        build => {
+            requires   => $meta->{'build_requires'},
+            recommends => $self->recommends_build,
+            suggests   => $self->recommends_build,
+        },
+        test => {
+            requires   => $meta->{'build_requires'},
+            recommends => $self->recommends_build,
+            suggests   => $self->recommends_build,
+        },
+        configure => {
+            requires   => $meta->{'configure_requires'},
+            recommends => $self->recommends_build,
+            suggests   => $self->recommends_build,
+        },
+        develop => {
+            requires   => $meta->{'develop_requires'},
+            recommends => $meta->{'develop_requires'},
+            suggests   => $meta->{'develop_requires'},
+        },
+        runtime => {
+            requires    => $meta->{'requires'},
+            recommends  => $self->recommends_runtime,
+            suggests    => $self->recommends_runtime,
+            conflicts   => $self->conflicts_runtime,
+            x_conflicts => $self->conflicts_runtime,
+        },
+    };
 
-        delete $meta->{'prereqs'}->{$prereq_key}->{'requires'};
-        prune_ref( $meta->{'prereqs'}->{$prereq_key} );
-
-        keys %{ $meta->{'prereqs'}->{$prereq_key} } and die( "Unexpected prereqs found in $prereq_key:\n" . Dumper $meta);
+    # Walk the prereqs section of $meta using the prereq_map and re-locate the deps to a consistent location.
+    my $prereq_hash = $meta->{'prereqs'} //= {};
+    foreach my $prereq_key ( sort { $a cmp $b } keys %$prereq_map ) {    # build configure develop runtime test
+        next unless _is_a_hash_ref( $prereq_hash->{$prereq_key} );
+        foreach my $require_type ( sort { $a cmp $b } keys %{ $prereq_map->{$prereq_key} } ) {    # requires recommends suggests conflicts x_conflicts.
+            next unless _is_a_hash_ref( $prereq_hash->{$prereq_key}->{$require_type} );
+            merge_dep_into_hash( $prereq_hash->{$prereq_key}->{$require_type}, $prereq_map->{$prereq_key}->{$require_type} );
+            delete $prereq_hash->{$prereq_key}->{$require_type};
+        }
+        prune_ref( $prereq_hash->{$prereq_key} );
+        keys %{ $prereq_hash->{$prereq_key} } and die( "Unexpected prereqs found in $prereq_key:\n" . Dumper $meta);
     }
+
+    # Strip out any x_ prereqs. We don't care about them.
     foreach my $prereq_key ( grep { m/^x_/ } keys %{ $meta->{'prereqs'} } ) {
         print "Deleting non-standard prereq section $prereq_key\n";
         delete $meta->{'prereqs'}->{$prereq_key};
     }
 
+    # Strip everything out of $meta and see if there are still prereqs.
     prune_ref($meta);
     $meta->{'prereqs'} and die( "Unexpected prereqs found:\n" . Dumper $meta);
 
@@ -1471,8 +1458,10 @@ sub generate_build_json ($self) {
     }
 
     # https://metacpan.org/pod/CPAN::Meta::Spec#no_index
+    # I couldn't determine what we would do with this so it was thrown out.
     if ( $meta->{'no_index'} ) {
-        $build_json->{'no_index'} = $meta->{'no_index'};
+
+        # $build_json->{'no_index'} = $meta->{'no_index'};
         delete $meta->{'no_index'};
     }
 
