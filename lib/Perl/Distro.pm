@@ -9,17 +9,20 @@ use Moose;
 use experimental 'signatures';
 use experimental 'state';
 
-use version          ();
-use Git::Wrapper     ();
-use File::Slurper    ();
-use File::BOM        ();
-use Cwd::Guard       ();
-use Cpanel::JSON::XS ();
-use CPAN::Meta::YAML ();
-use File::Path qw/mkpath/;
+use version               ();
+use Git::Wrapper          ();
+use File::Slurper         ();
+use File::BOM             ();
+use Cwd::Guard            ();
+use Cpanel::JSON::XS      ();
+use CPAN::Meta::YAML      ();
+use File::Basename        ();
 use Pod::Markdown::Github ();
 use Module::CoreList      ();
 use File::Find            ();
+
+use List::Util qw(uniq);
+use File::Path qw/mkpath/;
 
 use PPI::Document ();
 use PPI::Dumper   ();
@@ -1178,9 +1181,9 @@ sub generate_build_json ($self) {
         }
     }
 
-    if ( %{ $self->provides } ) {
-        $build_json->{'provides'} = $self->provides;
-    }
+    # Put provides into BUILD.json
+    %{ $self->provides } or die("Every module should provide something. This provides nothing?");
+    $build_json->{'provides'} = $self->provides;
 
     # Decode the resource urls. These have been inconsistently stored over the years.
     foreach my $resource (qw/bugtracker repository/) {
@@ -1777,6 +1780,7 @@ sub parse_maker_for_scripts ($self) {
 
     my $distro  = $self->distro;
     my $scripts = $self->scripts;
+    my $meta    = $self->dist_meta;
 
     # Catfiles that are too hard to parse.
     push @{$scripts}, 'bin/ook'       if $distro eq 'Acme-Ook';
@@ -1784,11 +1788,24 @@ sub parse_maker_for_scripts ($self) {
     push @{$scripts}, 'bin/mt-upload' if $distro eq 'Net-MovableType';
     push @{$scripts}, 'bin/sys'       if $distro eq 'VCS-SaVeS';
     push @{$scripts}, 'bin/axk'       if $distro eq 'XML-Axk';
-    return if @{$scripts};
+
+    if ( @{$scripts} ) {
+
+        # We had to manually set these. Don't try to read the makers to get the info.
+    }
+
+    # NOTE: At the time of writing, we had no evidence that any minil distro did anything other than bin/* and script/*
+    elsif ( $self->builder_builder eq 'minilla' ) {
+
+        # This is the default.
+        my @files = $self->git->ls_files( 'bin/*', 'script/*' );
+        if (@files) {
+            push @{$scripts}, @files;
+        }
+    }
 
     # parse x_provides_scripts to find the scripts this distro ships.
-    my $meta = $self->dist_meta;
-    if ( exists $meta->{'x_provides_scripts'} ) {
+    elsif ( exists $meta->{'x_provides_scripts'} ) {
         if ( ref $meta->{'x_provides_scripts'} eq 'HASH' ) {
             foreach my $provides ( values %{ $meta->{'x_provides_scripts'} } ) {
                 ref $provides eq 'HASH' or die( "Unexpected format to x_provides_scripts:\n" . Dumper $meta);
@@ -1797,29 +1814,12 @@ sub parse_maker_for_scripts ($self) {
             return;
         }
     }
-
-    if ( $self->builder_builder eq 'minilla' ) {
-        my $c = $self->try_to_read_file('minil.toml');
-        if ( $c && $c =~ /script_files/msi ) {
-            ...;    #Let's wait and see if we get one of these.
-        }
-
-        # This is the default.
-        my @files = $self->git->ls_files( 'bin/*', 'script/*' );
-        if (@files) {
-            push @{$scripts}, @files;
-        }
-        return;
-    }
-
-    if ( -e 'Build.PL' ) {
+    elsif ( -e 'Build.PL' ) {
         my $doc = $self->get_ppi_doc('Build.PL');
 
         push @$scripts, $self->_ppi_find_and_parse_value_for_key( $doc, 'script_files' );
-        return;
     }
-
-    if ( -e 'Makefile.PL' ) {
+    elsif ( -e 'Makefile.PL' ) {
         my $doc = $self->get_ppi_doc('Makefile.PL');
 
         # my @scripts = grep {-f } glob("scripts/*.pl "); # Ripped from Text::PDF
@@ -1842,6 +1842,38 @@ sub parse_maker_for_scripts ($self) {
             push @$scripts, strip_quotes( $node->content );
         }
     }
+
+    return unless @$scripts;
+
+    # Strip out duplicates.
+    @$scripts = uniq(@$scripts);
+
+    my $need_reset = 0;
+
+    my $script_base_dir = 'script';
+
+    # Now we've found the scripts, we want to re-locate them.
+    foreach my $script (@$scripts) {
+        next if $script =~ m{^$script_base_dir/[^/]+\z};    # bin/abcdef. It's where we want it!
+        $script =~ m{^$script_base_dir/} and die("Unexpected $script_base_dir/ path for script: $script");    # bin/foo/bar ?
+
+        mkdir $script_base_dir;                                                                               # just in case it is not there.
+
+        my ( $file, $dirs ) = File::Basename::fileparse($script);
+
+        my $to = "$script_base_dir/$file";
+        -e $to and die("Unexpected file relocaing scripts file from $script to $to");
+
+        print "Relocate $script -> $to\n";
+        $self->git->mv( $script, $to );
+        $script = $to;                                                                                        # We are explicitly altering the alias in the array. (Don't try this at home kids!)
+
+        $need_reset++;
+    }
+
+    $self->reset_repo_files if $need_reset;
+
+    return;
 }
 
 # Parses the values from:
