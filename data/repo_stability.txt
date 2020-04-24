@@ -5310,6 +5310,26 @@
          }
       }
    },
+   "Acme-CPANModules-GetoptModules" : {
+      "0.001" : {
+         "all_results" : {
+            "fail" : 0,
+            "na" : 1,
+            "pass" : 105,
+            "total" : 106,
+            "unknown" : 0
+         },
+         "mtime" : 1587769144,
+         "newest_report" : "20200423",
+         "oldest_report" : "20200416",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 12,
+            "total" : 12,
+            "unknown" : 0
+         }
+      }
+   },
    "Acme-CPANModules-GettingTempDir" : {
       "0.001" : {
          "all_results" : {
@@ -5458,6 +5478,25 @@
             "fail" : 0,
             "pass" : 66,
             "total" : 66,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-CPANModules-MockModules" : {
+      "0.001" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 91,
+            "total" : 91,
+            "unknown" : 0
+         },
+         "mtime" : 1587769149,
+         "newest_report" : "20200424",
+         "oldest_report" : "20200419",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 12,
+            "total" : 12,
             "unknown" : 0
          }
       }
@@ -5648,6 +5687,23 @@
             "fail" : 0,
             "pass" : 68,
             "total" : 68,
+            "unknown" : 0
+         }
+      },
+      "0.003" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 78,
+            "total" : 78,
+            "unknown" : 0
+         },
+         "mtime" : 1587769153,
+         "newest_report" : "20200424",
+         "oldest_report" : "20200420",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 12,
+            "total" : 12,
             "unknown" : 0
          }
       }
@@ -12677,6 +12733,26 @@
             "fail" : 0,
             "pass" : 133,
             "total" : 133,
+            "unknown" : 0
+         }
+      }
+   },
+   "Acme-PERLANCAR-Test-Images" : {
+      "0.001" : {
+         "all_results" : {
+            "fail" : 0,
+            "na" : 16,
+            "pass" : 110,
+            "total" : 126,
+            "unknown" : 0
+         },
+         "mtime" : 1587769157,
+         "newest_report" : "20181118",
+         "oldest_report" : "20160713",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 68,
+            "total" : 68,
             "unknown" : 0
          }
       }
@@ -21993,6 +22069,23 @@
             "total" : 204,
             "unknown" : 3
          }
+      },
+      "1.16" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 41,
+            "total" : 41,
+            "unknown" : 0
+         },
+         "mtime" : 1587769161,
+         "newest_report" : "20200424",
+         "oldest_report" : "20200422",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 4,
+            "total" : 4,
+            "unknown" : 0
+         }
       }
    },
    "Alien-GPG-Error" : {
@@ -22911,6 +23004,23 @@
             "total" : 135,
             "unknown" : 0
          }
+      },
+      "0.16" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 54,
+            "total" : 54,
+            "unknown" : 0
+         },
+         "mtime" : 1587769165,
+         "newest_report" : "20200424",
+         "oldest_report" : "20200422",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 10,
+            "total" : 10,
+            "unknown" : 0
+         }
       }
    },
    "Alien-Lightbox" : {
@@ -23252,6 +23362,23 @@
             "pass" : 9,
             "total" : 9,
             "unknown" : 0
+         }
+      },
+      "0.4" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 87,
+            "total" : 89,
+            "unknown" : 2
+         },
+         "mtime" : 1587769169,
+         "newest_report" : "20200424",
+         "oldest_report" : "20200421",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 14,
+            "total" : 16,
+            "unknown" : 2
          }
       }
    },
@@ -25402,6 +25529,23 @@
             "fail" : 0,
             "pass" : 9,
             "total" : 9,
+            "unknown" : 0
+         }
+      },
+      "0.08" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 13,
+            "total" : 13,
+            "unknown" : 0
+         },
+         "mtime" : 1587769174,
+         "newest_report" : "20200424",
+         "oldest_report" : "20200424",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 7,
+            "total" : 7,
             "unknown" : 0
          }
       }
