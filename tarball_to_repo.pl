@@ -53,6 +53,8 @@ has 'temp_repo_dir'              => ( isa => 'Str', is => 'ro', lazy => 1, defau
 
 has 'tarball_parsed_cache' => ( isa => 'HashRef', is => 'rw', lazy => 1, builder => '_build_tarball_parsed_cache' );
 
+has 'need_to_stop' => ( isa => 'Bool', is => 'ro', default => 0 );
+
 has 'gh'      => ( isa => 'Object', is => 'ro', lazy => 1, default => sub { Net::GitHub::V3->new( version => 3, login => $_[0]->github_user, access_token => $_[0]->github_token ) } );
 has 'gh_org'  => ( isa => 'Object', is => 'ro', lazy => 1, default => sub { $_[0]->gh->org } );
 has 'gh_repo' => ( isa => 'Object', is => 'ro', lazy => 1, default => sub { $_[0]->gh->repos } );
@@ -120,6 +122,8 @@ sub stage_tarballs ($self) {
         next if ( -f $tarball_file && !$self->validate_existing_archives );    # No need to download it if we don't plan to validate it and it is there.
 
         push @to_download, [ $url, $tarball_file ];
+
+        return if $self->need_to_stop;                                         # ctrl-C
     }
 
     $0 = "tarball_to_repo - Downloading and validating archives";
@@ -266,6 +270,7 @@ sub process_updates ($self) {
         my $extracted_distro_name = $self->expand_distro( $tarball_file, $author_path );
 
         $self->sleep_until_not_throttled();
+        return if $self->need_to_stop;    # ctrl-C;
     }
 
     return 0;
@@ -342,12 +347,14 @@ sub expand_distro ( $self, $tarball_file, $author_path ) {
         $dir && $dir !~ m/^\./ or die("Unexpected dir $dir");
 
         `find "$temp_dir" -name .git -exec /bin/rm -rf {} \\; 2>&1`;    # remove extracted .git dirs.
-        `mv $temp_dir/"$dir"/* $temp_dir 2>&1`;
-        `mv $temp_dir/"$dir"/.* $temp_dir 2>&1`;
+        `mv $temp_dir/"$dir" $temp_dir/"$dir.$$"`;
+        `mv $temp_dir/"$dir.$$"/*  $temp_dir 2>&1`;
+        `mv $temp_dir/"$dir.$$"/.* $temp_dir 2>&1`;
+
         unlink @crazy_files;
         rmdir @crazy_files;
 
-        rmdir "$temp_dir/$dir" or die("Files unexpectedly found in $temp_dir/$dir");
+        rmdir "$temp_dir/$dir.$$" or die("Could not remove directory $temp_dir/$dir.$$");
     }
     elsif ( scalar @files ) {
         DEBUG("$tarball_file had no base dir????");
@@ -380,7 +387,7 @@ sub expand_distro ( $self, $tarball_file, $author_path ) {
 
     # If we don't have a distro with an older version of this tarball.
     if ( compare( $existing_version // 0, '<', $version ) ) {    # TODO: This is probably fragile. if version schemes change, this could lead to versions being skipped.
-        $self->add_extracted_tarball_from_tmp_to_repo( $distro, $version );
+        $self->add_extracted_tarball_from_tmp_to_repo( $distro, $version, $author_path );
     }
     else {
         DEBUG("Skipping parse of $distro version $version. We already have version $existing_version");
@@ -439,7 +446,7 @@ sub delete_all_repo_files ( $self, $git, $distro ) {
     }
 }
 
-sub add_extracted_tarball_from_tmp_to_repo ( $self, $distro, $version ) {
+sub add_extracted_tarball_from_tmp_to_repo ( $self, $distro, $version, $author_path ) {
     my $temp_dir  = $self->temp_repo_dir;
     my $repo_path = $self->repos_dir . '/' . $distro;
 
@@ -470,8 +477,8 @@ sub add_extracted_tarball_from_tmp_to_repo ( $self, $distro, $version ) {
     `/usr/bin/mv $temp_dir/.* $repo_path/ 2>&1`;
     rmdir $temp_dir or die( "Could not move all files from temp dir to $repo_path via $temp_dir: " . `ls -al $temp_dir` );
 
-    eval { $git->add('.') };
-    eval { $git->commit( '-m', "Import $distro version $version from PAUSE" ) };
+    eval { $git->add( '-f', '.' ) };    # Ignore .gitignore
+    eval { $git->commit( '-m', "Import $distro version $version from PAUSE\n\n    $author_path" ) };
 
     # We only need to do this the first time since we couldn't create a branch and set upstream until we make our first commit.
     if ($just_cloned) {
@@ -483,8 +490,9 @@ sub add_extracted_tarball_from_tmp_to_repo ( $self, $distro, $version ) {
         eval { $git->push(qw/--set-upstream origin PAUSE/) };
 
     }
-
-    eval { $git->push(qw/origin PAUSE/) };
+    else {
+        eval { $git->push(qw/origin PAUSE/) };
+    }
 
     if ($just_cloned) {
         $stop = 0;
@@ -604,5 +612,11 @@ sub align ( $left = '', $right = '' ) {
 package main;
 
 my $ptgr = PauseToGithubRepo->new_with_options( configfile => "${FindBin::Bin}/settings.ini" );
+
+$SIG{INT} = sub {
+    $ptgr->need_to_stop(1);
+    print "Exiting at next convenient point\n";
+    exit;
+};
 
 exit( $ptgr->run );
