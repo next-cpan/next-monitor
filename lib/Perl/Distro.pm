@@ -129,20 +129,28 @@ sub unexpected_alien_play_check ($self) {
     # It isn't play so nothing to be worried about.
     return unless $self->is_play;
 
+    my $distro = $self->distro;
+
     # It's not an alient module so we're not worried.
-    return unless $self->distro =~ m/^Alien-/;
+    return unless $distro =~ m/^Alien-/;
+    return if $distro =~ m/Alien-Web-/;    # Static.
 
     # These modules have been vetted to be safe with play. They're just installing share or something.
-    return if grep { $_ eq $self->distro } qw{
+    return if grep { $_ eq $distro } qw{
       Alien-BWIPP
       Alien-Build-Plugin-Build-Premake5
       Alien-Microsoft-Outlook
       Alien-Packages
       Alien-Saxon
+      Alien-SeleniumRC
+      Alien-SwaggerUI
+      Alien-VideoLAN-LibVLC
+      Alien-Web
+      Alien-Win32-LZMA
+      Alien-libgeos
     };
 
     $self->dump_self;
-    my $distro = $self->distro;
     die("Somehow we didn't detect that   $distro   couldn't play.");
 }
 
