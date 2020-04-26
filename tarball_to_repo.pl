@@ -36,12 +36,14 @@ has 'github_user'  => ( isa => 'Str', is => 'ro', required => 1, documentation =
 has 'github_token' => ( isa => 'Str', is => 'ro', required => 1, documentation => q{REQUIRED - The token we'll use to authenticate.} );
 has 'github_org'   => ( isa => 'Str', is => 'ro', required => 1, documentation => q{REQUIRED - The github organization we'll be creating/updating repos in.} );    # = pause-play
 
-has 'pause_cache_time'           => ( isa => 'Str',  is => 'ro', lazy => 1, default => 3600,                                documentation => 'The amount of time we cache 02packages.details.txt. Defaults to 3600 seconds (1 hour).' );
-has 'parallel_downloads'         => ( isa => 'Int',  is => 'ro', lazy => 1, default => 40,                                  documentation => 'How many downloads we are going to attempt at one time.' );                                                         # = 40
-has 'pause_base_url'             => ( isa => 'Str',  is => 'ro', lazy => 1, default => 'http://httpupdate.cpanel.net/CPAN', documentation => 'The base CPAN URL of upstream PAUSE. Defaults to http://httpupdate.cpanel.net/CPAN' );
-has 'validate_existing_archives' => ( isa => 'Bool', is => 'ro', lazy => 1, default => 0,                                   documentation => 'Do we need to validate the existing archives before we start? This takes a little while so is off by default.' );
-has 'git_binary'                 => ( isa => 'Str',  is => 'ro', lazy => 1, default => '/usr/bin/git',                      documentation => 'The location of the git binary that should be used.' );
-has 'maximum_modules_to_process' => ( isa => 'Str',  is => 'ro', lazy => 1, default => 1000,                                documentation => 'The maximum modules to process at a time.' );
+has 'pause_cache_time'           => ( isa => 'Str',  is => 'ro', default => 3600,                                documentation => 'The amount of time we cache 02packages.details.txt. Defaults to 3600 seconds (1 hour).' );
+has 'parallel_downloads'         => ( isa => 'Int',  is => 'ro', default => 40,                                  documentation => 'How many downloads we are going to attempt at one time.' );                                                         # = 40
+has 'pause_base_url'             => ( isa => 'Str',  is => 'ro', default => 'http://httpupdate.cpanel.net/CPAN', documentation => 'The base CPAN URL of upstream PAUSE. Defaults to http://httpupdate.cpanel.net/CPAN' );
+has 'validate_existing_archives' => ( isa => 'Bool', is => 'rw', default => 0,                                   documentation => 'Do we need to validate the existing archives before we start? This takes a little while so is off by default.' );
+has 'git_binary'                 => ( isa => 'Str',  is => 'ro', default => '/usr/bin/git',                      documentation => 'The location of the git binary that should be used.' );
+has 'maximum_modules_to_process' => ( isa => 'Str',  is => 'ro', default => 1000,                                documentation => 'The maximum modules to process at a time.' );
+has 'reparse'                    => ( isa => 'Str',  is => 'ro', default => '',                                  documentation => 'Reparse a sindle tarball based on package name' );
+has 'forceupdate'                => ( isa => 'Bool', is => 'ro', default => 0,                                   documentation => 'Update all the repos matching PAUSE and p5' );
 
 has 'repo_user_name' => ( isa => 'Str', is => 'ro', required => 1, documentation => 'The name that will be on commits for this repo.' );
 has 'repo_email'     => ( isa => 'Str', is => 'ro', required => 1, documentation => 'The email that will be on commits for this repo.' );
@@ -53,7 +55,7 @@ has 'temp_repo_dir'              => ( isa => 'Str', is => 'ro', lazy => 1, defau
 
 has 'tarball_parsed_cache' => ( isa => 'HashRef', is => 'rw', lazy => 1, builder => '_build_tarball_parsed_cache' );
 
-has 'need_to_stop' => ( isa => 'Bool', is => 'ro', default => 0 );
+has 'need_to_stop' => ( isa => 'Bool', is => 'rw', default => 0 );
 
 has 'gh'      => ( isa => 'Object', is => 'ro', lazy => 1, default => sub { Net::GitHub::V3->new( version => 3, login => $_[0]->github_user, access_token => $_[0]->github_token ) } );
 has 'gh_org'  => ( isa => 'Object', is => 'ro', lazy => 1, default => sub { $_[0]->gh->org } );
@@ -88,8 +90,15 @@ sub run ($self) {
 
     $self->stage_tarballs();
 
-    #printf("HERE %s\n", __LINE__);
-    $self->process_updates();
+    if ( $self->forceupdate ) {
+        $self->force_update_repos;
+    }
+    elsif ( $self->reparse ) {
+        $self->reparse_module_tarball;
+    }
+    else {
+        $self->process_updates();
+    }
 
     return 0;
 }
@@ -108,10 +117,11 @@ sub stage_tarballs ($self) {
 
         # The legacy pm files we're just going to ignore.
         next if $author_path =~ m/\.(?:pm|pm.gz)$/i;
-        next if $self->archive_was_parsed($author_path);    # Skip download if we have already parsed the tarball.
 
         my $url          = $self->pause_base_url . "/authors/id/$author_path";
         my $tarball_file = $self->path_to_tarball_cache_file($author_path);
+
+        next if -f $tarball_file && $self->archive_was_parsed($author_path);    # Skip download if we have already parsed the tarball.
 
         # Have we have already determined we need this file?
         next if $tarball_requested{$tarball_file};
@@ -119,11 +129,9 @@ sub stage_tarballs ($self) {
 
         unlink $tarball_file if -z $tarball_file;
 
-        next if ( -f $tarball_file && !$self->validate_existing_archives );    # No need to download it if we don't plan to validate it and it is there.
+        next if ( -f $tarball_file && !$self->validate_existing_archives );     # No need to download it if we don't plan to validate it and it is there.
 
         push @to_download, [ $url, $tarball_file ];
-
-        return if $self->need_to_stop;                                         # ctrl-C
     }
 
     $0 = "tarball_to_repo - Downloading and validating archives";
@@ -248,6 +256,59 @@ sub fetch_file ( $url, $file ) {
 sub DEBUG ($msg) {
     chomp $msg;
     print $msg . "\n";
+}
+
+sub force_update_repos ($self) {
+    my $fh = $self->otwo_packages_fh();
+
+    my $repo_dir = $self->repos_dir;
+
+    my %parsed = ( 'perl' => 1 );
+
+    while ( my $line = <$fh> ) {
+        my ( $module, $module_version, $author_path ) = split( qr/\s+/, $line );
+        chomp $author_path;
+        next if $author_path =~ m{\.pm\.gz$};
+
+        my $d      = CPAN::DistnameInfo->new($author_path);
+        my $distro = $d->dist;
+        $distro or die("Couldn't parse $author_path");
+        next if $parsed{$distro};
+
+        my $repo_path = "$repo_dir/$distro";
+        next if !-d $repo_path;
+        $parsed{$distro} = 1;
+
+        DEBUG("Processing $author_path for $distro");
+        my $tarball_file = $self->path_to_tarball_cache_file($author_path);
+
+        my $git  = Git::Wrapper->new( { dir => $repo_path, git_binary => $self->git_binary } ) or die("Failed to create Git::Wrapper for $repo_path");
+        my $diff = $git->diff( '--stat', qw/PAUSE..p5/ );
+        next if $diff;    # p5 has been updated. Move to the next.
+
+        my $extracted_distro_name = $self->expand_distro( $tarball_file, $author_path );
+    }
+}
+
+sub reparse_module_tarball ($self) {
+    my $fh = $self->otwo_packages_fh();
+
+    my $module_to_find = $self->reparse;
+
+    while ( my $line = <$fh> ) {
+        my ( $module, $module_version, $author_path ) = split( qr/\s+/, $line );
+        next unless $module eq $module_to_find;
+        chomp $author_path;
+
+        DEBUG("Processing $author_path for $module");
+        my $tarball_file = $self->path_to_tarball_cache_file($author_path);
+
+        my $extracted_distro_name = $self->expand_distro( $tarball_file, $author_path );
+        return 0;
+    }
+
+    print "Could not find $module_to_find\n";
+    return 1;    # Failure;
 }
 
 sub process_updates ($self) {
@@ -385,8 +446,14 @@ sub expand_distro ( $self, $tarball_file, $author_path ) {
         $repo_dir or die("Couldn't parse version for existing $repo_dir");
     }
 
-    # If we don't have a distro with an older version of this tarball.
-    if ( compare( $existing_version // 0, '<', $version ) ) {    # TODO: This is probably fragile. if version schemes change, this could lead to versions being skipped.
+    if ( $self->forceupdate ) {
+        return 0 if ( $distro eq 'XML-Toolkit' );
+        $self->update_extracted_tarball_from_tmp_to_repo( $distro, $version, $author_path );
+    }
+    elsif ( $self->reparse ) {
+        $self->add_extracted_tarball_from_tmp_to_repo( $distro, $version, $author_path );
+    }
+    elsif ( compare( $existing_version // 0, '<', $version ) ) {    # TODO: This is probably fragile. if version schemes change, this could lead to versions being skipped.
         $self->add_extracted_tarball_from_tmp_to_repo( $distro, $version, $author_path );
     }
     else {
@@ -446,6 +513,41 @@ sub delete_all_repo_files ( $self, $git, $distro ) {
     }
 }
 
+sub update_extracted_tarball_from_tmp_to_repo ( $self, $distro, $version, $author_path ) {
+    my $temp_dir  = $self->temp_repo_dir;
+    my $repo_path = $self->repos_dir . '/' . $distro;
+
+    -d $repo_path or die("Unexpected missing path on update request - $repo_path");
+
+    my $git = Git::Wrapper->new( { dir => $repo_path, git_binary => $self->git_binary } ) or die("Failed to create Git::Wrapper for $repo_path");
+
+    # Cleanup the repo.
+    eval { $git->merge('--abort') };    # In case we were in the middle of a merge.
+    $git->reset('.');
+    $git->clean('-dxf');
+    $git->checkout('.');
+
+    # Switch to PAUSE.
+    $git->checkout( '-f', 'PAUSE' );
+    $self->delete_all_repo_files( $git, $distro );
+
+    `/usr/bin/mv $temp_dir/* $repo_path/ 2>&1`;
+    `/usr/bin/mv $temp_dir/.* $repo_path/ 2>&1`;
+    rmdir $temp_dir or die( "Could not move all files from temp dir to $repo_path via $temp_dir: " . `ls -al $temp_dir` );
+
+    eval { $git->add( '-f', '.' ) };    # Ignore .gitignore
+    return unless $git->status->is_dirty;
+
+    $git->commit( '-m', "Import $distro version $version from PAUSE\n\n    $author_path" );
+    $git->push( 'origin', '+PAUSE' );
+    $git->checkout( '-f', 'p5' );
+    $git->reset( '--hard', 'PAUSE' );
+    $git->push( 'origin', '+p5' );
+    print "~~~~~~~~ Updated $author_path via force_update\n";
+
+    return;
+}
+
 sub add_extracted_tarball_from_tmp_to_repo ( $self, $distro, $version, $author_path ) {
     my $temp_dir  = $self->temp_repo_dir;
     my $repo_path = $self->repos_dir . '/' . $distro;
@@ -466,7 +568,7 @@ sub add_extracted_tarball_from_tmp_to_repo ( $self, $distro, $version, $author_p
         $git->config( 'user.email', $self->repo_email );
     }
     else {
-        $git->checkout('PAUSE');
+        $git->checkout( '-f', 'PAUSE' );
     }
 
     -d $repo_path or die("Can't proceed without a $repo_path dir");
@@ -546,7 +648,7 @@ sub determine_distro_and_version ( $self, $extracted_dir, $author_path ) {
 sub get_dist_version_from_meta_yaml ($file) {
     open( my $fh, "<:utf8", $file ) or return ( '', 0 );
     my $yaml_text = do { local $/; <$fh> };
-    my $yaml      = CPAN::Meta::YAML->read_string($yaml_text) or return ( '', 0 );
+    my $yaml      = eval { CPAN::Meta::YAML->read_string($yaml_text) } or return ( '', 0 );
 
     return ( $yaml->[0]->{'name'} // '', $yaml->[0]->{'version'} // 0 );
 }
@@ -616,7 +718,6 @@ my $ptgr = PauseToGithubRepo->new_with_options( configfile => "${FindBin::Bin}/s
 $SIG{INT} = sub {
     $ptgr->need_to_stop(1);
     print "Exiting at next convenient point\n";
-    exit;
 };
 
 exit( $ptgr->run );
