@@ -354,6 +354,8 @@ sub is_unnecessary_dep ( $self, $module ) {
         'AnyEvent-IMAP'                           => [qw{ Test::Requires }],
         'AnyEvent-Inotify-Simple'                 => [qw{ Test::Exception }],
         'AnyEvent-MessagePack'                    => [qw{ Test::Requires }],
+        'Amon2-MobileJP'                          => [qw{ Plack::Util }],
+        'Amon2-Plugin-ShareDir'                   => [qw{ Test::Requires }],
 
     };
 
@@ -394,7 +396,6 @@ sub fix_special_repos ( $self ) {
     $self->git->mv( glob('Stegano/*'), '.' ) if ( $distro eq 'Acme-Stegano' );
     $self->git->rm( '-rf', 'local' ) if ( $distro eq 'Acme-Sort-Sleep' );
     $self->git->mv( glob('Line/Bresenham/C/*'), '.' ) if ( $distro eq 'Algorithm-Line-Bresenham-C' );
-    $self->git->mv( glob('01_use.t'),           't' ) if ( $distro eq 'AnyEvent-Ident' );
 
     state $incorrect_case_files = {
         qw{
@@ -566,6 +567,7 @@ sub fix_special_repos ( $self ) {
         'AnyEvent-OWNet'                             => [qw{.build/* AnyEvent-OWNet-1.142000/.travis.yml}],
         'ALBD'                                       => [qw{FAQ FDL.txt config/association config/interface config/interfaceConfig config/lbd utils/datasetCreator/applyMaxThreshold.pl utils/*}],
         'Acme-AllThePerlIsAStage'                    => [qw{share/and_one_man_in_his_time_plays_many_parts.pl share/they_have_their_exits_and_their_entrances.pl}],
+        'Amon2'                                      => [qw{eg/* author/*}],
 
     };
 
@@ -633,7 +635,7 @@ sub cleanup_tree ($self) {
         SIGNATURE dist.ini Makefile.PL Build.PL weaver.ini PROFILING.md RELEASE.md
         README README.md README.pod README.txt README.markdown README.html README.old
         BUGS META.yml META.json ignore.txt .mailmap Changes.PL cpanfile cpanfile.snapshot minil.toml
-        .gitignore .gitattributes  .cvsignore .travis.yml travis.yml appveyor.yml .appveyor.yml
+        .gitignore .gitattributes  .cvsignore .travis.yml travis.yml appveyor.yml .appveyor.yml .proverc
         .project t/boilerplate.t MYMETA.json MYMETA.yml Makefile Makefile.old maint/Makefile.PL.include metamerge.json README.bak dist.ini.bak
         AUTHORS CREDITS doap.ttl author_test.sh cpants.pl makeall.sh perlcritic.rc .perltidyrc .perltidy dist.ini.meta Changes.new Changes.old
         CONTRIBUTORS tidyall.ini perlcriticrc perltidyrc README.mkdn .shipit example.pl pm_to_blib
@@ -975,7 +977,7 @@ sub determine_installer ( $self ) {
 
     # .PL files usually indicate something that needs to be generated.
     my @files;
-    if ( @files = grep { $_ =~ m/\.PL$/ && $_ !~ m/^(Build|Makefile)\.PL$/ } keys %$files ) {
+    if ( @files = grep { $_ =~ m/\.PL$/ && $_ !~ m/^(Build|Makefile)\.PL$/ && $_ !~ m{^share/} } keys %$files ) {
         printf( "Detected %s files which indicate a dynamic generation which can't play yet!\n", join( ", ", @files ) );
         $self->cant_play('.PL files');
         $builder = 'legacy';
@@ -1013,7 +1015,7 @@ sub determine_installer ( $self ) {
     }
 
     # Validate x_static_install matches our own decision.
-    if ( defined $meta->{'x_static_install'} ) {
+    if ( exists $meta->{'x_static_install'} ) {
         if ( $meta->{'x_static_install'} ) {
             $builder eq 'play' or die('x_static_install says this distro is static but I detected things that might make it legacy');
         }
@@ -1317,6 +1319,13 @@ sub generate_build_json ($self) {
         }
     }
 
+    if ( $meta->{'x_conflicts'} && ref $meta->{'x_conflicts'} eq 'HASH' ) {
+        foreach my $conflict ( keys %{ $meta->{'x_conflicts'} } ) {
+            $self->conflicts_runtime->{$conflict} = $meta->{'x_conflicts'}->{$conflict};
+        }
+        delete $meta->{'x_conflicts'};
+    }
+
     # Merge in detected requires_runtime into BUILD.yaml. Validate against META as we go.
     foreach my $req (qw/requires recommends build_requires test_requires configure_requires develop_requires/) {
         my $build_req_name =
@@ -1366,7 +1375,10 @@ sub generate_build_json ($self) {
                 next;
             }
 
-            if ( !exists $build_req->{$module} ) {
+            if ( !$self->code_is_parseable ) {
+                1;    #
+            }
+            elsif ( !exists $build_req->{$module} ) {
                 if ( !$self->is_play or $req eq 'recommends' ) {    # Just pass it through.
                     $build_req->{$module} = $meta->{$req}->{$module};
                     delete $meta->{$req}->{$module};
@@ -1589,10 +1601,7 @@ sub get_ppi_doc ( $self, $filename ) {
 
     return $self->ppi_cache->{$filename} if exists $self->ppi_cache->{$filename};
 
-    print "PPI $filename\n";
-
-    #    my $content = File::Slurper::read_text($filename);
-    #my $content = $self->try_to_read_file($filename);
+    #print "PPI doc $filename\n";
 
     state @latin_modules = qw {
       lib/Ananke/Template.pm lib/Ananke/Utils.pm lib/Acme/Flip.pm lib/Acme/HOIGAN.pm lib/Acme/LeetSpeak.pm lib/Acme/Mobile/Therbligs.pm
