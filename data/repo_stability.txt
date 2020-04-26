@@ -27633,6 +27633,23 @@
             "total" : 3,
             "unknown" : 0
          }
+      },
+      "1.24.0" : {
+         "all_results" : {
+            "fail" : 1,
+            "pass" : 7,
+            "total" : 8,
+            "unknown" : 0
+         },
+         "mtime" : 1587771734,
+         "newest_report" : "20200416",
+         "oldest_report" : "20200416",
+         "recent_perl_results" : {
+            "fail" : 1,
+            "pass" : 2,
+            "total" : 3,
+            "unknown" : 0
+         }
       }
    },
    "Ananke-SqlLink" : {
@@ -30572,6 +30589,23 @@
             "fail" : 0,
             "pass" : 114,
             "total" : 114,
+            "unknown" : 0
+         }
+      },
+      "0.08" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 106,
+            "total" : 106,
+            "unknown" : 0
+         },
+         "mtime" : 1587789499,
+         "newest_report" : "20200425",
+         "oldest_report" : "20200421",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 18,
+            "total" : 18,
             "unknown" : 0
          }
       }
