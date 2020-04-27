@@ -110,7 +110,18 @@ sub _build_meta ($self) {
         }
     }
 
-    die( 'No META data found in ' . $self->distro . "\n" . `ls -l` . "\n\n" . Carp::longmess );
+    return { name => $self->distro, version => $self->get_version_from_log() };
+
+    #die( 'No META data found in ' . $self->distro . "\n" . `ls -l` . "\n\n" . Carp::longmess );
+}
+
+sub get_version_from_log ($self) {
+    my ($log) = $self->git->log(qw/-1 PAUSE/);
+    $log or die;
+    $log->{'message'} or die;
+    my ($version) = $log->{'message'} =~ m{ version (\S+)};
+
+    return $version;
 }
 
 sub dump_self ($self) {
@@ -356,6 +367,10 @@ sub is_unnecessary_dep ( $self, $module ) {
         'AnyEvent-MessagePack'                    => [qw{ Test::Requires }],
         'Amon2-MobileJP'                          => [qw{ Plack::Util }],
         'Amon2-Plugin-ShareDir'                   => [qw{ Test::Requires }],
+        'AnyEvent-RabbitMQ'                       => [qw{ Test::Exception }],
+        'AnyEvent-Stomper'                        => [qw{ Test::MockObject }],
+        'Apache-LogFormat-Compiler'               => [qw{ Test::Requires }],
+        'Apache2-AuthCASSimple'                   => [qw{ Pod::Coverage }],
 
     };
 
@@ -377,6 +392,10 @@ sub is_necessary_dep ( $self, $module ) {
         'Analizo'                        => [qw{ Alien::Doxyparse }],
         'AnyEvent-Callback'              => [qw{ AnyEvent }],
         'AnyEvent-Inotify-Simple'        => [qw{ EV }],
+        'AnyEvent-Redis-RipeRedis'       => [qw{ Test::TCP }],
+        'AnyEvent-RipeRedis'             => [qw{ Test::TCP }],
+        'Amon2-Lite'                     => [qw{ Test::WWW::Mechanize Tiffany }],
+        'Apache2-Camelcadedb'            => [qw{ Apache::TestMM }],
 
     };
 
@@ -396,6 +415,12 @@ sub fix_special_repos ( $self ) {
     $self->git->mv( glob('Stegano/*'), '.' ) if ( $distro eq 'Acme-Stegano' );
     $self->git->rm( '-rf', 'local' ) if ( $distro eq 'Acme-Sort-Sleep' );
     $self->git->mv( glob('Line/Bresenham/C/*'), '.' ) if ( $distro eq 'Algorithm-Line-Bresenham-C' );
+
+    if ( $distro eq 'Apache-OutputChain' ) {
+        mkdir 'lib';
+        mkdir 'lib/Apache';
+        $self->git->mv( glob('[OMPS]*.pm'), 'lib/Apache' );
+    }
 
     state $incorrect_case_files = {
         qw{
@@ -417,13 +442,17 @@ sub fix_special_repos ( $self ) {
     # Distro doesn't match the file.
     $self->parse_pod('Ace.pm') if $distro eq 'AcePerl';
 
-    $self->BUILD_json->{'maintainers'} = 'Cal Henderson, <cal@iamcal.com>'       if $distro =~ /^(Acme-Goatse|Acme-OneBit)$/;
-    $self->BUILD_json->{'maintainers'} = 'Audrey Tang <cpan@audreyt.org>.'       if $distro eq 'Acme-Hello';
-    $self->BUILD_json->{'maintainers'} = 'Paul Fenwick.'                         if $distro eq 'Acme-OSDc';
-    $self->BUILD_json->{'maintainers'} = 'David Nicol.'                          if $distro eq 'Acme-landmine';
-    $self->BUILD_json->{'maintainers'} = 'Salvador Fandino <sfandino@yahoo.com>' if $distro eq 'Algorithm-ClusterPoints';
-    $self->BUILD_json->{'maintainers'} = 'Say Media'                             if $distro eq 'AnyEvent-Blackboard';
-    $self->BUILD_json->{'maintainers'} = 'Yuval Kogman'                          if $distro eq 'AnyEvent-Kanye';
+    $self->BUILD_json->{'maintainers'} = 'Cal Henderson, <cal@iamcal.com>'          if $distro =~ /^(Acme-Goatse|Acme-OneBit)$/;
+    $self->BUILD_json->{'maintainers'} = 'Audrey Tang <cpan@audreyt.org>.'          if $distro eq 'Acme-Hello';
+    $self->BUILD_json->{'maintainers'} = 'Paul Fenwick.'                            if $distro eq 'Acme-OSDc';
+    $self->BUILD_json->{'maintainers'} = 'David Nicol.'                             if $distro eq 'Acme-landmine';
+    $self->BUILD_json->{'maintainers'} = 'Salvador Fandino <sfandino@yahoo.com>'    if $distro eq 'Algorithm-ClusterPoints';
+    $self->BUILD_json->{'maintainers'} = 'Say Media'                                if $distro eq 'AnyEvent-Blackboard';
+    $self->BUILD_json->{'maintainers'} = 'Yuval Kogman'                             if $distro eq 'AnyEvent-Kanye';
+    $self->BUILD_json->{'maintainers'} = 'Michael A. Nachbaur'                      if $distro eq 'Apache-AxKit-Language-SpellCheck';
+    $self->BUILD_json->{'maintainers'} = 'Nigel Wetters Gourlay'                    if $distro eq 'Apache-Emulator';
+    $self->BUILD_json->{'maintainers'} = 'Edmund Mergl'                             if $distro eq 'Apache-LoggedAuthDBI';
+    $self->BUILD_json->{'maintainers'} = 'Carlos Vicente <cvicente@ns.uoregon.edu>' if $distro eq 'Apache2-AuthenRadius';
 
     # Repos where their tarball doesn't match their primary module.
     state $repos_to_rename = {
@@ -441,13 +470,12 @@ sub fix_special_repos ( $self ) {
 
     $self->BUILD_json->{'license'} = 'unknown' if grep { $distro eq $_ } qw{ Acme-Code-FreedomFighter ACME-Error-Translate Acme-ESP Acme-Goatse AFS AFS-Command AI-Fuzzy AI-General AIS-client AIX-LPP-lpp_name
       Acme-Lingua-Strine-Perl Acme-ManekiNeko Acme-Method-CaseInsensitive Acme-Remote-Strangulation-Protocol Acme-Turing Acme-URM Acme-Ukrop Acme-Void Algorithm-FEC Alien-KentSrc Alien-MeCab Alien-HDF4 Alien-Iconv
-      Alien-Saxon AnyEvent-Kanye
+      Alien-Saxon AnyEvent-Kanye AnyEvent-XSPromises Apache-AuthCookieURL Apache-AuthenMT Apache-File-Resumable Apache-FileManager
     };
     $self->BUILD_json->{'license'} = 'perl' if grep { $distro eq $_ } qw{ ACME-Error-31337 ACME-Error-IgpayAtinlay Acme-OSDc Acme-PM-Berlin-Meetings Acme-please Algorithm-Cluster};
     $self->BUILD_json->{'license'} = 'GPL'  if grep { $distro eq $_ } qw{ AI-LibNeural };
 
     state $files_to_delete = {
-        'Acme-Aheui'                                 => [qw{bin/aheui}],
         'Acme-BeCool'                                => [qw{example.pm}],
         'Acme-Beatnik'                               => [qw{findwords.pl generate.pl}],
         'Acme-Blarghy-McBlarghBlargh'                => [qw{blarghymcblarghblargh.pl}],
@@ -455,20 +483,16 @@ sub fix_special_repos ( $self ) {
         'Acme-Buffy'                                 => [qw{buffy}],
         'Acme-CPAN-Testers-UNKNOWN'                  => [qw{messup.PL}],
         'Acme-CPANAuthors-Acme-CPANAuthors-Authors'  => [qw{scripts/author_info.pl scripts/basic_info.pl}],
-        'Acme-Cow-Interpreter'                       => ['bin/*'],
         'Test-Unit'                                  => [ 'TestRunner.pl', 'TkTestRunner.pl' ],
         'Acme-CPANAuthors-AnyEvent'                  => [qw{script/AnyEvent.tt script/generate.pl}],
         'Acme-CPANAuthors-DualLife'                  => [qw{tools/duallife.pl}],
         'Acme-CPANAuthors-GitHub'                    => [qw{scripts/generate-github-authors.pl}],
-        'Acme-CPANAuthors-Japanese'                  => [qw{bin/unregistered_japanese_authors}],
         'Acme-CPANAuthors-MBTI'                      => [qw{authorlists/* misc/*}],
         'Acme-CPANAuthors-Russian'                   => [qw{script/cpan-author.pl script/cpan-faces.pl}],
         'Acme-CreatingCPANModules'                   => [qw{images/* slides/*}],
         'Acme-Curses-Marquee'                        => [qw{scrolly}],
         'Acme-Dahut-Call'                            => [qw{demo/synopsis.pl}],
-        'Acme-EvaTitlenize'                          => [qw{bin/eva-titlenize}],
         'Acme-EyeDrops'                              => [qw{demo/findshapes.pl demo/gentable.pl demo/sightly.pl xBuild.PL}],
-        'Acme-Filter-Kenny'                          => [qw{bin/kennyfy}],
         'Acme-Flat'                                  => [qw{misc/Changes.deps misc/Changes.deps.all misc/Changes.deps.dev misc/Changes.deps.opt misc/built_with.json misc/perlcritic.deps}],
         'Acme-Futuristic-Perl'                       => [qw{COPYRIGHT}],
         'Acme-Geo-Whitwell-Name'                     => [qw{demo/zip_to_whitwell}],
@@ -495,14 +519,12 @@ sub fix_special_repos ( $self ) {
         'Acme-MITHALDU-XSGrabBag'                    => [qw{README.PATCHING}],
         'Acme-Mahjong-Rule-CC'                       => [qw{mj_series}],
         'Acme-MetaSyntactic-legoindianajones'        => [qw{indie.txt}],
-        'Acme-MorningMusume-ShinMember'              => [qw{bin/genmusume}],
-        'Acme-Ook'                                   => [qw{ook/*.ook}],
         'Acme-PIA-Export'                            => [qw{Acme-PIA-Export-0.019.html}],
         'Acme-Pinoko'                                => [qw{benchmark/pinoko_vs_geso.pl}],
         'Acme-PriPara'                               => [qw{etc/90_concept.t}],
         'Acme-RandomEmoji'                           => [qw{author/RandomEmoji.pm author/generate.pl author/screenshot.png}],
         'Acme-Resume'                                => [qw{iller.yaml}],
-        'Acme-RunDoc'                                => [qw{FAQ foo.pl foo2.pl word-examples/helloworld.doc word-lib/Hello/World.docm}],
+        'Acme-RunDoc'                                => [qw{foo.pl foo2.pl word-examples/helloworld.doc word-lib/Hello/World.docm}],
         'Acme-Signum'                                => [qw{signum.pl}],
         'Acme-Test-LocaleTextDomain'                 => [qw{LocaleData/id/LC_MESSAGES/Acme-Test-LocaleTextDomain.mo po/Acme-Test-LocaleTextDomain.pot po/id.po}],
         'Acme-Test-LocaleTextDomainIfEnv'            => [qw{LocaleData/id/LC_MESSAGES/Acme-Test-LocaleTextDomainIfEnv.mo po/Acme-Test-LocaleTextDomainIfEnv.pot po/id.po}],
@@ -513,8 +535,6 @@ sub fix_special_repos ( $self ) {
         'Acme-XSS'                                   => [qw{xss.html}],
         'Acme-rafl-Everywhere'                       => [qw{a.pl changes.patch}],
         'Activiti-Rest-Client'                       => [qw{test/*}],
-        'Agent-TCLI'                                 => [qw{bin/agent_tail.pl}],
-        'Agent-TCLI-Package-Net'                     => [qw{bin/agent_net.pl}],
         'Album'                                      => [qw{helper/Makefile helper/README helper/autorun.inf helper/shellrun.c helper/shellrun.exe script/album}],
         'Algorithm-BitVector'                        => [qw{Examples/BitVectorDemo.pl Examples/README Examples/testinput.txt}],
         'Algorithm-CheckDigits'                      => [qw{cgi-bin/checkdigits.cgi}],
@@ -546,7 +566,6 @@ sub fix_special_repos ( $self ) {
         'Alzabo-Display-SWF'                         => [qw{etc/Tahoma-B.fdb etc/Tahoma.fdb etc/Verdana-B.fdb etc/Verdana.fdb etc/create.pl etc/my_conf.yml}],
         'Amazon-Dash-Button'                         => [qw{systemctl/Makefile systemctl/amazon-dash-button.service}],
         'Amazon-S3-FastUploader'                     => [qw{s3uploader.pl}],
-        'Amazon-SQS-Simple'                          => [qw{bin/sqs-toolkit}],
         'Ambrosia'                                   => [qw{Example/MusicS.sql Example/README script/ambrosia}],
         'Amethyst'                                   => [qw{factpacks/* dump.pl import.pl import.sh }],
         'Amon2-Plugin-L10N'                          => [qw{script/amon2-xgettext.pl}],
@@ -565,9 +584,46 @@ sub fix_special_repos ( $self ) {
         'AnyEvent-ITM'                               => [qw{bundle.bat}],
         'AnyEvent-MQTT'                              => [qw{misc/*}],
         'AnyEvent-OWNet'                             => [qw{.build/* AnyEvent-OWNet-1.142000/.travis.yml}],
-        'ALBD'                                       => [qw{FAQ FDL.txt config/association config/interface config/interfaceConfig config/lbd utils/datasetCreator/applyMaxThreshold.pl utils/*}],
+        'ALBD'                                       => [qw{FDL.txt config/association config/interface config/interfaceConfig config/lbd utils/datasetCreator/applyMaxThreshold.pl utils/*}],
         'Acme-AllThePerlIsAStage'                    => [qw{share/and_one_man_in_his_time_plays_many_parts.pl share/they_have_their_exits_and_their_entrances.pl}],
         'Amon2'                                      => [qw{eg/* author/*}],
+        'AnyEvent-RPC'                               => [qw{.portupload.yml}],
+        'AnyEvent-SKKServ'                           => [qw{script/google-ime-skk.pl}],
+        'Acme-CPANAuthors-Japanese'                  => [qw{bin/unregistered_japanese_authors}],
+        'Acme-Cow-Interpreter'                       => [qw{bin/cow.c bin/cow.pl bin/cowtidy.pl bin/text2cow.pl}],
+        'Amazon-SQS-Simple'                          => [qw{bin/sqs-toolkit}],
+        'AozoraBunko-Checkerkun'                     => [qw{author/bench.pl author/bench.txt author/cp932-utf8.pl author/cp932-utf8.txt author/euc2utf8.pl author/sjis2utf8.pl}],
+        'Apache-ASP'                                 => [qw{build/* site/* editors/aasp.vim editors/mmm-asp-perl.el make_httpd/build_httpds.sh}],
+        'Apache-Admin-Config'                        => [qw{UPGRADE-0.10}],
+        'Apache-AuthCookieDBI'                       => [qw{generic_reg_auth_scheme.txt schema.sql techspec.txt}],
+        'Apache-Authen-Generic'                      => [qw{README.examples}],
+        'Apache-AxKit-Provider-File-Formatter'       => [qw{transforms/do-nothing.xsl transforms/xhtml2html.xsl}],
+        'Apache-AxKit-Provider-OpenOffice'           => [qw{CATALOGS docs/AxKit-OOProviderUserGuide.sxw dtds/* stylesheets/oo2html.xsl stylesheets/oocommon.xsl stylesheets/ooscreen.css}],
+        'Apache-Blog'                                => [qw{templates/lightblue/entry-template.html templates/lightblue/older.html templates/simple/entry-template.html templates/simple/older.html}],
+        'Apache-CVS'                                 => [qw{apache_cvs.css httpd.conf}],
+        'Apache-Centipaid'                           => [ 'RCS/Centipaid.pm,v', qw{VERSION config/htaccess config/htaccess-dist config/httpd.conf config/httpd.conf-dist contrib/CGI.pm-2.89.tar.gz contrib/DBD-mysql-2.1024.tar.gz sql/mysql.sql} ],
+        'Apache-CodeRed'                             => [qw{CVS/Entries CVS/Repository CVS/Root}],
+        'Apache-DBI'                                 => [qw{traces.txt}],
+        'Apache-FilteringProxy'                      => [qw{Apache-FilteringProxy.spec}],
+        'Apache-Gateway'                             => [qw{Definitions.txt FAQ.txt References.txt}],
+        'Apache-Log-Parser'                          => [qw{Parser.pm}],
+        'Apache-LoggedAuthDBI'                       => [qw{AuthDBI.pm DBI.pm MD5.pm SHA1.pm blocked.html brute_force.html pass_sharing.html}],
+        'Apache-MP3'                                 => [qw{apache_mp3/* screenshots/*}],
+        'Apache-MP3-Skin'                            => [qw{apache_mp3/*}],
+        'Apache-MiniWiki'                            => [qw{Rcs-1.04-spaces.diff conf/httpd-perl-startup.pl wiki.cgi}],
+        'Apache-Motd'                                => [qw{motd.txt}],
+        'Apache-NNTPGateway'                         => [qw{NNTPGateway.html}],
+        'Apache-OWA'                                 => [qw{CVS/Entries CVS/Repository CVS/Root}],
+        'Apache-PrettyText'                          => [qw{fix_html.perl}],
+        'Apache-AuthCookie'                          => [qw{README.apache-2.4.pod README.modperl2 scripts/docker-shell scripts/docker-smoke scripts/dzil-build scripts/perlbrew-smoke scripts/run-docker-tests}],
+        'Apache-AuthTicket'                          => [qw{README.apache-2.4.pod sample/apache.conf sample/apache2.conf sample/mysql.sql sample/pgsql.sql scripts/perlbrew-smoke}],
+        'Apache-iNcom'                               => [qw{Apache-Session-generate_id.patch Locale-Maketext-insu.patch NEWS iNcom.spec}],
+        'Apache-iTunes'                              => [qw{html/iTunes.html}],
+        'Apache2-AuthCAS'                            => [qw{schemaOracle.sql schemaPg.sql}],
+        'Apache2-AuthColloquy'                       => [qw{NOTICE}],
+        'Apache2-AuthCookieDBI'                      => [qw{README-docker docker/README docker/httpd-2.2/Dockerfile docker/httpd-2.4/Dockerfile generic_reg_auth_scheme.txt schema.sql techspec.txt}],
+        'Apache2-Autocomplete'                       => [qw{ac.js}],
+        'Apache2-BalanceLogic'                       => [qw{Config/MainConfig.yaml Config/PluginConfig/DistByCookie.yaml Config/PluginConfig/DistByTime.yaml Config/PluginConfig/DistByURL.yaml}],
 
     };
 
@@ -585,7 +641,7 @@ sub fix_special_repos ( $self ) {
 sub is_extra_files_we_ship ( $self, $file, $distro = undef ) {
 
     # Explicit files we're going to ignore.
-    return 1 if ( grep { $file eq $_ } qw/Changelog LICENSE CONTRIBUTING.md Todo author.yml/ );
+    return 1 if ( grep { $file eq $_ } qw/Changelog LICENSE CONTRIBUTING.md Todo author.yml FAQ/ );
 
     # paths with example files we're going to ignore.
     return 1 if $file =~ m{^(eg|examples?|ex)/};
@@ -603,10 +659,13 @@ sub is_extra_files_we_ship ( $self, $file, $distro = undef ) {
     return 1 if $file eq 'OSDc/prog.osdc' && $distro eq 'Acme-OSDc';
     return 1 if $file eq 'test.txt'       && $distro eq 'Acme-Stegano';
     return 1 if $file eq 'sqltest.lib'    && $distro eq 'AlignDB-SQL';
-    return 1 if $distro eq 'Alvis-TermTagger' and grep { $_ eq $file } qw{ bin/TermTagger-brat.pl bin/TermTagger.pl etc/corpus-test-lem.txt etc/corpus-test.txt etc/termlist-test.lst };
+    return 1 if $distro eq 'Alvis-TermTagger' and grep { $_ eq $file } qw{ etc/corpus-test-lem.txt etc/corpus-test.txt etc/termlist-test.lst };
     return 1 if $file eq 'sqltest.lib' && $distro eq 'AlignDB-SQL';
     return 1 if $file =~ m{^test/} && $distro eq 'AnyEvent-GnuPG';
     return 1 if $file =~ m{^data/} && $distro eq 'AIX-LPP-lpp_name';
+    return 1 if $file eq 'MockKeyFile' && $distro eq 'Apache-AuthCookieDBI';
+    return 1 if $file eq 'test.sxw'    && $distro eq 'Apache-AxKit-Provider-OpenOffice';
+    return 1 if $file =~ m{^ook/}      && $distro eq 'Acme-Ook';
 
     return 0;
 }
@@ -640,8 +699,8 @@ sub cleanup_tree ($self) {
         AUTHORS CREDITS doap.ttl author_test.sh cpants.pl makeall.sh perlcritic.rc .perltidyrc .perltidy dist.ini.meta Changes.new Changes.old
         CONTRIBUTORS tidyall.ini perlcriticrc perltidyrc README.mkdn .shipit example.pl pm_to_blib
         install.txt install.sh install.cmd install.bat .settings/org.eclipse.core.resources.prefs .includepath META.ttl Makefile.PL.back
-        Artistic_License.txt GPL_License.txt LICENSE.txt LICENSE.GPL LICENSE.Artistic misc/make_manifest.pl GPL.txt ARTISTIC-1.0 GPL-1
-        Dockerfile HACKING.md
+        Artistic_License.txt GPL_License.txt LICENSE.txt LICENSE.GPL LICENSE.Artistic misc/make_manifest.pl GPL.txt ARTISTIC-1.0 GPL-1 ARTISTIC GPL License.Artistic License.GPL
+        Dockerfile HACKING.md SUPPORT ABSTRACT
         }
     ) {
         next unless $files->{$unwanted_file};
@@ -708,11 +767,11 @@ sub cleanup_tree ($self) {
         delete $files->{$license_variant};
     }
 
-    # Normalize all Changelog files to a common 'Changelog'
+    # Normalize all CONTRIBUTING files to a common 'CONTRIBUTING.md'
     foreach my $contrib_variant (qw{CONTRIBUTING CONTRIBUTING.mkdn docs/SubmittingPatches.pod}) {
         next unless $files->{$contrib_variant};
 
-        $files->{'Changelog'} && die("Unexpectedly saw CONTRIBUTING.md and $contrib_variant in the same repo. I don't know what to do");
+        $files->{'CONTRIBUTING.md'} && die("Unexpectedly saw CONTRIBUTING.md and $contrib_variant in the same repo. I don't know what to do");
 
         print "Renaming $contrib_variant to CONTRIBUTING.md\n";
         $git->mv( $contrib_variant, 'CONTRIBUTING.md' );
@@ -722,7 +781,7 @@ sub cleanup_tree ($self) {
     }
 
     # Normalize all Changelog files to a common 'Changelog'
-    foreach my $changes_variant (qw/CHANGES CHANGELOG Changes ChangeLog CHANGELOG.md/) {
+    foreach my $changes_variant (qw/CHANGES CHANGELOG Changes ChangeLog CHANGELOG.md CHANGE/) {
         next unless $files->{$changes_variant};
 
         $files->{'Changelog'} && die("Unexpectedly saw Changelog and $changes_variant in the same repo. I don't know what to do");
@@ -779,6 +838,9 @@ sub determine_primary_module ($self) {
     $build_json->{'primary'} =~ s/\\?'/::/g;    # Acme::Can't
 
     return unless $self->is_play;               # We shouldn't alter the location of the module if we're not a play module.
+
+    $build_json->{'primary'} = 'AnyEvent::RFXCOM::TX'          if $distro eq 'AnyEvent-RFXCOM';
+    $build_json->{'primary'} = 'Apache2::AMFDetectRightFilter' if $distro eq 'Apache2-ApacheMobileFilter';
 
     # Move the module into lib/ if we need to.
     my @module      = split( '::', $build_json->{'primary'} );
@@ -973,11 +1035,15 @@ sub determine_installer ( $self ) {
         $build_json->{'XS'} = 0;
     }
 
-    $builder = 'legacy' if $distro =~ m/^(Acme-Padre-PlayCode|Alien-TALib)$/;
+    if ( $distro =~ m/^(Acme-Padre-PlayCode|Alien-TALib|Apache-GeoIP)$/ ) {
+        $builder = 'legacy';
+        $self->cant_play('Manual detection');
+        print "Manually determined that $distro could not be used with play\n";
+    }
 
     # .PL files usually indicate something that needs to be generated.
     my @files;
-    if ( @files = grep { $_ =~ m/\.PL$/ && $_ !~ m/^(Build|Makefile)\.PL$/ && $_ !~ m{^share/} } keys %$files ) {
+    if ( @files = grep { $_ =~ m/\.PL$/ && $_ !~ m{^(Build|Makefile|t/TEST)\.PL$} && $_ !~ m{^share/} } keys %$files ) {
         printf( "Detected %s files which indicate a dynamic generation which can't play yet!\n", join( ", ", @files ) );
         $self->cant_play('.PL files');
         $builder = 'legacy';
@@ -1086,7 +1152,9 @@ sub determine_installer ( $self ) {
 
     # No XS but maybe OBJECTS is mentioned in Makefile.PL?
     if ( $builder ne 'legacy' and -f 'Makefile.PL' ) {
+        local $@;
         my $doc = $self->get_ppi_doc('Makefile.PL');
+        die if !$doc;
 
         my ($object) = $self->_ppi_find_and_parse_value_for_key( $doc, 'OBJECT' );
         $object = strip_quotes($object) if length $object;
@@ -1110,13 +1178,18 @@ sub determine_installer ( $self ) {
             $self->cant_play("Module::Install prompt_script");
             printf("Detected a M::I prompt_script  in Makefile.PL. Something can't be installed with play.\n");
         }
+        elsif ( $self->_ppi_find_class_and_content( $doc, 'PPI::Token::Word', 'inline' ) ) {
+            $builder = 'legacy';
+            $self->cant_play("Module::Install use of Inline");
+            printf("Detected a M::I inline in Makefile.PL. Something can't be installed with play.\n");
+        }
         elsif ( $distro =~ m/^Alien-/ and $self->_ppi_find_class_and_content( $doc, 'PPI::Token::QuoteLike::Backtick', qr/`/ ) ) {
             $builder = 'legacy';
             $self->cant_play("Backticks in Makefile.PL");
             printf("Makefile.PL uses backticks.\n");
         }
         else {
-            #die; dump_tree($doc);
+            #die dump_tree($doc);
         }
 
         #        if($builder eq 'play') { die dump_tree($doc, "postamble stuff.") }
@@ -1186,6 +1259,7 @@ sub generate_build_json ($self) {
     my $meta       = $self->dist_meta;
     my $distro     = $self->distro;
 
+    $meta->{'version'} ||= $self->get_version_from_log();
     $build_json->{'version'} = $meta->{'version'};
 
     # Sometimes the meta license isn't just a string. Let's normalize it.
@@ -1348,13 +1422,14 @@ sub generate_build_json ($self) {
             }
 
             # These requirements never move over to p5.
-            if ( $module =~ m/^(?:ExtUtils::MakeMaker|Module::Build|App::ModuleBuildTiny|Module::Build::Tiny|(inc::)?Module::Install|Module::Build::Pluggable(?:::.+)?|ExtUtils::MakeMaker::CPANfile|Module::Install|strict|warnings|version|lib)$/ ) {
+            if ( $self->is_play && $module =~ m/^(?:ExtUtils::MakeMaker|Module::Build|App::ModuleBuildTiny|Module::Build::Tiny|(inc::)?Module::Install|Module::Build::Pluggable(?:::.+)?|ExtUtils::MakeMaker::CPANfile|Module::Install|strict|warnings|version|lib)$/ ) {
                 delete $meta->{$req}->{$module};
                 next;
             }
 
             # special handling for minimum perl version.
             if ( $module eq 'perl' ) {
+                $meta->{$req}->{$module} =~ s{^\s*>=\s*}{};
                 $build_req->{$module} = $meta->{$req}->{$module};
                 delete $meta->{$req}->{$module};
                 next;
@@ -1415,7 +1490,9 @@ sub generate_build_json ($self) {
 
             # Upgrade the version required if some META specified a version.
             if ( $meta->{$req}->{$module} ) {
-                $meta->{$req}->{$module} =~ s/[><]?=\s*//;
+                $meta->{$req}->{$module} =~ s/^\s*[><]?=//a;
+                $meta->{$req}->{$module} = 0 if !length $meta->{$req}->{$module};                                                                                                                                                                                                                           # If it's a blank string, set it to 0;
+                                                                                                                                                                                                                                                                                                            # $meta->{$req}->{$module} += 0; This will corrupt v strings!
                 my $meta_version = version->parse( $meta->{$req}->{$module} );
                 if ( $meta_version > 0 ) {
                     if ( $build_req->{$module} && version->parse( $build_req->{$module} ) < $meta_version ) {
@@ -1444,7 +1521,7 @@ sub generate_build_json ($self) {
     $build_json->{'cant_play'}           = $self->cant_play if $self->cant_play;
 
     $build_json->{'primary'} or die("Never determined primary module name?");
-    $build_json->{'name'} = $build_json->{'primary'};
+    $build_json->{'name'} = $meta->{'name'} // $build_json->{'primary'};
     $build_json->{'name'} =~ s/::/-/g;
 
     delete $meta->{'author'} unless defined $meta->{'author'};    # Remove bogus undefine author.
@@ -1458,10 +1535,24 @@ sub generate_build_json ($self) {
         }
         delete $meta->{'author'};
     }
+
+    # $meta->{'authored_by'};
+    if ( !$build_json->{'maintainers'} && $meta->{'authored_by'} ) {
+        $build_json->{'maintainers'} = $meta->{'authored_by'};
+    }
+    delete $meta->{'authored_by'};
+
+    # Try to read Build.PL or Makefile.PL for the author.
     if ( !$build_json->{'maintainers'} ) {
-        my $makedoc = $self->ppi_cache->{'Makefile.PL'};
-        if ($makedoc) {
-            ( $build_json->{'maintainers'} ) = $self->_ppi_find_and_parse_value_for_key( $makedoc, 'AUTHOR' );
+        my $doc = $self->ppi_cache->{'Build.PL'};
+        if ($doc) {
+            ( $build_json->{'maintainers'} ) = $self->_ppi_find_and_parse_value_for_key( $doc, 'dist_author' );
+        }
+        else {
+            $doc = $self->ppi_cache->{'Makefile.PL'};
+            if ($doc) {
+                ( $build_json->{'maintainers'} ) = $self->_ppi_find_and_parse_value_for_key( $doc, 'AUTHOR' );
+            }
         }
     }
 
@@ -1483,6 +1574,8 @@ sub generate_build_json ($self) {
     elsif ( exists $meta->{'abstract'} ) {
         delete $meta->{'abstract'};
     }
+
+    delete $meta->{'provides'}->{'main'};    # Nothing provides main.
 
     # Validate provides is what we detected
     if ( $meta->{'provides'} ) {
@@ -1538,6 +1631,7 @@ sub generate_build_json ($self) {
     # Validate name detection worked.
     $meta->{'name'} or die( "No name for distro?\n" . Dumper($meta) );
     $meta->{'name'} =~ s/\\?'/-/g;    # Acme::Can't
+    $meta->{'name'} =~ s/::/-/g;      # Acme::Can't
     $build_json->{'name'} eq $meta->{'name'} or die( "Bad detection of name?\n" . Dumper( $meta, $build_json ) );
     delete $meta->{'name'};
 
@@ -1590,8 +1684,8 @@ sub prune_ref ($var) {
 }
 
 sub get_ppi_doc ( $self, $filename ) {
-    return if $filename =~ m{\.(bak|yml|json|yaml|txt|out|htm|html|tt|tt2|pro|js|css|ps|xml|xhtml|po|mo|tt2|fdb|xls|xlsx|csv|tab|jpg|jpeg|png|gif|fla|swf|sql|eye|eyp|doc|docm|ppt|c|cpp|h|dat|zip|gz|tar|jar|java)$}i;
-    return if $filename =~ m{share/|share-module/};                                                                                                                                                                       # Skip share files. They're not perl code.
+    return if $filename =~ m{\.(bak|yml|json|yaml|txt|out|htm|html|tt|tt2|pro|js|css|ps|xml|xhtml|po|mo|tt2|fdb|xls|xlsx|csv|tab|jpg|jpeg|png|gif|fla|swf|sql|eye|eyp|doc|docm|ppt|c|cpp|h|dat|zip|gz|tar|jar|java|conf|cfg|ini)$}i;
+    return if $filename =~ m{share/|share-module/};                                                                                                                                                                                    # Skip share files. They're not perl code.
     return if $self->is_extra_files_we_ship($filename);
 
     if ( -l $filename || -d _ || -z _ ) {
@@ -1605,7 +1699,7 @@ sub get_ppi_doc ( $self, $filename ) {
 
     state @latin_modules = qw {
       lib/Ananke/Template.pm lib/Ananke/Utils.pm lib/Acme/Flip.pm lib/Acme/HOIGAN.pm lib/Acme/LeetSpeak.pm lib/Acme/Mobile/Therbligs.pm
-      lib/Acme/Ukrop.pm
+      lib/Acme/Ukrop.pm lib/Apache/AuthPAM.pm lib/Apache/AuthenLDAP.pm lib/Apache/AuthzCache.pm lib/Apache/NNTPGateway.pm
     };
 
     # Some perl modules have a BOM in the head of their file.
@@ -1648,8 +1742,20 @@ sub get_ppi_doc ( $self, $filename ) {
 
     close $fh;
 
-    local $@;
-    my $cache = $self->ppi_cache->{$filename} = PPI::Document->new( \$content );
+    my ( $error, $cache );
+    {
+        local $@;
+        $cache = $self->ppi_cache->{$filename} = PPI::Document->new( \$content );
+        $error = $@;
+    }
+
+    # Fall back to Latin1 (binary) if all attempts to read utf8 or another encoding fail.
+    if ( $error =~ m/Malformed UTF-8 character/ ) {
+        print "Falling back to binary on $filename. GOT: $error\n";
+        File::BOM::open_bom( my $fh, $filename, ":encoding(Latin1)" );
+        $content = do { local $/; <$fh> };
+        $cache   = $self->ppi_cache->{$filename} = PPI::Document->new( \$content );
+    }
     print( "ERR: " . Dumper $@) if $@;
 
     return $cache;
@@ -1700,7 +1806,8 @@ sub parse_builders_for_share ($self) {
     if ( $self->builder_builder eq 'minilla' ) {    # We can just assume minilla is going to support the share dir.
         if ( -d 'share' ) {
             push @share_directives, ['install_share'];
-            $dist = 1;
+            $dist    = 1;
+            $DOTDIRS = $DOTFILES = 1 if -f 'Build.PL';
         }
 
     }
@@ -1886,6 +1993,15 @@ sub parse_maker_for_scripts ($self) {
         my $doc = $self->get_ppi_doc('Build.PL');
 
         push @$scripts, $self->_ppi_find_and_parse_value_for_key( $doc, 'script_files' );
+
+        # https://metacpan.org/pod/Module::Build::API#script_files
+        # The default is to install any scripts found in a bin directory at the top level of the distribution, minus any keys of PL_files.
+        if ( !@$scripts ) {
+            my @files = $self->git->ls_files('bin/*');
+            if (@files) {
+                push @{$scripts}, @files;
+            }
+        }
     }
     elsif ( -e 'Makefile.PL' ) {
         my $doc = $self->get_ppi_doc('Makefile.PL');
@@ -1949,6 +2065,7 @@ sub parse_maker_for_scripts ($self) {
 # 'my_key' => ['abc', 123 ], ...
 
 sub _ppi_find_and_parse_value_for_key ( $self, $doc, $key_name ) {
+    $doc or die(Carp::longmess);
 
     my $key_nodes = $doc->find( sub { $_[1]->class =~ m/^PPI::Token::Quote::|^PPI::Token::Word$/ && $_[1]->content =~ m{^['"]?(\Q$key_name\E)['"]?$} } );
 
@@ -1956,37 +2073,43 @@ sub _ppi_find_and_parse_value_for_key ( $self, $doc, $key_name ) {
     ref $key_nodes eq 'ARRAY' or die;
 
     # Verify the next sibling is '=>'
-    my $node = $key_nodes->[0]->snext_sibling();
-    $node->content eq '=>' or die dump_tree( $key_nodes, "Unexpected sibling to $key_name" );
+    foreach (@$key_nodes) {
+        my $node = $_;
 
-    # Next sibling is [] right?
-    $node = $node->snext_sibling();
-    if ( $node->class eq 'PPI::Structure::Constructor' ) {    # or die( "Unexpected sibling value $key_name: " . dump_tree($node) );
-        my @list;
-        my ($list_nodes) = $node->schildren;
-        $list_nodes or return;                                # Nothing in the list.
-        foreach my $list_node ( $list_nodes->children ) {
-            next   if $list_node->class eq 'PPI::Token::Operator';
-            next   if $list_node->class eq 'PPI::Token::Whitespace';
-            return if $list_node->class eq 'PPI::Token::Word';         # Looks like code not a list. Forget it!
+        $node = $node->snext_sibling() or next;    # Not AUTHOR =>
+        $node && $node->content eq '=>' or die dump_tree( $key_nodes || $doc, "Unexpected sibling to $key_name" );
 
-            next if $list_node->content =~ m/^\s*qw[\[(]\s*[\])]\s*\z/;    # qw()
+        # Next sibling is [] right?
+        $node = $node->snext_sibling();
+        if ( $node->class eq 'PPI::Structure::Constructor' ) {    # or die( "Unexpected sibling value $key_name: " . dump_tree($node) );
+            my @list;
+            my ($list_nodes) = $node->schildren;
+            $list_nodes or return;                                # Nothing in the list.
+            foreach my $list_node ( $list_nodes->children ) {
+                next   if $list_node->class eq 'PPI::Token::Operator';
+                next   if $list_node->class eq 'PPI::Token::Whitespace';
+                return if $list_node->class eq 'PPI::Token::Word';         # Looks like code not a list. Forget it!
 
-            push @list, _ppi_get_list_from_quote_or_quote_like_words($list_node);
+                next if $list_node->content =~ m/^\s*qw[\[(]\s*[\])]\s*\z/;    # qw()
+
+                push @list, _ppi_get_list_from_quote_or_quote_like_words($list_node);
+            }
+            return @list;
         }
-        return @list;
+
+        return _ppi_get_list_from_quote_or_quote_like_words($node);
     }
 
-    return _ppi_get_list_from_quote_or_quote_like_words($node);
+    return;                                                                    # Couldn't find it.
 }
 
 sub _ppi_get_list_from_quote_or_quote_like_words ($node) {
     my @list;
 
-    if ( $node->class eq 'PPI::Token::QuoteLike::Words' ) {    # qw( abc def )
+    if ( $node->class eq 'PPI::Token::QuoteLike::Words' ) {                    # qw( abc def )
         my $content = $node->content;
-        $content =~ s{^qw[\[(/](.*)[)/\]]$}{$1}msi;            # Strip out qw()
-        push @list, split( " ", $content );                    # magical split on " "
+        $content =~ s{^qw[\[(/](.*)[)/\]]$}{$1}msi;                            # Strip out qw()
+        push @list, split( " ", $content );                                    # magical split on " "
     }
     elsif ( $node->class =~ m{^PPI::Token::Quote::} ) {
         push @list, strip_quotes( $node->content );
@@ -1994,7 +2117,7 @@ sub _ppi_get_list_from_quote_or_quote_like_words ($node) {
     elsif ( $node->class eq 'PPI::Token::Word' ) {
         push @list, $node->content;
     }
-    elsif ( $node->class eq 'PPI::Structure::List' ) {         # [("utils/runDiscovery.pl")],
+    elsif ( $node->class eq 'PPI::Structure::List' ) {                         # [("utils/runDiscovery.pl")],
         $node = $node->schild(0);
         $node->class eq 'PPI::Statement::Expression' or die dump_tree( $node->parent, "Unexpected class for quote/list node" );
         $node = $node->schild(0);
@@ -2052,6 +2175,7 @@ sub parse_pod ( $self, $filename ) {
         while (@pod_lines) {
             my $license_data = '';
             my $line         = shift @pod_lines;
+
             if ( $line =~ m{^=head1 NAME} ) {
                 while ( @pod_lines && $pod_lines[0] && $pod_lines[0] !~ m/^=/ ) {
                     my $line = shift @pod_lines;
@@ -2311,6 +2435,7 @@ sub parse_code ( $self, $filename ) {
                     $version = strip_quotes($version);
                     if ( $version =~ m/Revision: ([0-9.]+)/ ) {    # ( $VERSION ) = '$Revision: 1.9 $ ' =~ /\$Revision:\s+([^\s]+)/;
                         $version = $1;
+                        print "Got $module Rev: $version \n";
                     }
                 }
                 elsif ( $node->class eq 'PPI::Token::Word' && $node->content eq 'qv' ) {    # our $version = qv{v0.0.2}
@@ -2321,7 +2446,7 @@ sub parse_code ( $self, $filename ) {
                     $node->class eq 'PPI::Statement::Expression' or die dump_tree( $node, "ppi-sta-express" );
 
                     $node = $node->schild(0);
-                    $node->class =~ m/^PPI::Token::Quote::/ or die dump_tree( $node, "PPI::Token::Quote::" );
+                    $node->class =~ m/^(PPI::Token::Quote::|PPI::Token::Number::Version\z)/ or die dump_tree( $node, "PPI::Token::Quote::" );
 
                     $version = $node->content;
                     $version =~ s/^\s*['"](.+)['"]\s*$/v$1/;                                # Make it a v-string since that's what they were going for.
@@ -2461,22 +2586,22 @@ sub _ppi_get_package_usage ($element) {
 
     $token = $token->snext_sibling;
 
-    return if ( $token->content =~ m/^5(\.[0-9]+)?\z/ );    # skip use 5.x and use 5
-    if ( $token->content =~ m/[\$\%\@]/ ) {                 # Dynamic require can't be parsed.
+    return if ( $token->content =~ m/^5(\.[0-9_]+)?\z/ );    # skip use 5.x and use 5
+    if ( $token->content =~ m/[\$\%\@]/ ) {                  # Dynamic require can't be parsed.
         printf( "Failed to parse require: %s\n", $token->content );
         return;
     }
 
     my $module = $token->content;
 
-    return if $module eq 'main';                            # Main is not a legal CPAN package.
+    return if $module eq 'main';                             # Main is not a legal CPAN package.
 
-    if ( $module =~ m/^['"]/ ) {                            # require 'AC/protobuf/auth.pl';
+    if ( $module =~ m/^['"]/ ) {                             # require 'AC/protobuf/auth.pl';
         $module = strip_quotes($module);
-        return if -e "lib/$module";                         # we don't care if it's just a local file.
+        return if -e "lib/$module";                          # we don't care if it's just a local file.
     }
 
-    $module =~ s/'/::/g;                                    # Acme::Can't
+    $module =~ s/'/::/g;                                     # Acme::Can't
 
     # use base 'accessors';
     if ( $is_use eq 'use' and $module =~ /^(base|parent|Test::Requires)$/ ) {
@@ -2487,6 +2612,9 @@ sub _ppi_get_package_usage ($element) {
 
         $token = $token->snext_sibling if ( $token->content eq '+' );                              # use Test::Requires +{ ... };
                                                                                                    # use Test::Requires +{ 'YAML::Tiny' => '1.46' };
+
+        $token = $token->snext_sibling if ( $token->class eq 'PPI::Token::Number::Float' );        # use parent 0.223 "Object::Event"; Just ignore the float number.
+
         if ( $token->class eq 'PPI::Structure::Constructor' ) {
             $token = $token->schild(0);
             $token->class eq 'PPI::Statement' or die( dump_tree( $token->parent, "unexpected class in Test::Requires requires." ) );
