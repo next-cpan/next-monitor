@@ -371,6 +371,8 @@ sub is_unnecessary_dep ( $self, $module ) {
         'AnyEvent-Stomper'                        => [qw{ Test::MockObject }],
         'Apache-LogFormat-Compiler'               => [qw{ Test::Requires }],
         'Apache2-AuthCASSimple'                   => [qw{ Pod::Coverage }],
+        'Apache2-Controller'                      => [qw{ Math::BigInt::GMP }],
+        'Apache2-WebApp-Plugin-Cookie'            => [qw{ Apache2::WebApp::Plugin::CGI }],
 
     };
 
@@ -395,10 +397,11 @@ sub is_necessary_dep ( $self, $module ) {
         'AnyEvent-Redis-RipeRedis'       => [qw{ Test::TCP }],
         'AnyEvent-RipeRedis'             => [qw{ Test::TCP }],
         'Amon2-Lite'                     => [qw{ Test::WWW::Mechanize Tiffany }],
-        'Apache2-Camelcadedb'            => [qw{ Apache::TestMM }],
+        'Apache2-Controller'             => [qw{ LWP }],
 
     };
 
+    return 1 if $distro =~ m/^Apache2-/ && ( $module eq 'Apache::TestMM' or $module eq 'Apache::Test' );
     return unless $keeps->{$distro};
     return 1 if grep { $_ eq $module } @{ $keeps->{$distro} };
     return 0;
@@ -454,23 +457,9 @@ sub fix_special_repos ( $self ) {
     $self->BUILD_json->{'maintainers'} = 'Edmund Mergl'                             if $distro eq 'Apache-LoggedAuthDBI';
     $self->BUILD_json->{'maintainers'} = 'Carlos Vicente <cvicente@ns.uoregon.edu>' if $distro eq 'Apache2-AuthenRadius';
 
-    # Repos where their tarball doesn't match their primary module.
-    state $repos_to_rename = {
-        'AI-Classifier-Text'                => 1,
-        'AIX-LPP-lpp_name'                  => 1,
-        'Algorithm-DependencySolver-Solver' => 1,
-        'Alvis-URLs'                        => 1,
-        'Amazon-SQS-Producer'               => 1,
-        'AnyEvent-eris'                     => 1,
-    };
-
-    if ( $repos_to_rename->{$distro} ) {
-        $self->dist_meta->{'name'} = $distro;
-    }
-
     $self->BUILD_json->{'license'} = 'unknown' if grep { $distro eq $_ } qw{ Acme-Code-FreedomFighter ACME-Error-Translate Acme-ESP Acme-Goatse AFS AFS-Command AI-Fuzzy AI-General AIS-client AIX-LPP-lpp_name
       Acme-Lingua-Strine-Perl Acme-ManekiNeko Acme-Method-CaseInsensitive Acme-Remote-Strangulation-Protocol Acme-Turing Acme-URM Acme-Ukrop Acme-Void Algorithm-FEC Alien-KentSrc Alien-MeCab Alien-HDF4 Alien-Iconv
-      Alien-Saxon AnyEvent-Kanye AnyEvent-XSPromises Apache-AuthCookieURL Apache-AuthenMT Apache-File-Resumable Apache-FileManager
+      Alien-Saxon AnyEvent-Kanye AnyEvent-XSPromises Apache-AuthCookieURL Apache-AuthenMT Apache-File-Resumable Apache-FileManager Apache2-FileManager Apache2-LogNotify
     };
     $self->BUILD_json->{'license'} = 'perl' if grep { $distro eq $_ } qw{ ACME-Error-31337 ACME-Error-IgpayAtinlay Acme-OSDc Acme-PM-Berlin-Meetings Acme-please Algorithm-Cluster};
     $self->BUILD_json->{'license'} = 'GPL'  if grep { $distro eq $_ } qw{ AI-LibNeural };
@@ -624,7 +613,18 @@ sub fix_special_repos ( $self ) {
         'Apache2-AuthCookieDBI'                      => [qw{README-docker docker/README docker/httpd-2.2/Dockerfile docker/httpd-2.4/Dockerfile generic_reg_auth_scheme.txt schema.sql techspec.txt}],
         'Apache2-Autocomplete'                       => [qw{ac.js}],
         'Apache2-BalanceLogic'                       => [qw{Config/MainConfig.yaml Config/PluginConfig/DistByCookie.yaml Config/PluginConfig/DistByTime.yaml Config/PluginConfig/DistByURL.yaml}],
-
+        'Apache2-Controller'                         => [qw{util/apache2_http_response_reference_list.pl}],
+        'Apache2-Imager-Resize'                      => [qw{Build}],
+        'Apache2-Mogile-Dispatch'                    => [qw{doc/Subclassing.pod doc/examples/Cookie.pm doc/examples/HTTPConfig.pm doc/examples/Large.pm doc/examples/SSI.pm}],
+        'Apache2-SiteControl'                        => [qw{README.UPGRADING_TO_1.0 docs/README docs/apache sample/*}],
+        'Apache2-UploadProgress'                     => [qw{extra/*}],
+        'Apache2_4-AuthCookieMultiDBI'               => [qw{Apache2_4-AuthCookieMultiDBI-0.03.tar}],
+        'AxKit-XSP-BasicSession'                     => [qw{example.xsp}],
+        'CIPP'                                       => [qw{README.Apache README.CGI README.CIPP cipp.cgi output.cgi test.cipp}],
+        'Earlybird'                                  => [qw{Earlybird.README}],
+        'Mandel'                                     => [qw{.ship.conf}],
+        'SOAP-Lite-ActiveWorks'                      => [qw{client/* server/*}],
+        'ansi-unicode'                               => [qw{sample/ED-CMSG.ICE sample/ED-CMSG.ICE.html sample/mkhtml.sh}],
     };
 
     if ( $files_to_delete->{$distro} ) {
@@ -694,7 +694,7 @@ sub cleanup_tree ($self) {
         SIGNATURE dist.ini Makefile.PL Build.PL weaver.ini PROFILING.md RELEASE.md
         README README.md README.pod README.txt README.markdown README.html README.old
         BUGS META.yml META.json ignore.txt .mailmap Changes.PL cpanfile cpanfile.snapshot minil.toml
-        .gitignore .gitattributes  .cvsignore .travis.yml travis.yml appveyor.yml .appveyor.yml .proverc
+        .gitignore .gitattributes  .cvsignore .travis.yml travis.yml appveyor.yml .appveyor.yml .proverc .DS_Store
         .project t/boilerplate.t MYMETA.json MYMETA.yml Makefile Makefile.old maint/Makefile.PL.include metamerge.json README.bak dist.ini.bak
         AUTHORS CREDITS doap.ttl author_test.sh cpants.pl makeall.sh perlcritic.rc .perltidyrc .perltidy dist.ini.meta Changes.new Changes.old
         CONTRIBUTORS tidyall.ini perlcriticrc perltidyrc README.mkdn .shipit example.pl pm_to_blib
@@ -727,7 +727,7 @@ sub cleanup_tree ($self) {
     $self->_remove_files_by_pattern(qr{~$|/#.+#$|^#.+#$});
 
     # Normalize all TODO files to 'Todo' and throw out the boilerplate ones.
-    my @todo = sort grep { $_ =~ m/^todo(.md)?$/i } keys %$files;
+    my @todo = sort grep { $_ =~ m/^todo(\.(md|txt))?$|^(readme.todo)$/i } keys %$files;
     if (@todo) {
         scalar @todo == 1 or die( "Too many TODO files.\n" . Dumper($files) );
         my $todo = shift @todo;
@@ -839,8 +839,11 @@ sub determine_primary_module ($self) {
 
     return unless $self->is_play;               # We shouldn't alter the location of the module if we're not a play module.
 
-    $build_json->{'primary'} = 'AnyEvent::RFXCOM::TX'          if $distro eq 'AnyEvent-RFXCOM';
-    $build_json->{'primary'} = 'Apache2::AMFDetectRightFilter' if $distro eq 'Apache2-ApacheMobileFilter';
+    $build_json->{'primary'} = 'AnyEvent::RFXCOM::TX'               if $distro eq 'AnyEvent-RFXCOM';
+    $build_json->{'primary'} = 'Apache2::AMFDetectRightFilter'      if $distro eq 'Apache2-ApacheMobileFilter';
+    $build_json->{'primary'} = 'SOAP::Transport::ActiveWorks::Lite' if $distro eq 'SOAP-Lite-ActiveWorks';
+    $build_json->{'primary'} = 'ANSI::Unicode'                      if $distro eq 'ansi-unicode';
+    $build_json->{'primary'} = 'Apache2::LogUtil'                   if $distro eq 'perl-Apache2-LogUtil';
 
     # Move the module into lib/ if we need to.
     my @module      = split( '::', $build_json->{'primary'} );
@@ -973,9 +976,17 @@ sub update_p5_branch_from_PAUSE ($self) {
 
     $self->generate_build_json;
 
+    state $readme_map = {
+        'Just-Another-Perl-Hacker' => 'lib/Just/Another/Perl/Hacker.pm',
+    };
+
     {    # Generate README.md from the primary module.
-        $self->BUILD_json->{'provides'}->{ $self->BUILD_json->{'primary'} }->{'file'} or die( "Unexpected primary file location not found:\n" . Dumper $self->BUILD_json );
-        my $primary_file = $self->BUILD_json->{'provides'}->{ $self->BUILD_json->{'primary'} }->{'file'};
+
+        my $primary_file = $readme_map->{$distro};
+        if ( !$primary_file ) {    # Normally we'd guess it from the primary module name.
+            $self->BUILD_json->{'provides'}->{ $self->BUILD_json->{'primary'} }->{'file'} or die( "Unexpected primary file location not found:\n" . Dumper $self->BUILD_json );
+            $primary_file = $self->BUILD_json->{'provides'}->{ $self->BUILD_json->{'primary'} }->{'file'};
+        }
 
         my $primary_file_stem = $primary_file;
         $primary_file_stem =~ s/\.pm$//;
@@ -1035,7 +1046,7 @@ sub determine_installer ( $self ) {
         $build_json->{'XS'} = 0;
     }
 
-    if ( $distro =~ m/^(Acme-Padre-PlayCode|Alien-TALib|Apache-GeoIP)$/ ) {
+    if ( grep { $distro eq $_ } qw/Acme-Padre-PlayCode Alien-TALib Apache-GeoIP Win32-SerialPort/ ) {
         $builder = 'legacy';
         $self->cant_play('Manual detection');
         print "Manually determined that $distro could not be used with play\n";
@@ -1684,8 +1695,8 @@ sub prune_ref ($var) {
 }
 
 sub get_ppi_doc ( $self, $filename ) {
-    return if $filename =~ m{\.(bak|yml|json|yaml|txt|out|htm|html|tt|tt2|pro|js|css|ps|xml|xhtml|po|mo|tt2|fdb|xls|xlsx|csv|tab|jpg|jpeg|png|gif|fla|swf|sql|eye|eyp|doc|docm|ppt|c|cpp|h|dat|zip|gz|tar|jar|java|conf|cfg|ini)$}i;
-    return if $filename =~ m{share/|share-module/};                                                                                                                                                                                    # Skip share files. They're not perl code.
+    return if $filename =~ m{\.(bak|yml|json|yaml|txt|out|htm|html|tt|tt2|pro|js|css|ps|xml|xhtml|po|mo|tt2|fdb|xsl|xsd|xls|xlsx|csv|tab|jpg|jpeg|png|gif|fla|swf|sql|eye|eyp|doc|docm|ppt|c|cpp|h|dat|zip|gz|tar|jar|java|conf|cfg|ini)$}i;
+    return if $filename =~ m{share/|share-module/};                                                                                                                                                                                            # Skip share files. They're not perl code.
     return if $self->is_extra_files_we_ship($filename);
 
     if ( -l $filename || -d _ || -z _ ) {
@@ -1699,13 +1710,14 @@ sub get_ppi_doc ( $self, $filename ) {
 
     state @latin_modules = qw {
       lib/Ananke/Template.pm lib/Ananke/Utils.pm lib/Acme/Flip.pm lib/Acme/HOIGAN.pm lib/Acme/LeetSpeak.pm lib/Acme/Mobile/Therbligs.pm
-      lib/Acme/Ukrop.pm lib/Apache/AuthPAM.pm lib/Apache/AuthenLDAP.pm lib/Apache/AuthzCache.pm lib/Apache/NNTPGateway.pm
+      lib/Acme/Ukrop.pm lib/Apache/AuthPAM.pm lib/Apache/AuthenLDAP.pm lib/Apache/AuthzCache.pm lib/Apache/NNTPGateway.pm lib/CIPP.pm
     };
 
     # Some perl modules have a BOM in the head of their file.
     my $encoding = 'utf8';
     File::BOM::open_bom( my $fh, $filename, ":$encoding" );
     binmode( $fh, ':encoding(Latin1)' ) if grep { $filename eq $_ } @latin_modules;
+    binmode( $fh, ':encoding(Latin1)' ) if $filename =~ m{^lib/Event/ExecFlow};
 
     my $content = '';
     while ( my $line = <$fh> ) {
@@ -2187,7 +2199,7 @@ sub parse_pod ( $self, $filename ) {
                     last;
                 }
             }
-            if ( $line =~ m{^=head1 AUTHOR} ) {
+            if ( $line =~ m{^=head[12] AUTHOR} ) {
                 while ( @pod_lines && $pod_lines[0] !~ m/^=/ ) {
                     my $line = shift @pod_lines;
                     next unless $line =~ m/\S/;
@@ -2203,7 +2215,7 @@ sub parse_pod ( $self, $filename ) {
                     push @author, $line;
                 }
             }
-            if ( $line =~ m{^=head1 CONTRIBUTORS} ) {
+            if ( $line =~ m{^=head[12] CONTRIBUTORS} ) {
                 while ( @pod_lines && $pod_lines[0] !~ m/^=/ ) {
                     my $line = shift @pod_lines;
                     next unless $line =~ s/Author:\s*(\S.+)/$1/;
@@ -2213,7 +2225,7 @@ sub parse_pod ( $self, $filename ) {
                     push @author, $line;
                 }
             }
-            if ( $line =~ m{^=head1 (COPYRIGHT|LICENSE|LICENCE|LEGALESE)|^=head1 .+ E COPYRIGHT}i ) {
+            if ( $line =~ m{^=head[12] (COPYRIGHT|LICENSE|LICENCE|LEGALESE)|^=head1 .+ E COPYRIGHT}i ) {
 
                 $self->BUILD_json->{'license'} = 'MIT' if ( $line =~ m/the mit license/i );    # =head1 COPYRIGHT AND LICENSE (The MIT License)
 
@@ -2457,9 +2469,9 @@ sub parse_code ( $self, $filename ) {
                     $node->class eq 'PPI::Token::Operator' or die dump_tree( $node, "PPI::Token::Operator" );
 
                     $node = $node->snext_sibling;                                                # declare
-                    if ( $node->class eq 'PPI::Token::Word' && $node->content eq 'declare' ) {   # our $VERSION = version->declare('v0.2.2');
+                    if ( $node->class eq 'PPI::Token::Word' && $node->content =~ m{^(declare|new)\z} ) {    # our $VERSION = version->declare('v0.2.2');
 
-                        $node = $node->snext_sibling;                                            # ( ... )
+                        $node = $node->snext_sibling;                                                       # ( ... )
                         $node->class eq 'PPI::Structure::List' or die dump_tree( $node, 'PPI::Structure::List' );
 
                         $node = $node->schild(0);
@@ -2469,11 +2481,11 @@ sub parse_code ( $self, $filename ) {
                         $node->class =~ m/^PPI::Token::Quote::/ or die dump_tree( $node, '^PPI::Token::Quote::' );
 
                         $version = $node->content;
-                        $version =~ s/^\s*['"](.+)['"]\s*$/v$1/;                                 # Make it a v-string since that's what they were going for.
+                        $version =~ s/^\s*['"](.+)['"]\s*$/v$1/;                                            # Make it a v-string since that's what they were going for.
                     }
-                    elsif ( $node->class eq 'PPI::Token::Word' && $node->content eq 'parse' ) {    # our $VERSION = version->parse('v0.2.2')->numify;
+                    elsif ( $node->class eq 'PPI::Token::Word' && $node->content eq 'parse' ) {             # our $VERSION = version->parse('v0.2.2')->numify;
 
-                        my $next = $node = $node->snext_sibling;                                   # ( ... )
+                        my $next = $node = $node->snext_sibling;                                            # ( ... )
                         $node->class eq 'PPI::Structure::List' or die dump_tree($node);
 
                         $node = $node->schild(0);
@@ -2624,7 +2636,7 @@ sub _ppi_get_package_usage ($element) {
             push @modules, strip_quotes( $token->content );
         }
         elsif ( $token->class eq 'PPI::Structure::List' ) {
-            $token = $token->schild(0);
+            $token = $token->schild(0) or return;                                                  # use base (); # Unnecessary code.
             $token->class eq 'PPI::Statement::Expression' or die;
             $token = $token->schild(0);
 
@@ -2635,7 +2647,7 @@ sub _ppi_get_package_usage ($element) {
                 push @modules, _ppi_get_list_from_quote_or_quote_like_words($token);
             }
 
-            return @modules;    # In this case, it's more than one module.
+            return @modules;                                                                       # In this case, it's more than one module.
         }
         else {
             push @modules, _ppi_get_list_from_quote_or_quote_like_words($token);

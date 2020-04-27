@@ -17,3 +17,4 @@ AIX-SysInfo # No passing tests ever.
 Acme-KMX-Test # It seems to do some uncommon things with pm.PL to generate perl modules dynamically.
 Acme-NewMath # case insensitive files never worked right except maybe on windows.
 AI-FreeHAL-Class # It doesn't even have a Makefile.PL
+perl # play can't install perl.
