@@ -917,7 +917,7 @@ sub update_p5_branch_from_PAUSE ($self) {
     my $build_json = $self->BUILD_json;
     my $meta       = $self->dist_meta;
 
-    $build_json->{'XS'} and die("play doesn't support XS distros");
+    $build_json->{'xs'} and die("play doesn't support xs distros");
 
     $self->determine_primary_module;
 
@@ -1037,13 +1037,13 @@ sub determine_installer ( $self ) {
 
     # Tag the BUILD file with whether this repo has XS.
     if ( grep { $_ =~ m/\.xs(.inc)?$/ } keys %$files ) {
-        $build_json->{'XS'} = 1;
+        $build_json->{'xs'} = 1;
         $builder = 'legacy';
         $self->cant_play('xs');
         print "Detected .xs files in distro\n";
     }
     else {
-        $build_json->{'XS'} = 0;
+        $build_json->{'xs'} = 0;
     }
 
     if ( grep { $distro eq $_ } qw/Acme-Padre-PlayCode Alien-TALib Apache-GeoIP Win32-SerialPort/ ) {
