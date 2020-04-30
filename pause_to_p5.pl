@@ -28,7 +28,8 @@ has 'git_binary' => ( isa => 'Str', is => 'ro', lazy     => 1, default       => 
 has 'repo_user_name' => ( isa => 'Str', is => 'ro', required => 1, documentation => 'The name that will be on commits for this repo.' );
 has 'repo_email'     => ( isa => 'Str', is => 'ro', required => 1, documentation => 'The email that will be on commits for this repo.' );
 
-has 'push_to_github' => ( isa => 'Bool', is => 'ro', required => 0, default => sub { 1 }, documentation => 'push changes to github.' );
+has 'push_to_github'     => ( isa => 'Bool', is => 'ro', required => 0, default => sub { 1 }, documentation => 'push changes to github.' );
+has 'parse_only_passing' => ( isa => 'Bool', is => 'ro', required => 0, default => sub { 1 }, documentation => "Only parse recent modules or modules seen to pass tests on cpantesters" );
 
 has 'parsed_pause_archives_file' => ( isa => 'Str', is => 'ro', lazy => 1, default => sub { $_[0]->base_dir . '/data/parsed_pause_archives.txt' } );
 has 'repos_dir'                  => ( isa => 'Str', is => 'ro', lazy => 1, default => sub { my $d = $_[0]->base_dir . '/repos'; -d $d or mkdir $d; return $d } );
@@ -82,11 +83,12 @@ sub run ( $self, @optional_repos ) {
         $repo_list = \@optional_repos;
     }
 
-    my $repo_cache       = $self->repo_cache;
-    my $module_stability = $self->module_stability;
+    my $repo_cache         = $self->repo_cache;
+    my $module_stability   = $self->module_stability;
+    my $parse_only_passing = $self->parse_only_passing;
 
     foreach my $repo (@$repo_list) {
-        if ( grep { $repo eq $_ } @skip_list ) {
+        if ( $parse_only_passing && grep { $repo eq $_ } @skip_list ) {
 
             #print "Skipping $repo\n";
             next;
@@ -96,7 +98,7 @@ sub run ( $self, @optional_repos ) {
         next unless $repo_cache->needs_check($repo);
 
         # Skip failing repos.
-        if ( $repo ne 'AC-Yenta' && !$module_stability->is_passing($repo) ) {
+        if ( $parse_only_passing && $repo ne 'AC-Yenta' && !$module_stability->is_passing($repo) ) {
             print "--- Skipping $repo because it isn't passing\n";
             $repo_cache->update_cache_for_repo($repo);
             next;
@@ -109,9 +111,17 @@ sub run ( $self, @optional_repos ) {
 
         my $distro = Perl::Distro->new( 'distro' => $repo, 'repo_path' => $repo_dir, 'git_binary' => $self->git_binary, 'push_to_github' => $self->push_to_github );
 
-        $distro->do_the_do;
-
-        $repo_cache->update_cache_for_repo($repo);
+        if ($parse_only_passing) {
+            $distro->do_the_do;
+            $repo_cache->update_cache_for_repo($repo);
+        }
+        else {
+            local $@;
+            eval { $distro->do_the_do; 1 };
+            if ( !$@ ) {
+                $repo_cache->update_cache_for_repo($repo);
+            }
+        }
     }
 
     return 0;

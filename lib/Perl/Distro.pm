@@ -1706,11 +1706,12 @@ sub get_ppi_doc ( $self, $filename ) {
 
     return $self->ppi_cache->{$filename} if exists $self->ppi_cache->{$filename};
 
-    #print "PPI doc $filename\n";
+    # print "PPI doc $filename\n";
 
     state @latin_modules = qw {
       lib/Ananke/Template.pm lib/Ananke/Utils.pm lib/Acme/Flip.pm lib/Acme/HOIGAN.pm lib/Acme/LeetSpeak.pm lib/Acme/Mobile/Therbligs.pm
       lib/Acme/Ukrop.pm lib/Apache/AuthPAM.pm lib/Apache/AuthenLDAP.pm lib/Apache/AuthzCache.pm lib/Apache/NNTPGateway.pm lib/CIPP.pm
+      lib/Acme/BOPE.pm
     };
 
     # Some perl modules have a BOM in the head of their file.
