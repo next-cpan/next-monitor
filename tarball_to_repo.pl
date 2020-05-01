@@ -14,9 +14,9 @@ use experimental 'state';
 
 use FindBin;
 
-my $stop      = 0;
 my $processed = 0;
 
+use Time::HiRes qw/usleep/;
 use LWP::UserAgent     ();
 use File::Basename     ();
 use CPAN::Meta::YAML   ();
@@ -44,6 +44,7 @@ has 'git_binary'                 => ( isa => 'Str',  is => 'ro', default => '/us
 has 'maximum_modules_to_process' => ( isa => 'Str',  is => 'ro', default => 1000,                                documentation => 'The maximum modules to process at a time.' );
 has 'reparse'                    => ( isa => 'Str',  is => 'ro', default => '',                                  documentation => 'Reparse a sindle tarball based on package name' );
 has 'forceupdate'                => ( isa => 'Bool', is => 'ro', default => 0,                                   documentation => 'Update all the repos matching PAUSE and p5' );
+has 'todo_file'                  => ( isa => 'Str',  is => 'ro', default => '',                                  documentation => 'A list of tarballs to create a repo for.' );
 
 has 'repo_user_name' => ( isa => 'Str', is => 'ro', required => 1, documentation => 'The name that will be on commits for this repo.' );
 has 'repo_email'     => ( isa => 'Str', is => 'ro', required => 1, documentation => 'The email that will be on commits for this repo.' );
@@ -54,6 +55,7 @@ has 'repos_dir'                  => ( isa => 'Str', is => 'ro', lazy => 1, defau
 has 'temp_repo_dir'              => ( isa => 'Str', is => 'ro', lazy => 1, default => sub { my $d = $_[0]->repos_dir . '/tmp'; -d $d or mkdir $d; return $d } );
 
 has 'tarball_parsed_cache' => ( isa => 'HashRef', is => 'rw', lazy => 1, builder => '_build_tarball_parsed_cache' );
+has 'distros_requested'    => ( isa => 'HashRef', is => 'rw', lazy => 1, builder => '_build_distros_requested' );
 
 has 'need_to_stop' => ( isa => 'Bool', is => 'rw', default => 0 );
 
@@ -82,6 +84,21 @@ sub _build_tarball_parsed_cache ($self) {
     }
 
     return \%cache;
+}
+
+sub _build_distros_requested ($self) {
+    return {} unless $self->todo_file;
+
+    open( my $fh, '<', $self->todo_file ) or die;
+    my %requested;
+    while ( my $line = <$fh> ) {
+        next if $line =~ m/^\s*#/;
+        next unless $line =~ m/\S/;
+        chomp $line;
+        $requested{$line} = 1;
+    }
+
+    return \%requested;
 }
 
 sub run ($self) {
@@ -312,22 +329,12 @@ sub reparse_module_tarball ($self) {
 }
 
 sub process_updates ($self) {
-    my $fh = $self->otwo_packages_fh();
 
-    while ( my $line = <$fh> ) {
-        my ( $module, $module_version, $author_path ) = split( qr/\s+/, $line );
-        chomp $author_path;
-        next if grep { $author_path eq $_ } qw{B/BI/BINGOS/Acme-Working-Out-Dependencies-From-META-files-Will-Be-Wrong-At-Some-Point-Like-This-Module-For-Instance-9.99.tar.gz};
+    my $tarballs = $self->tarballs_to_process();
 
-        # The legacy pm files we're just going to ignore.
-        next if $author_path =~ m/\.(?:pm|pm.gz)$/i;
-
-        # If we have already processed the archive, then don't do it again.
-        next if $self->archive_was_parsed($author_path);
-
-        DEBUG("Processing $author_path for $module");
-        my $tarball_file = $self->path_to_tarball_cache_file($author_path);
-
+    foreach my $author_path (@$tarballs) {
+        DEBUG("Processing $author_path");
+        my $tarball_file          = $self->path_to_tarball_cache_file($author_path);
         my $extracted_distro_name = $self->expand_distro( $tarball_file, $author_path );
 
         $self->sleep_until_not_throttled();
@@ -335,6 +342,65 @@ sub process_updates ($self) {
     }
 
     return 0;
+}
+
+use constant A_REALLY_BIG_VERSION => 99999999;
+
+sub tarballs_to_process ($self) {
+    my $a_really_big_version = 999999;
+    my %checked_distros      = (
+        'Acme-Working-Out-Dependencies-From-META-files-Will-Be-Wrong-At-Some-Point-Like-This-Module-For-Instance' => A_REALLY_BIG_VERSION,    # Longer than max repo length.
+        'perl'                                                                                                    => A_REALLY_BIG_VERSION,    # Perl isn't a module/package.
+    );
+
+    open( my $uvt_fh, '<', 'data/unversioned_tarballs' ) or die;
+    my %checked_tarballs;
+    while ( my $tar = <$uvt_fh> ) {
+        chomp $tar;
+        $checked_tarballs{$tar} = 1;
+    }
+
+    my $requested = $self->distros_requested;
+    $requested = undef unless %$requested;
+
+    my %todo;
+
+    my $fh = $self->otwo_packages_fh();
+    while ( my $line = <$fh> ) {
+        my ( $module, $module_version, $author_path ) = split( qr/\s+/, $line );
+        chomp $author_path;
+
+        next if $checked_tarballs{$author_path};    # We already looked at this one.
+        $checked_tarballs{$author_path} = 1;
+
+        # The legacy pm files we're just going to ignore.
+        next if $author_path =~ m/\.(?:pm|pm.gz)$/i;
+
+        my $d              = CPAN::DistnameInfo->new($author_path);
+        my $distro         = $d->dist;
+        my $distro_version = $d->version;
+        next if $distro =~ m/^Bundle-/;
+        ( $distro && defined $distro_version ) or die( sprintf( "Couldn't parse $module => $author_path (%s,%s)", $distro // 'undef', $distro_version // 'undef' ) );
+
+        # If a list was provided, skip rows which aren't related to this distro.
+        next if ( $requested && !$requested->{$distro} );
+
+        # We've already planned a newer tarball
+        next if compare( $checked_distros{$distro} // 0, '>=', $distro_version );
+        $checked_distros{$distro} = $distro_version;
+
+        $todo{$distro} = $author_path;
+
+        exit if $self->need_to_stop;
+    }
+
+    my @list = grep { !$self->archive_was_parsed($_) } map { defined $todo{$_} ? $todo{$_} : () } sort { $a cmp $b } keys %todo;
+
+    DEBUG( sprintf( "%d tarballs to process\n", scalar @list ) );
+
+    #print "$_\n" foreach @list; exit;
+
+    return \@list;
 }
 
 my $loop;
@@ -461,12 +527,7 @@ sub expand_distro ( $self, $tarball_file, $author_path ) {
     }
 
     $self->report_archive_parsed($author_path);
-    if ($stop) {
-        print "exec - pause_to_p5.pl $distro\n";
-        chdir $self->base_dir;
-        exec( $^X, "$FindBin::Bin/pause_to_p5.pl", $distro );
-        exit;
-    }
+
     if ( $processed >= $self->maximum_modules_to_process ) {
         print "Processed $processed distros. Stopping\n";
         exit;
@@ -552,16 +613,24 @@ sub add_extracted_tarball_from_tmp_to_repo ( $self, $distro, $version, $author_p
     my $temp_dir  = $self->temp_repo_dir;
     my $repo_path = $self->repos_dir . '/' . $distro;
 
-    my $git         = Git::Wrapper->new( { dir => $repo_path, git_binary => $self->git_binary } ) or die("Failed to create Git::Wrapper for $repo_path");
+    my $git         = eval { Git::Wrapper->new( { dir => $repo_path, git_binary => $self->git_binary } ) } or die("Failed to create Git::Wrapper for $repo_path: $@");
     my $just_cloned = 0;
-    if ( !-d $repo_path ) {
-        if ( !$self->github_repos->{$distro} ) {
-            $self->create_github_repo($distro);
-        }
 
+    if ( !-d $repo_path ) {
         my $url = sprintf( "git\@github.com:%s/%s.git", $self->github_org, $distro );
-        my $got = $git->clone( $url, $repo_path );
-        $got and die("Unexpected exit code cloning $url to $repo_path");
+        if ( !$self->github_repos->{$distro} ) {
+            mkdir $repo_path or die("Can't mkdir $repo_path");
+
+            $self->create_github_repo($distro);
+            $git->init;
+            $git->remote( 'add', 'origin', $url );
+            $git->checkout( '-b', 'p5' );
+
+            $just_cloned = 1;
+        }
+        else {
+            $git->clone( $url, $repo_path );
+        }
 
         $just_cloned = 1;
         $git->config( 'user.name',  $self->repo_user_name );
@@ -584,41 +653,17 @@ sub add_extracted_tarball_from_tmp_to_repo ( $self, $distro, $version, $author_p
 
     # We only need to do this the first time since we couldn't create a branch and set upstream until we make our first commit.
     if ($just_cloned) {
-        eval { $git->branch(qw/-m p5/) };
-        eval { $git->branch(qw/--unset-upstream/) };
         eval { $git->push(qw/--set-upstream origin p5/) };
 
         eval { $git->checkout(qw/-b PAUSE/) };
         eval { $git->push(qw/--set-upstream origin PAUSE/) };
-
     }
     else {
         eval { $git->push(qw/origin PAUSE/) };
     }
 
-    if ($just_cloned) {
-        $stop = 0;
-        $processed++;
-    }
+    $processed++;
     return 1;
-}
-
-sub rename_distro ( $self, $distro ) {
-
-    state $rename_hash = {
-        qw{
-          Algorithm-DependencySolver    Algorithm-DependencySolver-Solver
-          Amazon-SQS-ProducerConsumer   Amazon-SQS-Producer
-          AI-Classifier   AI-Classifier-Text
-          AIX-LPP         AIX-LPP-lpp_name
-          FreeHAL         AI-FreeHAL-Class
-          libalarm        Alarm-Queued
-          Alvis-Bags      Alvis-URLs
-          AnyEvent-Eris   AnyEvent-eris
-          }
-    };
-
-    return $rename_hash->{$distro} // $distro;
 }
 
 sub determine_distro_and_version ( $self, $extracted_dir, $author_path ) {
@@ -626,8 +671,6 @@ sub determine_distro_and_version ( $self, $extracted_dir, $author_path ) {
     my $d       = CPAN::DistnameInfo->new($author_path);
     my $distro  = $d->dist;
     my $version = $d->version;
-
-    $distro = $self->rename_distro($distro);
 
     # Is the version parseable?
     if ( $version and eval { version->parse($version); 1 } ) {
@@ -642,7 +685,7 @@ sub determine_distro_and_version ( $self, $extracted_dir, $author_path ) {
     $meta_name or return ( $distro, $version );
 
     $meta_name =~ s/::/-/g;
-    return ( $self->rename_distro($meta_name), $meta_version );
+    return ( $meta_name, $meta_version );
 }
 
 sub get_dist_version_from_meta_yaml ($file) {
