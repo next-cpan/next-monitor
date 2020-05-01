@@ -477,6 +477,7 @@ sub expand_distro ( $self, $tarball_file, $author_path ) {
         `mv $temp_dir/"$dir" $temp_dir/"$dir.$$"`;
         `mv $temp_dir/"$dir.$$"/*  $temp_dir 2>&1`;
         `mv $temp_dir/"$dir.$$"/.* $temp_dir 2>&1`;
+        `/usr/bin/rm -rf .github`; # Make sure github .worklfow stuff isn't triggered.
 
         unlink @crazy_files;
         rmdir @crazy_files;

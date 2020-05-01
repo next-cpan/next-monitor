@@ -39990,7 +39990,43 @@
       }
    },
    "App-Cmd" : {
-      "0.331" : {}
+      "0.331" : {
+         "all_results" : {
+            "fail" : 20,
+            "na" : 1,
+            "pass" : 1758,
+            "total" : 1786,
+            "unknown" : 7
+         },
+         "mtime" : 1588310023,
+         "newest_report" : "20200423",
+         "oldest_report" : "20160717",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 742,
+            "total" : 743,
+            "unknown" : 1
+         }
+      }
+   },
+   "App-CmdDispatch" : {
+      "0.44" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 131,
+            "total" : 131,
+            "unknown" : 0
+         },
+         "mtime" : 1588310030,
+         "newest_report" : "20200415",
+         "oldest_report" : "20200408",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 64,
+            "total" : 64,
+            "unknown" : 0
+         }
+      }
    },
    "App-Context" : {
       "0.968" : {
@@ -40026,6 +40062,81 @@
             "fail" : 2,
             "pass" : 34,
             "total" : 36,
+            "unknown" : 0
+         }
+      }
+   },
+   "App-Nopaste" : {
+      "1.013" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 198,
+            "total" : 198,
+            "unknown" : 0
+         },
+         "mtime" : 1588310035,
+         "newest_report" : "20200426",
+         "oldest_report" : "20190723",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 85,
+            "total" : 85,
+            "unknown" : 0
+         }
+      }
+   },
+   "App-Prove-Plugin-Elasticsearch" : {
+      "0.001" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 0,
+            "unknown" : 0
+         },
+         "mtime" : 1588310039,
+         "newest_report" : null,
+         "oldest_report" : null,
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 0,
+            "unknown" : 0
+         }
+      }
+   },
+   "App-cpanminus" : {
+      "1.7044" : {
+         "all_results" : {
+            "fail" : 0,
+            "na" : 1,
+            "pass" : 1281,
+            "total" : 1282,
+            "unknown" : 0
+         },
+         "mtime" : 1588310049,
+         "newest_report" : "20200426",
+         "oldest_report" : "20180419",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 409,
+            "total" : 409,
+            "unknown" : 0
+         }
+      }
+   },
+   "App-perlbrew" : {
+      "0.88" : {
+         "all_results" : {
+            "fail" : 0,
+            "pass" : 145,
+            "total" : 145,
+            "unknown" : 0
+         },
+         "mtime" : 1588310055,
+         "newest_report" : "20200426",
+         "oldest_report" : "20200129",
+         "recent_perl_results" : {
+            "fail" : 0,
+            "pass" : 47,
+            "total" : 47,
             "unknown" : 0
          }
       }

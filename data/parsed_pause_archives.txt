@@ -4665,7 +4665,6 @@ L/LU/LUKEC/Test-Mock-LWP-0.08.tar.gz
 M/MA/MASAKI/Test-Mock-LWP-Conditional-0.04.tar.gz
 W/WK/WKI/Test-MockDateTime-0.02.tar.gz
 T/TO/TODDR/Test-MockFile-0.021.tar.gz
-G/GF/GFRANKS/Test-MockModule-v0.172.0.tar.gz
 C/CH/CHROMATIC/Test-MockObject-1.20200122.tar.gz
 D/DD/DDICK/Test-MockTime-0.17.tar.gz
 T/TO/TOBYINK/Test-Modern-0.013.tar.gz
@@ -4861,3 +4860,4 @@ D/DA/DAGOLDEN/superclass-0.003.tar.gz
 P/PH/PHAYLON/syntax-0.004.tar.gz
 J/JD/JDHEDDEN/threads-2.21.tar.gz
 G/GF/GFUJI/warnings-unused-0.06.tar.gz
+G/GF/GFRANKS/Test-MockModule-v0.172.0.tar.gz
