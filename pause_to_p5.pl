@@ -11,6 +11,8 @@ use Perl::Distro          ();
 use Perl::RepoCache       ();
 use Perl::ModuleStability ();
 
+use Data::Dumper;
+
 use Moose;
 with 'MooseX::SimpleConfig';
 with 'MooseX::Getopt';
@@ -74,14 +76,13 @@ sub skip_list {
     return @skip_list;
 }
 
-sub run ( $self, @optional_repos ) {
+sub run ( $self ) {
 
     my @skip_list = skip_list();
 
-    my $repo_list = $self->repo_list;
-    if (@optional_repos) {
-        $repo_list = \@optional_repos;
-    }
+    my $optional_repos = $self->extra_argv;
+    my $repo_list      = $optional_repos if @$optional_repos;
+    $repo_list //= $self->repo_list;
 
     my $repo_cache         = $self->repo_cache;
     my $module_stability   = $self->module_stability;
@@ -170,5 +171,5 @@ $SIG{INT} = sub {
 
 my $o = PauseTop5->new_with_options( configfile => "${FindBin::Bin}/settings.ini" );
 
-exit( $o->run(@ARGV) );
+exit( $o->run );
 
