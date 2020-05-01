@@ -102,7 +102,7 @@ sub _build_meta ($self) {
         return $yaml->[0] if $yaml && ref $yaml eq 'CPAN::Meta::YAML';
     }
     if ( -f 'Makefile.PL' ) {    # Generate MYMETA.json?
-        `$^X Makefile.PL`;
+        `cat /dev/null | $^X Makefile.PL`;
         if ( -e 'MYMETA.json' ) {
             my $json = Cpanel::JSON::XS::decode_json( File::Slurper::read_binary('MYMETA.json') );
             $self->git->clean('-dxf');
