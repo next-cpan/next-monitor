@@ -135,7 +135,7 @@ sub dump_self ($self) {
 }
 
 sub is_next ($self) {
-    return $self->BUILD_json->{'builder'} eq 'play';
+    return $self->BUILD_json->{'builder'} eq 'next';
 }
 
 sub unexpected_alien_play_check ($self) {
@@ -1028,7 +1028,7 @@ sub determine_installer ( $self ) {
     my $files      = $self->repo_files;
     my $distro     = $self->distro;
 
-    my $builder = 'play';
+    my $builder = 'next';
 
     # Tag the BUILD file with whether this repo has XS.
     if ( grep { $_ =~ m/\.xs(.inc)?$/ } keys %$files ) {
@@ -1056,8 +1056,8 @@ sub determine_installer ( $self ) {
     }
 
     # Other than .PL files and XS/C, Module::Build::Tiny is just for vanilla installs.
-    if ( $builder eq 'play' && $self->builder_builder eq 'Module::Build::Tiny' ) {
-        $build_json->{'builder'} = 'play';
+    if ( $builder eq 'next' && $self->builder_builder eq 'Module::Build::Tiny' ) {
+        $build_json->{'builder'} = 'next';
         return;
     }
 
@@ -1095,10 +1095,10 @@ sub determine_installer ( $self ) {
 
     # Validate x_static_install matches our own decision.
     if ( exists $meta->{'x_static_install'} ) {
-        if ( $meta->{'x_static_install'} && $builder ne 'play' ) {
+        if ( $meta->{'x_static_install'} && $builder ne 'next' ) {
             die('x_static_install says this distro is static but I detected things that might make it legacy');
         }
-        if ( !$meta->{'x_static_install'} && $builder eq 'play' ) {
+        if ( !$meta->{'x_static_install'} && $builder eq 'next' ) {
             $builder eq 'legacy' or warn(q{x_static_install says his distro isn't static but I don't know why it is play at this point?});
             $builder = 'legacy';
             $self->cant_next("x_static_install=0");
@@ -1205,7 +1205,7 @@ sub determine_installer ( $self ) {
             #die dump_tree($doc);
         }
 
-        #        if($builder eq 'play') { die dump_tree($doc, "postamble stuff.") }
+        #        if($builder eq 'next') { die dump_tree($doc, "postamble stuff.") }
     }
 
     # Force the cache on maker files. Often we need to peek back at the makers and we remove them early.
@@ -1215,8 +1215,8 @@ sub determine_installer ( $self ) {
     }
 
     # If the builder is play, then set it and return.
-    if ( $builder eq 'play' ) {
-        $build_json->{'builder'} = 'play';
+    if ( $builder eq 'next' ) {
+        $build_json->{'builder'} = 'next';
         return;
     }
 
@@ -1653,7 +1653,7 @@ sub generate_build_json ($self) {
     $build_json->{'version'} eq $meta->{'version'} or die( "Bad detection of version?\n" . Dumper( $meta, $build_json ) );
     delete $meta->{'version'};
 
-    if ( $build_json->{'builder'} eq 'play' && %$meta ) {
+    if ( $build_json->{'builder'} eq 'next' && %$meta ) {
         $self->dump_self;
         die("Unparsed information still exists in dist_meta. Please review.");
     }
