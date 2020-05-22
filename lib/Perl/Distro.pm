@@ -169,35 +169,19 @@ sub unexpected_alien_next_check ($self) {
 }
 
 sub do_the_do ($self) {
-    $self->check_if_dirty_and_die;
-    $self->checkout_p5_branch;
 
-    my @log = $self->git->log(qw/p5..PAUSE/);
+    $self->check_if_dirty_and_die;           # right now we're actually just cleaning stuff up.
+    $self->checkout_p5_branch;               # Switch to the p5 branch
+    $self->stage_p5_for_update or return;    # Nothing to update if we return here.
 
-    # Has the PAUSE branch been updated since p5 was last merged from it?
-    if (@log) {    # Reset the branch to its state on the current PAUSE branch and re-process it.
-        my $git = $self->git;
-        eval { $git->merge('PAUSE') };    # This will probably fail but that's ok.
-        $self->delete_all_repo_files;
-        my $bin = $self->git_binary;
-        `$bin archive PAUSE | /usr/bin/tar -x`;
-        $self->git->add( '-f', '.' );
-    }
-    elsif ( -e $self->NEXT_file ) {
-        print "Nothing to update\n";
+    $self->cleanup_repo_cruft;               # Cleanup files from the tarball which have nothing to do with the install.
 
-        # There are no new changes and NEXT.json has already been created.
-        return;
-    }
+    $self->determine_installer;              # Determine what our builder will be: next, Build.PL, or Makefile.PL
+    $self->unexpected_alien_next_check;      # Most alien modules aren't next compatible.
 
-    $self->cleanup_repo_cruft;    # Cleanup files from the tarball which have nothing to do with the install.
+    $self->parse_specail_files_for_license;  # Try to read special files to guess their license. TODO: move all the license stuff here.
 
-    $self->determine_installer;            # Determine what our builder will be: next, Build.PL, or Makefile.PL
-    $self->unexpected_alien_next_check;    # Most alien modules aren't next compatible.
-
-    $self->parse_specail_files_for_license;    # Try to read special files to guess their license. TODO: move all the license stuff here.
-
-    $self->set_primary_module_from_meta;       # Using the distro name, try to guess the primary module.
+    $self->set_primary_module_from_meta;     # Using the distro name, try to guess the primary module.
 
     if ( $self->is_next ) {
         $self->parse_maker_for_scripts;
@@ -218,6 +202,31 @@ sub do_the_do ($self) {
 
     $self->generate_build_json;
     $self->git_commit;
+}
+
+sub stage_p5_for_update ($self) {
+
+    # Has the PAUSE branch been updated since p5 was last merged from it?
+    my @log = $self->git->log(qw/p5..PAUSE/);
+
+    # Nothing to update and the initial update from PAUSE happened.
+    if ( !@log and -e $self->NEXT_file ) {
+        return;
+    }
+
+    # Reset the branch to its state on the current PAUSE branch and re-process it.
+    my $git = $self->git;
+    eval { $git->merge('PAUSE') };    # This will probably fail but that's ok.
+    $self->delete_all_repo_files;
+    my $bin = $self->git_binary;
+    `$bin archive PAUSE | /usr/bin/tar -x`;
+    $self->git->add( '-f', '.' );
+
+    # Restore the .github path.
+    $self->git->reset('.github');
+    $self->git->checkout( '-f', '.github' );
+
+    return 1;
 }
 
 sub delete_all_repo_files ($self) {
