@@ -67,8 +67,8 @@ has 'test_provides'      => ( isa => 'HashRef',  is => 'rw', default => sub { re
 
 has 'ppi_cache' => ( isa => 'HashRef', is => 'rw', default => sub { return {} } );
 
-has 'BUILD_json' => ( isa => 'HashRef', is => 'rw', default => sub { return {} } );
-has 'BUILD_file' => ( isa => 'Str',     is => 'rw', default => 'BUILD.json' );
+has 'NEXT_json' => ( isa => 'HashRef', is => 'rw', default => sub { return {} } );
+has 'NEXT_file' => ( isa => 'Str',     is => 'rw', default => 'NEXT.json' );
 
 sub _build_builder_builder ($self) {
     return 'minilla' if -f 'minil.toml' && !-z _;
@@ -135,7 +135,7 @@ sub dump_self ($self) {
 }
 
 sub is_next ($self) {
-    return $self->BUILD_json->{'builder'} eq 'next';
+    return $self->NEXT_json->{'builder'} eq 'next';
 }
 
 sub unexpected_alien_next_check ($self) {
@@ -183,10 +183,10 @@ sub do_the_do ($self) {
         `$bin archive PAUSE | /usr/bin/tar -x`;
         $self->git->add( '-f', '.' );
     }
-    elsif ( -e $self->BUILD_file ) {
+    elsif ( -e $self->NEXT_file ) {
         print "Nothing to update\n";
 
-        # There are no new changes and BUILD.yaml has already been created.
+        # There are no new changes and NEXT.json has already been created.
         return;
     }
 
@@ -206,7 +206,7 @@ sub do_the_do ($self) {
         $self->update_p5_branch_from_PAUSE;
     }
 
-    # For non-next, we may need to pull in a few bits from other sources before we emit BUILD.json
+    # For non-next, we may need to pull in a few bits from other sources before we emit NEXT.json
     if ( !$self->is_next ) {
         $self->gather_non_next_provides_from_meta;
         $self->parse_non_next_primary_module;
@@ -260,7 +260,7 @@ sub parse_non_next_primary_module ($self) {
 
 # This is only done in the event the module isn't next and we need to look around for it.
 sub find_non_next_primary ($self) {
-    my @parts    = split( "::", $self->BUILD_json->{'primary'} );
+    my @parts    = split( "::", $self->NEXT_json->{'primary'} );
     my $lib_path = join( "/", 'lib', @parts ) . ".pm";
     return $lib_path if -f $lib_path;
 
@@ -464,24 +464,24 @@ sub cleanup_repo_cruft ( $self ) {
     # Distro doesn't match the file.
     $self->parse_pod('Ace.pm') if $distro eq 'AcePerl';
 
-    $self->BUILD_json->{'maintainers'} = 'Cal Henderson, <cal@iamcal.com>'          if $distro =~ /^(Acme-Goatse|Acme-OneBit)$/;
-    $self->BUILD_json->{'maintainers'} = 'Audrey Tang <cpan@audreyt.org>.'          if $distro eq 'Acme-Hello';
-    $self->BUILD_json->{'maintainers'} = 'Paul Fenwick.'                            if $distro eq 'Acme-OSDc';
-    $self->BUILD_json->{'maintainers'} = 'David Nicol.'                             if $distro eq 'Acme-landmine';
-    $self->BUILD_json->{'maintainers'} = 'Salvador Fandino <sfandino@yahoo.com>'    if $distro eq 'Algorithm-ClusterPoints';
-    $self->BUILD_json->{'maintainers'} = 'Say Media'                                if $distro eq 'AnyEvent-Blackboard';
-    $self->BUILD_json->{'maintainers'} = 'Yuval Kogman'                             if $distro eq 'AnyEvent-Kanye';
-    $self->BUILD_json->{'maintainers'} = 'Michael A. Nachbaur'                      if $distro eq 'Apache-AxKit-Language-SpellCheck';
-    $self->BUILD_json->{'maintainers'} = 'Nigel Wetters Gourlay'                    if $distro eq 'Apache-Emulator';
-    $self->BUILD_json->{'maintainers'} = 'Edmund Mergl'                             if $distro eq 'Apache-LoggedAuthDBI';
-    $self->BUILD_json->{'maintainers'} = 'Carlos Vicente <cvicente@ns.uoregon.edu>' if $distro eq 'Apache2-AuthenRadius';
+    $self->NEXT_json->{'maintainers'} = 'Cal Henderson, <cal@iamcal.com>'          if $distro =~ /^(Acme-Goatse|Acme-OneBit)$/;
+    $self->NEXT_json->{'maintainers'} = 'Audrey Tang <cpan@audreyt.org>.'          if $distro eq 'Acme-Hello';
+    $self->NEXT_json->{'maintainers'} = 'Paul Fenwick.'                            if $distro eq 'Acme-OSDc';
+    $self->NEXT_json->{'maintainers'} = 'David Nicol.'                             if $distro eq 'Acme-landmine';
+    $self->NEXT_json->{'maintainers'} = 'Salvador Fandino <sfandino@yahoo.com>'    if $distro eq 'Algorithm-ClusterPoints';
+    $self->NEXT_json->{'maintainers'} = 'Say Media'                                if $distro eq 'AnyEvent-Blackboard';
+    $self->NEXT_json->{'maintainers'} = 'Yuval Kogman'                             if $distro eq 'AnyEvent-Kanye';
+    $self->NEXT_json->{'maintainers'} = 'Michael A. Nachbaur'                      if $distro eq 'Apache-AxKit-Language-SpellCheck';
+    $self->NEXT_json->{'maintainers'} = 'Nigel Wetters Gourlay'                    if $distro eq 'Apache-Emulator';
+    $self->NEXT_json->{'maintainers'} = 'Edmund Mergl'                             if $distro eq 'Apache-LoggedAuthDBI';
+    $self->NEXT_json->{'maintainers'} = 'Carlos Vicente <cvicente@ns.uoregon.edu>' if $distro eq 'Apache2-AuthenRadius';
 
-    $self->BUILD_json->{'license'} = 'unknown' if grep { $distro eq $_ } qw{ Acme-Code-FreedomFighter ACME-Error-Translate Acme-ESP Acme-Goatse AFS AFS-Command AI-Fuzzy AI-General AIS-client AIX-LPP-lpp_name
+    $self->NEXT_json->{'license'} = 'unknown' if grep { $distro eq $_ } qw{ Acme-Code-FreedomFighter ACME-Error-Translate Acme-ESP Acme-Goatse AFS AFS-Command AI-Fuzzy AI-General AIS-client AIX-LPP-lpp_name
       Acme-Lingua-Strine-Perl Acme-ManekiNeko Acme-Method-CaseInsensitive Acme-Remote-Strangulation-Protocol Acme-Turing Acme-URM Acme-Ukrop Acme-Void Algorithm-FEC Alien-KentSrc Alien-MeCab Alien-HDF4 Alien-Iconv
       Alien-Saxon AnyEvent-Kanye AnyEvent-XSPromises Apache-AuthCookieURL Apache-AuthenMT Apache-File-Resumable Apache-FileManager Apache2-FileManager Apache2-LogNotify
     };
-    $self->BUILD_json->{'license'} = 'perl' if grep { $distro eq $_ } qw{ ACME-Error-31337 ACME-Error-IgpayAtinlay Acme-OSDc Acme-PM-Berlin-Meetings Acme-please Algorithm-Cluster};
-    $self->BUILD_json->{'license'} = 'GPL'  if grep { $distro eq $_ } qw{ AI-LibNeural };
+    $self->NEXT_json->{'license'} = 'perl' if grep { $distro eq $_ } qw{ ACME-Error-31337 ACME-Error-IgpayAtinlay Acme-OSDc Acme-PM-Berlin-Meetings Acme-please Algorithm-Cluster};
+    $self->NEXT_json->{'license'} = 'GPL'  if grep { $distro eq $_ } qw{ AI-LibNeural };
 
     state $files_to_delete = {
         'Acme-BeCool'                                => [qw{example.pm}],
@@ -836,7 +836,7 @@ sub reset_repo_files ($self) {
 }
 
 sub set_primary_module_from_meta ($self) {
-    my $build_json = $self->BUILD_json;
+    my $build_json = $self->NEXT_json;
     my $distro     = $self->distro;
 
     # Try to determine the primary package of this distro.
@@ -857,7 +857,7 @@ sub set_primary_module_from_meta ($self) {
 
 sub relocate_modules_to_lib ($self) {
     my $git        = $self->git;
-    my $build_json = $self->BUILD_json;
+    my $build_json = $self->NEXT_json;
     my $files      = $self->repo_files;
 
     $self->is_next or die;    # Shouldn't ever get here. We shouldn't alter the location of the module if we're not a next module.
@@ -924,7 +924,7 @@ sub cleanup_and_grep ( $self, $grep ) {
 sub update_p5_branch_from_PAUSE ($self) {
     my $git        = $self->git;
     my $distro     = $self->distro;
-    my $build_json = $self->BUILD_json;
+    my $build_json = $self->NEXT_json;
     my $meta       = $self->dist_meta;
 
     $build_json->{'xs'} and die("next doesn't support xs distros");
@@ -999,8 +999,8 @@ sub generate_readme_md ($self) {
 
     my $primary_file = $readme_map->{ $self->distro };
     if ( !$primary_file ) {    # Normally we'd guess it from the primary module name.
-        $self->BUILD_json->{'provides'}->{ $self->BUILD_json->{'primary'} }->{'file'} or die( "Unexpected primary file location not found:\n" . Dumper $self->BUILD_json );
-        $primary_file = $self->BUILD_json->{'provides'}->{ $self->BUILD_json->{'primary'} }->{'file'};
+        $self->NEXT_json->{'provides'}->{ $self->NEXT_json->{'primary'} }->{'file'} or die( "Unexpected primary file location not found:\n" . Dumper $self->NEXT_json );
+        $primary_file = $self->NEXT_json->{'provides'}->{ $self->NEXT_json->{'primary'} }->{'file'};
     }
 
     my $primary_file_stem = $primary_file;
@@ -1035,7 +1035,7 @@ sub try_to_read_file ( $self, $filename ) {
 sub git_commit ($self) {
     my $git = $self->git;
 
-    $git->commit( '-m', sprintf( "Update %s version %s to next.", $self->distro, $self->BUILD_json->{'version'} ) );
+    $git->commit( '-m', sprintf( "Update %s version %s to next.", $self->distro, $self->NEXT_json->{'version'} ) );
 
     $git->push if $self->push_to_github;
 
@@ -1048,13 +1048,13 @@ sub git_commit ($self) {
 # * $self->cant_next('...')
 
 sub determine_installer ( $self ) {
-    my $build_json = $self->BUILD_json;
+    my $build_json = $self->NEXT_json;
     my $files      = $self->repo_files;
     my $distro     = $self->distro;
 
     my $builder = 'next';
 
-    # Tag the BUILD file with whether this repo has XS.
+    # Tag the NEXT file with whether this repo has XS.
     if ( grep { $_ =~ m/\.xs(.inc)?$/ } keys %$files ) {
         $build_json->{'xs'} = 1;
         $builder = 'legacy';
@@ -1292,7 +1292,7 @@ sub _is_a_hash_ref ($ref) {
 }
 
 sub generate_build_json ($self) {
-    my $build_json = $self->BUILD_json;
+    my $build_json = $self->NEXT_json;
     my $meta       = $self->dist_meta;
     my $distro     = $self->distro;
 
@@ -1329,7 +1329,7 @@ sub generate_build_json ($self) {
         }
     }
 
-    # Put provides into BUILD.json
+    # Put provides into NEXT.json
     if ( !$self->code_is_parseable ) {
         $build_json->{'unparseable'} = 1;
     }
@@ -1437,7 +1437,7 @@ sub generate_build_json ($self) {
         delete $meta->{'x_conflicts'};
     }
 
-    # Merge in detected requires_runtime into BUILD.yaml. Validate against META as we go.
+    # Merge in detected requires_runtime into NEXT.json. Validate against META as we go.
     foreach my $req (qw/requires recommends build_requires test_requires configure_requires develop_requires/) {
         my $build_req_name =
             $req eq 'requires'           ? 'requires_runtime'
@@ -1682,8 +1682,8 @@ sub generate_build_json ($self) {
         die("Unparsed information still exists in dist_meta. Please review.");
     }
 
-    File::Slurper::write_text( $self->BUILD_file, Cpanel::JSON::XS->new->pretty->canonical( [1] )->encode($build_json) );
-    $self->git->add( $self->BUILD_file );
+    File::Slurper::write_text( $self->NEXT_file, Cpanel::JSON::XS->new->pretty->canonical( [1] )->encode($build_json) );
+    $self->git->add( $self->NEXT_file );
 
     return;
 }
@@ -2195,16 +2195,16 @@ sub parse_comments ( $self, $filename ) {
     my $comments = $doc->find('PPI::Token::Comment') || [];
 
     # Search for abstract if the file is the primary package
-    my $primary_package = $self->BUILD_json->{'primary'};
+    my $primary_package = $self->NEXT_json->{'primary'};
     if ( $primary_package eq _file_to_package($filename) ) {
         foreach my $comment (@$comments) {
             my $content = $comment->content;
-            if ( $content =~ m/^# ABSTRACT:\s+(\S.+$)/ && !$self->BUILD_json->{'abstract'} ) {
-                $self->BUILD_json->{'abstract'} = "$1";
-                chomp $self->BUILD_json->{'abstract'};
+            if ( $content =~ m/^# ABSTRACT:\s+(\S.+$)/ && !$self->NEXT_json->{'abstract'} ) {
+                $self->NEXT_json->{'abstract'} = "$1";
+                chomp $self->NEXT_json->{'abstract'};
             }
-            if ( $content =~ m/under the same terms as Perl itself/msi && !length $self->BUILD_json->{'license'} ) {
-                $self->BUILD_json->{'license'} = 'perl';
+            if ( $content =~ m/under the same terms as Perl itself/msi && !length $self->NEXT_json->{'license'} ) {
+                $self->NEXT_json->{'license'} = 'perl';
             }
 
         }
@@ -2216,7 +2216,7 @@ sub parse_pod ( $self, $filename ) {
 
     my $doc = $self->get_ppi_doc($filename) or return;
 
-    my $primary_package = $self->BUILD_json->{'primary'};
+    my $primary_package = $self->NEXT_json->{'primary'};
 
     # remove pods
     my $pods = $doc->find('PPI::Token::Pod') || [];
@@ -2237,7 +2237,7 @@ sub parse_pod ( $self, $filename ) {
                     $abstract = $1;
                     $abstract =~ s/\s+$//;                                                  # Strip off trailing white space.
 
-                    $self->BUILD_json->{'abstract'} = $abstract;
+                    $self->NEXT_json->{'abstract'} = $abstract;
                     last;
                 }
             }
@@ -2251,8 +2251,8 @@ sub parse_pod ( $self, $filename ) {
                     }
                     $line =~ s/^\s+//;
                     $line =~ s/\s+\z//;
-                    if ( !$self->BUILD_json->{'maintainers'} ) {
-                        $self->BUILD_json->{'maintainers'} = \@author;
+                    if ( !$self->NEXT_json->{'maintainers'} ) {
+                        $self->NEXT_json->{'maintainers'} = \@author;
                     }
                     push @author, $line;
                 }
@@ -2261,15 +2261,15 @@ sub parse_pod ( $self, $filename ) {
                 while ( @pod_lines && $pod_lines[0] !~ m/^=/ ) {
                     my $line = shift @pod_lines;
                     next unless $line =~ s/Author:\s*(\S.+)/$1/;
-                    if ( !$self->BUILD_json->{'maintainers'} ) {
-                        $self->BUILD_json->{'maintainers'} = \@author;
+                    if ( !$self->NEXT_json->{'maintainers'} ) {
+                        $self->NEXT_json->{'maintainers'} = \@author;
                     }
                     push @author, $line;
                 }
             }
             if ( $line =~ m{^=head[12] (COPYRIGHT|LICENSE|LICENCE|LEGALESE)|^=head1 .+ E COPYRIGHT}i ) {
 
-                $self->BUILD_json->{'license'} = 'MIT' if ( $line =~ m/the mit license/i );    # =head1 COPYRIGHT AND LICENSE (The MIT License)
+                $self->NEXT_json->{'license'} = 'MIT' if ( $line =~ m/the mit license/i );    # =head1 COPYRIGHT AND LICENSE (The MIT License)
 
                 while ( @pod_lines && $pod_lines[0] !~ m/^=(cut|head)/ ) {
                     my $line = shift @pod_lines;
@@ -2288,49 +2288,49 @@ sub parse_pod ( $self, $filename ) {
 sub parse_text_for_license ( $self, $license_data ) {
 
     return unless $license_data;
-    return if $self->BUILD_json->{'license'};
+    return if $self->NEXT_json->{'license'};
 
     $license_data =~ s/\s\s+/ /msg;    # Strip double spaces to make parsing the text easier.
     $license_data =~ s/\s/ /msg;       # Convert all white space to a single space.
 
     if ( $license_data =~ m/(or|under) the Artistic License|/msi ) {
-        return $self->BUILD_json->{'license'} = 'perl';
+        return $self->NEXT_json->{'license'} = 'perl';
     }
     elsif ( $license_data =~ m/Terms (of|as) Perl itself/msi ) {
-        return $self->BUILD_json->{'license'} = 'perl';
+        return $self->NEXT_json->{'license'} = 'perl';
     }                                  # This module is licensed under the same terms as perl itself
     elsif ( $license_data =~ m{same as Perl itself|you can redistribute it and/or modify it under the same terms as the perl 5 programming language system itself|under the same terms as perl\.|is licensed under the same terms as perl itself}msi ) {
-        return $self->BUILD_json->{'license'} = 'perl';
+        return $self->NEXT_json->{'license'} = 'perl';
     }
     elsif ( $license_data =~ m/L<perlartistic>/msi ) {
-        return $self->BUILD_json->{'license'} = 'perl';
+        return $self->NEXT_json->{'license'} = 'perl';
     }
     elsif ( $license_data =~ m{This distribution is free software; you can redistribute it and/or modify it under the Artistic License 2.0|licensed under: The Artistic License 2.0|artistic_license_2_0}msi ) {
-        return $self->BUILD_json->{'license'} = 'Artistic_2_0';
+        return $self->NEXT_json->{'license'} = 'Artistic_2_0';
     }
     elsif ( $license_data =~ m/under the terms of the Perl Artistic License/msi ) {
-        return $self->BUILD_json->{'license'} = 'perl';
+        return $self->NEXT_json->{'license'} = 'perl';
     }
     elsif ( $license_data =~ m/under the terms of GNU General Public License \(GPL\)/msi ) {
-        return $self->BUILD_json->{'license'} = 'GPL';
+        return $self->NEXT_json->{'license'} = 'GPL';
     }
     elsif ( $license_data =~ m/under the terms of GNU General Public License 3/msi ) {
-        return $self->BUILD_json->{'license'} = 'GPLv3+';
+        return $self->NEXT_json->{'license'} = 'GPLv3+';
     }
     elsif ( $license_data =~ m/MIT License/msi ) {
-        return $self->BUILD_json->{'license'} = 'MIT';
+        return $self->NEXT_json->{'license'} = 'MIT';
     }
     elsif ( $license_data =~ m/the Mozilla Public License Version 1\.1/msi ) {
-        return $self->BUILD_json->{'license'} = 'Mozilla_1_1';
+        return $self->NEXT_json->{'license'} = 'Mozilla_1_1';
     }
     elsif ( $license_data =~ m/under the terms of the Apache 2.0 license/msi ) {
-        return $self->BUILD_json->{'license'} = 'Apache_2_0';
+        return $self->NEXT_json->{'license'} = 'Apache_2_0';
     }
     elsif ( $license_data =~ m/L<Software::License::(\S+)>/msi ) {
-        return $self->BUILD_json->{'license'} = "$1";
+        return $self->NEXT_json->{'license'} = "$1";
     }
     elsif ( $license_data =~ m/into the public domain|This module is in the public domain/msi ) {
-        return $self->BUILD_json->{'license'} = "PublicDomain";
+        return $self->NEXT_json->{'license'} = "PublicDomain";
     }
 
     #die "Unknown license: $license_data==\n";
@@ -2338,7 +2338,7 @@ sub parse_text_for_license ( $self, $license_data ) {
 }
 
 sub parse_specail_files_for_license ($self) {
-    return if $self->BUILD_json->{'license'};
+    return if $self->NEXT_json->{'license'};
 
     foreach my $file (qw/README LICENSE COPYING/) {
         next unless -f $file && !-z _;
@@ -2378,7 +2378,7 @@ sub parse_code ( $self, $filename ) {
     # Moops uses class instead of package *sigh*
     my $moops = exists $requires_runtime_hash->{'Moops'} ? 1 : 0;
 
-    my $primary_module = $self->BUILD_json->{'primary'};
+    my $primary_module = $self->NEXT_json->{'primary'};
 
     return unless $filename =~ m{\.(t|pm)$} && $filename =~ m{^(t|lib)/};
     my $provides_hash = ( $filename =~ m/^lib/ ) ? $self->provides : $self->test_provides;
