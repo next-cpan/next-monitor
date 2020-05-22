@@ -134,14 +134,14 @@ sub dump_self ($self) {
     return '';
 }
 
-sub is_play ($self) {
+sub is_next ($self) {
     return $self->BUILD_json->{'builder'} eq 'play';
 }
 
 sub unexpected_alien_play_check ($self) {
 
     # It isn't play so nothing to be worried about.
-    return unless $self->is_play;
+    return unless $self->is_next;
 
     my $distro = $self->distro;
 
@@ -196,7 +196,7 @@ sub do_the_do ($self) {
 
     $self->unexpected_alien_play_check;    # Most alien modules aren't play compatible.
 
-    if ( $self->is_play ) {
+    if ( $self->is_next ) {
         $self->parse_maker_for_scripts;
         $self->parse_builders_for_share;
         $self->cleanup_tree;
@@ -340,10 +340,10 @@ sub is_unnecessary_dep ( $self, $module ) {
     my $distro = $self->distro;
 
     # Play does File::ShareDir::Install by itself.
-    return 1 if $module eq 'File::ShareDir::Install' && $self->is_play;
+    return 1 if $module eq 'File::ShareDir::Install' && $self->is_next;
 
     # We don't need this since we figure out deps on our own.
-    return 1 if $module eq 'Module::Build::Prereqs::FromCPANfile' && $self->is_play;
+    return 1 if $module eq 'Module::Build::Prereqs::FromCPANfile' && $self->is_next;
 
     state $skips = {
         'Acme-CPANModules-CalculatingDayOfWeek'   => [qw{ Bencher::Backend }],
@@ -832,7 +832,7 @@ sub determine_primary_module ($self) {
     $build_json->{'primary'} =~ s/-/::/g;
     $build_json->{'primary'} =~ s/\\?'/::/g;    # Acme::Can't
 
-    return unless $self->is_play;               # We shouldn't alter the location of the module if we're not a play module.
+    return unless $self->is_next;               # We shouldn't alter the location of the module if we're not a play module.
 
     $build_json->{'primary'} = 'AnyEvent::RFXCOM::TX'               if $distro eq 'AnyEvent-RFXCOM';
     $build_json->{'primary'} = 'Apache2::AMFDetectRightFilter'      if $distro eq 'Apache2-ApacheMobileFilter';
@@ -1312,7 +1312,7 @@ sub generate_build_json ($self) {
 
     $build_json->{'provides'} = $self->provides;
 
-    if ( $self->is_play ) {
+    if ( $self->is_next ) {
         %{ $self->provides } or die("Every module should provide something. This provides nothing?");
     }
 
@@ -1435,7 +1435,7 @@ sub generate_build_json ($self) {
             }
 
             # These requirements never move over to p5.
-            if ( $self->is_play && $module =~ m/^(?:ExtUtils::MakeMaker|Module::Build|App::ModuleBuildTiny|Module::Build::Tiny|(inc::)?Module::Install|Module::Build::Pluggable(?:::.+)?|ExtUtils::MakeMaker::CPANfile|Module::Install|strict|warnings|version|lib)$/ ) {
+            if ( $self->is_next && $module =~ m/^(?:ExtUtils::MakeMaker|Module::Build|App::ModuleBuildTiny|Module::Build::Tiny|(inc::)?Module::Install|Module::Build::Pluggable(?:::.+)?|ExtUtils::MakeMaker::CPANfile|Module::Install|strict|warnings|version|lib)$/ ) {
                 delete $meta->{$req}->{$module};
                 next;
             }
@@ -1467,7 +1467,7 @@ sub generate_build_json ($self) {
                 1;    #
             }
             elsif ( !exists $build_req->{$module} ) {
-                if ( !$self->is_play or $req eq 'recommends' ) {    # Just pass it through.
+                if ( !$self->is_next or $req eq 'recommends' ) {    # Just pass it through.
                     $build_req->{$module} = $meta->{$req}->{$module};
                     delete $meta->{$req}->{$module};
                     next;
