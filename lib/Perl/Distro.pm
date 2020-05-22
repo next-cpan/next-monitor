@@ -138,7 +138,7 @@ sub is_next ($self) {
     return $self->BUILD_json->{'builder'} eq 'next';
 }
 
-sub unexpected_alien_play_check ($self) {
+sub unexpected_alien_next_check ($self) {
 
     # It isn't play so nothing to be worried about.
     return unless $self->is_next;
@@ -194,7 +194,7 @@ sub do_the_do ($self) {
     $self->determine_installer;
     $self->parse_specail_files_for_license;
 
-    $self->unexpected_alien_play_check;    # Most alien modules aren't play compatible.
+    $self->unexpected_alien_next_check;    # Most alien modules aren't play compatible.
 
     if ( $self->is_next ) {
         $self->parse_maker_for_scripts;
@@ -206,8 +206,8 @@ sub do_the_do ($self) {
         $self->determine_primary_module;
 
         # Try to parse the POD
-        my $primary = $self->find_non_play_primary;
-        $self->gather_non_play_provides_from_meta;
+        my $primary = $self->find_non_next_primary;
+        $self->gather_non_next_provides_from_meta;
         $self->parse_pod($primary) if $primary;
 
         $self->generate_build_json;
@@ -239,7 +239,7 @@ sub delete_all_repo_files ($self) {
     return;
 }
 
-sub gather_non_play_provides_from_meta ($self) {
+sub gather_non_next_provides_from_meta ($self) {
     my $meta = $self->dist_meta;
     return unless $meta->{'provides'};
 
@@ -252,7 +252,7 @@ sub gather_non_play_provides_from_meta ($self) {
 }
 
 # This is only done in the event the module isn't play and we need to look around for it.
-sub find_non_play_primary ($self) {
+sub find_non_next_primary ($self) {
     my @parts    = split( "::", $self->BUILD_json->{'primary'} );
     my $lib_path = join( "/", 'lib', @parts ) . ".pm";
     return $lib_path if -f $lib_path;
@@ -888,7 +888,7 @@ sub determine_primary_module ($self) {
     return;
 }
 
-sub update_p5_branch_to_not_play ($self) {
+sub update_p5_branch_to_not_next ($self) {
     my $build_json = $self->BUILD_json;
     my $meta       = $self->dist_meta;
     $build_json->{'version'} = $meta->{'version'};
@@ -925,7 +925,7 @@ sub update_p5_branch_from_PAUSE ($self) {
         }
     }
 
-    $self->gather_non_play_provides_from_meta unless $self->code_is_parseable;
+    $self->gather_non_next_provides_from_meta unless $self->code_is_parseable;
 
     my $files = $self->repo_files;
     foreach my $file ( sort { $a cmp $b } keys %$files ) {
