@@ -190,11 +190,14 @@ sub do_the_do ($self) {
         return;
     }
 
-    $self->cleanup_repo_cruft; # Cleanup files from the tarball which have nothing to do with the install.
-    $self->determine_installer;
-    $self->parse_specail_files_for_license;
+    $self->cleanup_repo_cruft;    # Cleanup files from the tarball which have nothing to do with the install.
 
+    $self->determine_installer;            # Determine what our builder will be: next, Build.PL, or Makefile.PL
     $self->unexpected_alien_next_check;    # Most alien modules aren't next compatible.
+
+    $self->parse_specail_files_for_license;    # Try to read special files to guess their license. TODO: move all the license stuff here.
+
+    $self->set_primary_module_from_meta;       # Using the distro name, try to guess the primary module.
 
     if ( $self->is_next ) {
         $self->parse_maker_for_scripts;
@@ -203,8 +206,6 @@ sub do_the_do ($self) {
         $self->update_p5_branch_from_PAUSE;
     }
     else {
-        $self->determine_primary_module;
-
         # Try to parse the POD
         my $primary = $self->find_non_next_primary;
         $self->gather_non_next_provides_from_meta;
@@ -828,26 +829,32 @@ sub reset_repo_files ($self) {
     $self->repo_files( { map { ( $_ => 1 ) } $self->git->ls_files } );
 }
 
-sub determine_primary_module ($self) {
-    my $git        = $self->git;
-    my $distro     = $self->distro;
+sub set_primary_module_from_meta ($self) {
     my $build_json = $self->BUILD_json;
-    my $meta       = $self->dist_meta;
-    my $files      = $self->repo_files;
+    my $distro     = $self->distro;
 
     # Try to determine the primary package of this distro.
     # Let's make sure it matches the 'name' of the module.
-    $build_json->{'primary'} = $meta->{'name'};
+    $build_json->{'primary'} = $self->dist_meta->{'name'};
     $build_json->{'primary'} =~ s/-/::/g;
     $build_json->{'primary'} =~ s/\\?'/::/g;    # Acme::Can't
 
-    return unless $self->is_next;               # We shouldn't alter the location of the module if we're not a next module.
-
+    # Non-obvious primaries.
     $build_json->{'primary'} = 'AnyEvent::RFXCOM::TX'               if $distro eq 'AnyEvent-RFXCOM';
     $build_json->{'primary'} = 'Apache2::AMFDetectRightFilter'      if $distro eq 'Apache2-ApacheMobileFilter';
     $build_json->{'primary'} = 'SOAP::Transport::ActiveWorks::Lite' if $distro eq 'SOAP-Lite-ActiveWorks';
     $build_json->{'primary'} = 'ANSI::Unicode'                      if $distro eq 'ansi-unicode';
     $build_json->{'primary'} = 'Apache2::LogUtil'                   if $distro eq 'perl-Apache2-LogUtil';
+
+    return;
+}
+
+sub relocate_modules_to_lib ($self) {
+    my $git        = $self->git;
+    my $build_json = $self->BUILD_json;
+    my $files      = $self->repo_files;
+
+    $self->is_next or die;    # Shouldn't ever get here. We shouldn't alter the location of the module if we're not a next module.
 
     # Move the module into lib/ if we need to.
     my @module      = split( '::', $build_json->{'primary'} );
@@ -897,13 +904,6 @@ sub determine_primary_module ($self) {
     return;
 }
 
-sub update_p5_branch_to_not_next ($self) {
-    my $build_json = $self->BUILD_json;
-    my $meta       = $self->dist_meta;
-    $build_json->{'version'} = $meta->{'version'};
-    $self->determine_primary_module;
-}
-
 sub cleanup_and_grep ( $self, $grep ) {
     $self->git->reset('.');
     $self->git->checkout('.');
@@ -923,7 +923,7 @@ sub update_p5_branch_from_PAUSE ($self) {
 
     $build_json->{'xs'} and die("next doesn't support xs distros");
 
-    $self->determine_primary_module;
+    $self->relocate_modules_to_lib;
 
     # If test paths are specified in META, transfer that unless they're just t/* or t/*.t.
     if ( $meta->{'tests'} ) {
@@ -1031,6 +1031,11 @@ sub git_commit ($self) {
 
     return;
 }
+
+# Is responsible for setting the following:
+# * $build_json->{'builder'}
+# * $build_json->{'xs'}
+# * $self->cant_next('...')
 
 sub determine_installer ( $self ) {
     my $build_json = $self->BUILD_json;
