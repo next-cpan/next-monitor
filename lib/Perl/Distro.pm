@@ -140,7 +140,7 @@ sub is_next ($self) {
 
 sub unexpected_alien_next_check ($self) {
 
-    # It isn't play so nothing to be worried about.
+    # It isn't next so nothing to be worried about.
     return unless $self->is_next;
 
     my $distro = $self->distro;
@@ -149,7 +149,7 @@ sub unexpected_alien_next_check ($self) {
     return unless $distro =~ m/^Alien-/;
     return if $distro =~ m/Alien-Web-/;    # Static.
 
-    # These modules have been vetted to be safe with play. They're just installing share or something.
+    # These modules have been vetted to be safe with next. They're just installing share or something.
     return if grep { $_ eq $distro } qw{
       Alien-BWIPP
       Alien-Build-Plugin-Build-Premake5
@@ -165,7 +165,7 @@ sub unexpected_alien_next_check ($self) {
     };
 
     $self->dump_self;
-    die("Somehow we didn't detect that   $distro   couldn't play.");
+    die("Somehow we didn't detect that   $distro   couldn't next.");
 }
 
 sub do_the_do ($self) {
@@ -194,7 +194,7 @@ sub do_the_do ($self) {
     $self->determine_installer;
     $self->parse_specail_files_for_license;
 
-    $self->unexpected_alien_next_check;    # Most alien modules aren't play compatible.
+    $self->unexpected_alien_next_check;    # Most alien modules aren't next compatible.
 
     if ( $self->is_next ) {
         $self->parse_maker_for_scripts;
@@ -251,7 +251,7 @@ sub gather_non_next_provides_from_meta ($self) {
     }
 }
 
-# This is only done in the event the module isn't play and we need to look around for it.
+# This is only done in the event the module isn't next and we need to look around for it.
 sub find_non_next_primary ($self) {
     my @parts    = split( "::", $self->BUILD_json->{'primary'} );
     my $lib_path = join( "/", 'lib', @parts ) . ".pm";
@@ -832,7 +832,7 @@ sub determine_primary_module ($self) {
     $build_json->{'primary'} =~ s/-/::/g;
     $build_json->{'primary'} =~ s/\\?'/::/g;    # Acme::Can't
 
-    return unless $self->is_next;               # We shouldn't alter the location of the module if we're not a play module.
+    return unless $self->is_next;               # We shouldn't alter the location of the module if we're not a next module.
 
     $build_json->{'primary'} = 'AnyEvent::RFXCOM::TX'               if $distro eq 'AnyEvent-RFXCOM';
     $build_json->{'primary'} = 'Apache2::AMFDetectRightFilter'      if $distro eq 'Apache2-ApacheMobileFilter';
@@ -912,7 +912,7 @@ sub update_p5_branch_from_PAUSE ($self) {
     my $build_json = $self->BUILD_json;
     my $meta       = $self->dist_meta;
 
-    $build_json->{'xs'} and die("play doesn't support xs distros");
+    $build_json->{'xs'} and die("next doesn't support xs distros");
 
     $self->determine_primary_module;
 
@@ -1016,7 +1016,7 @@ sub try_to_read_file ( $self, $filename ) {
 sub git_commit ($self) {
     my $git = $self->git;
 
-    $git->commit( '-m', sprintf( "Update %s version %s to play.", $self->distro, $self->BUILD_json->{'version'} ) );
+    $git->commit( '-m', sprintf( "Update %s version %s to next.", $self->distro, $self->BUILD_json->{'version'} ) );
 
     $git->push if $self->push_to_github;
 
@@ -1044,13 +1044,13 @@ sub determine_installer ( $self ) {
     if ( grep { $distro eq $_ } qw/Acme-Padre-PlayCode Alien-TALib Apache-GeoIP Win32-SerialPort/ ) {
         $builder = 'legacy';
         $self->cant_next('Manual detection');
-        print "Manually determined that $distro could not be used with play\n";
+        print "Manually determined that $distro could not be used with next\n";
     }
 
     # .PL files usually indicate something that needs to be generated.
     my @files;
     if ( @files = grep { $_ =~ m/\.PL$/ && $_ !~ m{^(Build|Makefile|t/TEST)\.PL$} && $_ !~ m{^share/} } keys %$files ) {
-        printf( "Detected %s files which indicate a dynamic generation which can't play yet!\n", join( ", ", @files ) );
+        printf( "Detected %s files which indicate a dynamic generation which can't next yet!\n", join( ", ", @files ) );
         $self->cant_next('.PL files');
         $builder = 'legacy';
     }
@@ -1062,7 +1062,7 @@ sub determine_installer ( $self ) {
     }
 
     # This isn't really a builder builder but since we had the file open we detected
-    # that it doesn't really support play right now.
+    # that it doesn't really support next right now.
     if ( $self->builder_builder eq 'Module::Build::SysPath' ) {
         $self->cant_next('Module::Build::SysPath');
         $builder = 'legacy';
@@ -1078,7 +1078,7 @@ sub determine_installer ( $self ) {
             $builder = 'legacy';
             my $banned_modules = join( ", ", @exceptions );
             $self->cant_next("banned $banned_modules");
-            print "The Build/install modules ($banned_modules) make the installer unable to play.\n";
+            print "The Build/install modules ($banned_modules) make the installer unable to next.\n";
             last;
         }
     }
@@ -1089,7 +1089,7 @@ sub determine_installer ( $self ) {
         $builder = 'legacy';
         my $banned_modules = join( ", ", @exceptions );
         $self->cant_next("banned $banned_modules");
-        print "The Build/install modules ($banned_modules) make the installer unable to play.\n";
+        print "The Build/install modules ($banned_modules) make the installer unable to next.\n";
         last;
     }
 
@@ -1099,7 +1099,7 @@ sub determine_installer ( $self ) {
             die('x_static_install says this distro is static but I detected things that might make it legacy');
         }
         if ( !$meta->{'x_static_install'} && $builder eq 'next' ) {
-            $builder eq 'legacy' or warn(q{x_static_install says his distro isn't static but I don't know why it is play at this point?});
+            $builder eq 'legacy' or warn(q{x_static_install says his distro isn't static but I don't know why it is next at this point?});
             $builder = 'legacy';
             $self->cant_next("x_static_install=0");
             print "Detected x_static_install=0\n";
@@ -1112,7 +1112,7 @@ sub determine_installer ( $self ) {
 
         my @found = eval { $self->git->grep('ACTION_install') };
         if (@found) {
-            print "Build.PL distro is using ACTION_install somewhere. Cannot play.\n";
+            print "Build.PL distro is using ACTION_install somewhere. Cannot next.\n";
             $self->cant_next("ACTION_install");
             $builder = 'legacy';
         }
@@ -1125,27 +1125,27 @@ sub determine_installer ( $self ) {
             $builder = 'legacy';
         }
         elsif ( $content =~ m/Module::Build->subclass/ms ) {
-            print "Build.PL is subclassing so it must be doing something wierd. Skipping play.\n";
+            print "Build.PL is subclassing so it must be doing something wierd. Skipping next.\n";
             $self->cant_next("Module::Build->subclass");
             $builder = 'legacy';
         }
         elsif ( $content =~ m/add_build_element/ms ) {
-            print "Build.PL is using add_build_element. Skipping play.\n";
+            print "Build.PL is using add_build_element. Skipping next.\n";
             $self->cant_next("add_build_element");
             $builder = 'legacy';
         }
         elsif ( $distro =~ m/^Alien-/ && $content =~ m/use lib [^;]*inc/ ) {
-            print "Alien module via Build.PL is using inc/. I suspect it can't play\n";
+            print "Alien module via Build.PL is using inc/. I suspect it can't next\n";
             $self->cant_next("use of inc/ with Alien modules");
             $builder = 'legacy';
         }
         elsif ( $content =~ m/use\s+ExtUtils::Liblist/ ) {
-            print "Build.PL is using ExtUtils::Liblist. Can't play!\n";
+            print "Build.PL is using ExtUtils::Liblist. Can't next!\n";
             $self->cant_next("ExtUtils::Liblist");
             $builder = 'legacy';
         }
         elsif ( $content =~ m/install_path/msi ) {
-            print "Build.PL is using install_path. Can't play!\n";
+            print "Build.PL is using install_path. Can't next!\n";
             $self->cant_next("install_path");
             $builder = 'legacy';
         }
@@ -1179,22 +1179,22 @@ sub determine_installer ( $self ) {
         elsif ( $self->_ppi_find_class_and_content( $doc, 'PPI::Token::Word', 'postamble' ) ) {
             $builder = 'legacy';
             $self->cant_next("postamble in Makefile.PL");
-            printf("Detected a postamble in Makefile.PL. Something can't be installed with play.\n");
+            printf("Detected a postamble in Makefile.PL. Something can't be installed with next.\n");
         }
         elsif ( $self->_ppi_find_class_and_content( $doc, 'PPI::Token::Word', 'MY::postamble' ) ) {
             $builder = 'legacy';
             $self->cant_next("MY::postamble in Makefile.PL");
-            printf("Detected MY::postamble in Makefile.PL. Can't play.\n");
+            printf("Detected MY::postamble in Makefile.PL. Can't next.\n");
         }
         elsif ( $self->_ppi_find_class_and_content( $doc, 'PPI::Token::Word', 'prompt_script' ) ) {
             $builder = 'legacy';
             $self->cant_next("Module::Install prompt_script");
-            printf("Detected a M::I prompt_script  in Makefile.PL. Something can't be installed with play.\n");
+            printf("Detected a M::I prompt_script  in Makefile.PL. Something can't be installed with next.\n");
         }
         elsif ( $self->_ppi_find_class_and_content( $doc, 'PPI::Token::Word', 'inline' ) ) {
             $builder = 'legacy';
             $self->cant_next("Module::Install use of Inline");
-            printf("Detected a M::I inline in Makefile.PL. Something can't be installed with play.\n");
+            printf("Detected a M::I inline in Makefile.PL. Something can't be installed with next.\n");
         }
         elsif ( $distro =~ m/^Alien-/ and $self->_ppi_find_class_and_content( $doc, 'PPI::Token::QuoteLike::Backtick', qr/`/ ) ) {
             $builder = 'legacy';
@@ -1214,7 +1214,7 @@ sub determine_installer ( $self ) {
         $self->get_ppi_doc($builder);
     }
 
-    # If the builder is play, then set it and return.
+    # If the builder is next, then set it and return.
     if ( $builder eq 'next' ) {
         $build_json->{'builder'} = 'next';
         return;
@@ -1449,7 +1449,7 @@ sub generate_build_json ($self) {
             }
 
             # Let's not be so strict on develop requires. Maybe they know what they're talking about.
-            # Also who cares? play doesn't use develop_requires right now.
+            # Also who cares? next doesn't use develop_requires right now.
             if ( !exists $build_req->{$module} && $req eq 'develop_requires' ) {
                 $build_req->{$module} = $meta->{$req}->{$module};
                 delete $meta->{$req}->{$module};
