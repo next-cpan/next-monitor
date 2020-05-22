@@ -205,12 +205,14 @@ sub do_the_do ($self) {
         $self->cleanup_tree;
         $self->update_p5_branch_from_PAUSE;
     }
-    else {                                     # Build.PL or Makefile.PL
+
+    # For non-next, we may need to pull in a few bits from other sources before we emit BUILD.json
+    if ( !$self->is_next ) {
         $self->gather_non_next_provides_from_meta;
         $self->parse_non_next_primary_module;
-        $self->generate_build_json;
     }
 
+    $self->generate_build_json;
     $self->git_commit;
 }
 
@@ -981,8 +983,6 @@ sub update_p5_branch_from_PAUSE ($self) {
             die;
         }
     }
-
-    $self->generate_build_json;
 
     $self->generate_readme_md;
 
