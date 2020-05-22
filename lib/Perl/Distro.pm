@@ -204,7 +204,10 @@ sub do_the_do ($self) {
         $self->parse_builders_for_share;
         $self->standardize_next_tree;
         $self->relocate_modules_to_lib;
-        $self->update_p5_branch_from_PAUSE;
+        $self->gather_non_next_provides_from_meta unless $self->code_is_parseable;
+        $self->parse_files_for_meta_info;
+        $self->look_for_unknown_files;
+        $self->generate_readme_md;
     }
 
     # For non-next, we may need to pull in a few bits from other sources before we emit NEXT.json
@@ -917,12 +920,24 @@ sub cleanup_and_grep ( $self, $grep ) {
     print `git grep -iP '$grep'`;
 }
 
-# We can assume we are checked out into the p5 branch but it is
-# Indeterminate if PAUSE has merged in or if the p5 branch has been
-# converted.
-sub update_p5_branch_from_PAUSE ($self) {
-    my $git  = $self->git;
-    my $meta = $self->dist_meta;
+sub parse_files_for_meta_info ($self) {
+    my $files = $self->repo_files;
+    foreach my $file ( sort { $a cmp $b } keys %$files ) {
+        $self->parse_code($file) if $self->code_is_parseable;
+        $self->parse_comments($file);
+        $self->parse_pod($file);
+    }
+
+    return;
+}
+
+#  Look for any unexpected files in the file list.
+sub look_for_unknown_files ($self) {
+    my $next_json = $self->NEXT_json;
+    my $distro    = $self->distro;
+    my $meta      = $self->dist_meta;
+
+    my %files_copy = %{ $self->repo_files };
 
     # If test paths are specified in META, transfer that unless they're just t/* or t/*.t.
     if ( $meta->{'tests'} ) {
@@ -932,29 +947,6 @@ sub update_p5_branch_from_PAUSE ($self) {
             $self->NEXT_json->{'tests'} = [ map { $_ .= ".t" if m/\*$/; $_ } split( " ", $tests ) ];
         }
     }
-
-    $self->gather_non_next_provides_from_meta unless $self->code_is_parseable;
-
-    my $files = $self->repo_files;
-    foreach my $file ( sort { $a cmp $b } keys %$files ) {
-        $self->parse_code($file) if $self->code_is_parseable;
-        $self->parse_comments($file);
-        $self->parse_pod($file);
-    }
-
-    $self->look_for_unknown_files;
-
-    $self->generate_readme_md;
-
-    return;
-}
-
-#  Look for any unexpected files in the file list.
-sub look_for_unknown_files ($self) {
-    my $next_json = $self->NEXT_json;
-    my $distro    = $self->distro;
-
-    my %files_copy = %{ $self->repo_files };
 
     foreach my $script ( @{ $self->scripts } ) {
         $next_json->{'scripts'} ||= [];
