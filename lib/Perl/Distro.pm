@@ -203,6 +203,7 @@ sub do_the_do ($self) {
         $self->parse_maker_for_scripts;
         $self->parse_builders_for_share;
         $self->standardize_next_tree;
+        $self->relocate_modules_to_lib;
         $self->update_p5_branch_from_PAUSE;
     }
 
@@ -836,34 +837,32 @@ sub reset_repo_files ($self) {
 }
 
 sub set_primary_module_from_meta ($self) {
-    my $build_json = $self->NEXT_json;
-    my $distro     = $self->distro;
+    my $next_json = $self->NEXT_json;
+    my $distro    = $self->distro;
 
     # Try to determine the primary package of this distro.
     # Let's make sure it matches the 'name' of the module.
-    $build_json->{'primary'} = $self->dist_meta->{'name'};
-    $build_json->{'primary'} =~ s/-/::/g;
-    $build_json->{'primary'} =~ s/\\?'/::/g;    # Acme::Can't
+    $next_json->{'primary'} = $self->dist_meta->{'name'};
+    $next_json->{'primary'} =~ s/-/::/g;
+    $next_json->{'primary'} =~ s/\\?'/::/g;    # Acme::Can't
 
     # Non-obvious primaries.
-    $build_json->{'primary'} = 'AnyEvent::RFXCOM::TX'               if $distro eq 'AnyEvent-RFXCOM';
-    $build_json->{'primary'} = 'Apache2::AMFDetectRightFilter'      if $distro eq 'Apache2-ApacheMobileFilter';
-    $build_json->{'primary'} = 'SOAP::Transport::ActiveWorks::Lite' if $distro eq 'SOAP-Lite-ActiveWorks';
-    $build_json->{'primary'} = 'ANSI::Unicode'                      if $distro eq 'ansi-unicode';
-    $build_json->{'primary'} = 'Apache2::LogUtil'                   if $distro eq 'perl-Apache2-LogUtil';
+    $next_json->{'primary'} = 'AnyEvent::RFXCOM::TX'               if $distro eq 'AnyEvent-RFXCOM';
+    $next_json->{'primary'} = 'Apache2::AMFDetectRightFilter'      if $distro eq 'Apache2-ApacheMobileFilter';
+    $next_json->{'primary'} = 'SOAP::Transport::ActiveWorks::Lite' if $distro eq 'SOAP-Lite-ActiveWorks';
+    $next_json->{'primary'} = 'ANSI::Unicode'                      if $distro eq 'ansi-unicode';
+    $next_json->{'primary'} = 'Apache2::LogUtil'                   if $distro eq 'perl-Apache2-LogUtil';
 
     return;
 }
 
 sub relocate_modules_to_lib ($self) {
-    my $git        = $self->git;
-    my $build_json = $self->NEXT_json;
-    my $files      = $self->repo_files;
-
-    $self->is_next or die;    # Shouldn't ever get here. We shouldn't alter the location of the module if we're not a next module.
+    my $git       = $self->git;
+    my $next_json = $self->NEXT_json;
+    my $files     = $self->repo_files;
 
     # Move the module into lib/ if we need to.
-    my @module      = split( '::', $build_json->{'primary'} );
+    my @module      = split( '::', $next_json->{'primary'} );
     my $module_path = join( '/', ( 'lib', @module ) ) . ".pm";
 
     if ( !-d 'lib' && -d $module[0] ) {
@@ -922,21 +921,15 @@ sub cleanup_and_grep ( $self, $grep ) {
 # Indeterminate if PAUSE has merged in or if the p5 branch has been
 # converted.
 sub update_p5_branch_from_PAUSE ($self) {
-    my $git        = $self->git;
-    my $distro     = $self->distro;
-    my $build_json = $self->NEXT_json;
-    my $meta       = $self->dist_meta;
-
-    $build_json->{'xs'} and die("next doesn't support xs distros");
-
-    $self->relocate_modules_to_lib;
+    my $git  = $self->git;
+    my $meta = $self->dist_meta;
 
     # If test paths are specified in META, transfer that unless they're just t/* or t/*.t.
     if ( $meta->{'tests'} ) {
         my $tests = $meta->{'tests'};
         delete $meta->{'tests'};
         if ( $tests !~ m{^t/*\S+$} ) {
-            $build_json->{'tests'} = [ map { $_ .= ".t" if m/\*$/; $_ } split( " ", $tests ) ];
+            $self->NEXT_json->{'tests'} = [ map { $_ .= ".t" if m/\*$/; $_ } split( " ", $tests ) ];
         }
     }
 
@@ -949,44 +942,48 @@ sub update_p5_branch_from_PAUSE ($self) {
         $self->parse_pod($file);
     }
 
-    {    #  Look for any unexpected files in the file list.
-        my %files_copy = %{ $self->repo_files };
-
-        foreach my $script ( @{ $self->scripts } ) {
-            $build_json->{'scripts'} ||= [];
-
-            push @{ $build_json->{'scripts'} }, $script;
-            delete $files_copy{$script};
-        }
-
-        #Anything in lib, t, xt is good. Just pass it through.
-        delete $files_copy{$_} foreach grep { m{^lib/|^t/|^xt/} } keys %$files;
-
-        # Files we know are ok, we'll delete from the hash.
-        foreach my $file ( sort keys %files_copy ) {
-            delete $files_copy{$file} if $self->is_extra_files_we_ship( $file, $distro );
-        }
-
-        # Detected share files.
-        foreach my $file ( @{ $self->share_files } ) {
-            delete $files_copy{$file};
-        }
-
-        # Nothing was found.
-        #         'Acme-CPANAuthors-GitHub'                 => [qw{scripts/generate-github-authors.pl}],
-        if (%files_copy) {
-            my @unexpected_files = sort { $a cmp $b } keys %files_copy;
-            printf( "Unexpected files found in    %s\n%s\n", $distro, Dumper( \%files_copy ) );
-            my $grep = join( '|', @unexpected_files );
-            $self->cleanup_and_grep($grep);
-            printf( "\n        '%s'                 => [qw{%s}],\n", $distro, join( " ", @unexpected_files ) );
-            die;
-        }
-    }
+    $self->look_for_unknown_files;
 
     $self->generate_readme_md;
 
     return;
+}
+
+#  Look for any unexpected files in the file list.
+sub look_for_unknown_files ($self) {
+    my $next_json = $self->NEXT_json;
+    my $distro    = $self->distro;
+
+    my %files_copy = %{ $self->repo_files };
+
+    foreach my $script ( @{ $self->scripts } ) {
+        $next_json->{'scripts'} ||= [];
+
+        push @{ $next_json->{'scripts'} }, $script;
+        delete $files_copy{$script};
+    }
+
+    #Anything in lib, t, xt is good. Just pass it through.
+    delete $files_copy{$_} foreach grep { m{^lib/|^t/|^xt/} } keys %{ $self->repo_files };
+
+    # Files we know are ok, we'll delete from the hash.
+    foreach my $file ( sort keys %files_copy ) {
+        delete $files_copy{$file} if $self->is_extra_files_we_ship( $file, $distro );
+    }
+
+    # Detected share files.
+    foreach my $file ( @{ $self->share_files } ) {
+        delete $files_copy{$file};
+    }
+
+    if (%files_copy) {
+        my @unexpected_files = sort { $a cmp $b } keys %files_copy;
+        printf( "Unexpected files found in    %s\n%s\n", $distro, Dumper( \%files_copy ) );
+        my $grep = join( '|', @unexpected_files );
+        $self->cleanup_and_grep($grep);
+        printf( "\n        '%s'                 => [qw{%s}],\n", $distro, join( " ", @unexpected_files ) );
+        die;
+    }
 }
 
 sub generate_readme_md ($self) {
@@ -1043,26 +1040,26 @@ sub git_commit ($self) {
 }
 
 # Is responsible for setting the following:
-# * $build_json->{'builder'}
-# * $build_json->{'xs'}
+# * $next_json->{'builder'}
+# * $next_json->{'xs'}
 # * $self->cant_next('...')
 
 sub determine_installer ( $self ) {
-    my $build_json = $self->NEXT_json;
-    my $files      = $self->repo_files;
-    my $distro     = $self->distro;
+    my $next_json = $self->NEXT_json;
+    my $files     = $self->repo_files;
+    my $distro    = $self->distro;
 
     my $builder = 'next';
 
     # Tag the NEXT file with whether this repo has XS.
     if ( grep { $_ =~ m/\.xs(.inc)?$/ } keys %$files ) {
-        $build_json->{'xs'} = 1;
+        $next_json->{'xs'} = 1;
         $builder = 'legacy';
         $self->cant_next('xs');
         print "Detected .xs files in distro\n";
     }
     else {
-        $build_json->{'xs'} = 0;
+        $next_json->{'xs'} = 0;
     }
 
     if ( grep { $distro eq $_ } qw/Acme-Padre-PlayCode Alien-TALib Apache-GeoIP Win32-SerialPort/ ) {
@@ -1081,7 +1078,7 @@ sub determine_installer ( $self ) {
 
     # Other than .PL files and XS/C, Module::Build::Tiny is just for vanilla installs.
     if ( $builder eq 'next' && $self->builder_builder eq 'Module::Build::Tiny' ) {
-        $build_json->{'builder'} = 'next';
+        $next_json->{'builder'} = 'next';
         return;
     }
 
@@ -1240,12 +1237,12 @@ sub determine_installer ( $self ) {
 
     # If the builder is next, then set it and return.
     if ( $builder eq 'next' ) {
-        $build_json->{'builder'} = 'next';
+        $next_json->{'builder'} = 'next';
         return;
     }
 
     # Guess based on what builder to use based on files in the repo.
-    $build_json->{'builder'} = $files->{'Build.PL'} ? 'Build.PL' : $files->{'Makefile.PL'} ? 'Makefile.PL' : die("Can't determine builder for distro $distro");
+    $next_json->{'builder'} = $files->{'Build.PL'} ? 'Build.PL' : $files->{'Makefile.PL'} ? 'Makefile.PL' : die("Can't determine builder for distro $distro");
     return;
 }
 
@@ -1292,12 +1289,12 @@ sub _is_a_hash_ref ($ref) {
 }
 
 sub generate_build_json ($self) {
-    my $build_json = $self->NEXT_json;
-    my $meta       = $self->dist_meta;
-    my $distro     = $self->distro;
+    my $next_json = $self->NEXT_json;
+    my $meta      = $self->dist_meta;
+    my $distro    = $self->distro;
 
     $meta->{'version'} ||= $self->get_version_from_log();
-    $build_json->{'version'} = $meta->{'version'};
+    $next_json->{'version'} = $meta->{'version'};
 
     # Sometimes the meta license isn't just a string. Let's normalize it.
     if ( ref $meta->{'license'} eq 'ARRAY' ) {
@@ -1308,20 +1305,20 @@ sub generate_build_json ($self) {
     # unknown isn't a valid license except when it is.
     # We have a few distros which truly don't have a meaningful license.
     if ( $meta->{'license'} && $meta->{'license'} eq 'unknown' ) {
-        if ( $build_json->{'primary'} !~ m{^(ACL::Regex)$} ) {
+        if ( $next_json->{'primary'} !~ m{^(ACL::Regex)$} ) {
             delete $meta->{'license'};
         }
     }
 
     # Use the meta license preferentially if it's there.
     if ( $meta->{'license'} ) {
-        $build_json->{'license'} = $meta->{'license'};
+        $next_json->{'license'} = $meta->{'license'};
     }
 
     # Last attempt try reading LICENSE
-    if ( !$build_json->{'license'} ) {
-        $build_json->{'license'} = $self->parse_license_file;
-        if ( !$build_json->{'license'} ) {
+    if ( !$next_json->{'license'} ) {
+        $next_json->{'license'} = $self->parse_license_file;
+        if ( !$next_json->{'license'} ) {
             $self->dump_self;
             printf( "Missing license for   %s\n\n", $self->distro );
             $self->cleanup_and_grep('license|copyright');
@@ -1331,10 +1328,10 @@ sub generate_build_json ($self) {
 
     # Put provides into NEXT.json
     if ( !$self->code_is_parseable ) {
-        $build_json->{'unparseable'} = 1;
+        $next_json->{'unparseable'} = 1;
     }
 
-    $build_json->{'provides'} = $self->provides;
+    $next_json->{'provides'} = $self->provides;
 
     if ( $self->is_next ) {
         %{ $self->provides } or die("Every module should provide something. This provides nothing?");
@@ -1348,7 +1345,7 @@ sub generate_build_json ($self) {
         my $value_ref = ref $value;
         $value = !$value_ref ? $value : $value_ref eq 'HASH' ? $value->{'web'} : die( "Unexpected resources structure for $resource:\n" . Dumper( $meta->{'resources'} ) );
 
-        $build_json->{$resource} = $value;
+        $next_json->{$resource} = $value;
     }
 
     # unused vars in meta.
@@ -1542,58 +1539,58 @@ sub generate_build_json ($self) {
 
         %{ $meta->{$req} } and die("Modules still listed in req $req");
 
-        $build_json->{$build_req_name} = $build_req;
+        $next_json->{$build_req_name} = $build_req;
         delete $meta->{$req};
     }
 
     # Sometimes we detect a recommends runtime we want to process.
-    $build_json->{'recommends_runtime'} = $self->recommends_runtime if %{ $self->recommends_runtime };
-    $build_json->{'recommends_build'}   = $self->recommends_build   if %{ $self->recommends_build };
-    $build_json->{'conflicts_runtime'}  = $self->conflicts_runtime  if %{ $self->conflicts_runtime };
+    $next_json->{'recommends_runtime'} = $self->recommends_runtime if %{ $self->recommends_runtime };
+    $next_json->{'recommends_build'}   = $self->recommends_build   if %{ $self->recommends_build };
+    $next_json->{'conflicts_runtime'}  = $self->conflicts_runtime  if %{ $self->conflicts_runtime };
 
     # Where this branch got its data from.
-    $build_json->{'source'} = 'PAUSE';
+    $next_json->{'source'} = 'PAUSE';
 
-    $build_json->{'builder_API_version'} = '1';
-    $build_json->{'cant_next'}           = $self->cant_next if $self->cant_next;
+    $next_json->{'builder_API_version'} = '1';
+    $next_json->{'cant_next'}           = $self->cant_next if $self->cant_next;
 
-    $build_json->{'primary'} or die("Never determined primary module name?");
-    $build_json->{'name'} = $meta->{'name'} // $build_json->{'primary'};
-    $build_json->{'name'} =~ s/::/-/g;
+    $next_json->{'primary'} or die("Never determined primary module name?");
+    $next_json->{'name'} = $meta->{'name'} // $next_json->{'primary'};
+    $next_json->{'name'} =~ s/::/-/g;
 
     delete $meta->{'author'} unless defined $meta->{'author'};    # Remove bogus undefine author.
     if ( $meta->{'author'} ) {
         my $author = $meta->{'author'};
         if ( ref $author eq 'ARRAY' ) {
-            $build_json->{'maintainers'} = $author;
+            $next_json->{'maintainers'} = $author;
         }
         elsif ( !ref $author ) {
-            $build_json->{'maintainers'} = [$author];
+            $next_json->{'maintainers'} = [$author];
         }
         delete $meta->{'author'};
     }
 
     # $meta->{'authored_by'};
-    if ( !$build_json->{'maintainers'} && $meta->{'authored_by'} ) {
-        $build_json->{'maintainers'} = $meta->{'authored_by'};
+    if ( !$next_json->{'maintainers'} && $meta->{'authored_by'} ) {
+        $next_json->{'maintainers'} = $meta->{'authored_by'};
     }
     delete $meta->{'authored_by'};
 
     # Try to read Build.PL or Makefile.PL for the author.
-    if ( !$build_json->{'maintainers'} ) {
+    if ( !$next_json->{'maintainers'} ) {
         my $doc = $self->ppi_cache->{'Build.PL'};
         if ($doc) {
-            ( $build_json->{'maintainers'} ) = $self->_ppi_find_and_parse_value_for_key( $doc, 'dist_author' );
+            ( $next_json->{'maintainers'} ) = $self->_ppi_find_and_parse_value_for_key( $doc, 'dist_author' );
         }
         else {
             $doc = $self->ppi_cache->{'Makefile.PL'};
             if ($doc) {
-                ( $build_json->{'maintainers'} ) = $self->_ppi_find_and_parse_value_for_key( $doc, 'AUTHOR' );
+                ( $next_json->{'maintainers'} ) = $self->_ppi_find_and_parse_value_for_key( $doc, 'AUTHOR' );
             }
         }
     }
 
-    if ( !$build_json->{'maintainers'} ) {
+    if ( !$next_json->{'maintainers'} ) {
         $self->cleanup_and_grep('author|copyright');
         die("Could not determine maintainers for this repo");
     }
@@ -1602,10 +1599,10 @@ sub generate_build_json ($self) {
     $meta->{'abstract'} && $meta->{'abstract'} =~ s/\r//g;
     if ( length $meta->{'abstract'} && $meta->{'abstract'} ne 'unknown' ) {
 
-        if ( $build_json->{'abstract'} ) {
-            $build_json->{'abstract'} eq $meta->{'abstract'} or warn( sprintf( "META abstract does not match what's in the module. I'm going to trust what is in META. meta=%s lib=%s\n", $meta->{'abstract'}, $build_json->{'abstract'} ) );
+        if ( $next_json->{'abstract'} ) {
+            $next_json->{'abstract'} eq $meta->{'abstract'} or warn( sprintf( "META abstract does not match what's in the module. I'm going to trust what is in META. meta=%s lib=%s\n", $meta->{'abstract'}, $next_json->{'abstract'} ) );
         }
-        $build_json->{'abstract'} = $meta->{'abstract'};
+        $next_json->{'abstract'} = $meta->{'abstract'};
         delete $meta->{'abstract'};
     }
     elsif ( exists $meta->{'abstract'} ) {
@@ -1647,7 +1644,7 @@ sub generate_build_json ($self) {
 
     # https://metacpan.org/pod/CPAN::Meta::Spec#keywords (nobody seems to actually use this)
     if ( $meta->{'keywords'} ) {
-        $build_json->{'keywords'} = $meta->{'keywords'};
+        $next_json->{'keywords'} = $meta->{'keywords'};
         delete $meta->{'keywords'};
     }
 
@@ -1655,13 +1652,13 @@ sub generate_build_json ($self) {
     # I couldn't determine what we would do with this so it was thrown out.
     if ( $meta->{'no_index'} ) {
 
-        # $build_json->{'no_index'} = $meta->{'no_index'};
+        # $next_json->{'no_index'} = $meta->{'no_index'};
         delete $meta->{'no_index'};
     }
 
     # tells build/test if it should inject . in @INC.
     if ( exists $meta->{'x_use_unsafe_inc'} ) {
-        $build_json->{'use_unsafe_inc'} = $meta->{'x_use_unsafe_inc'};
+        $next_json->{'use_unsafe_inc'} = $meta->{'x_use_unsafe_inc'};
         delete $meta->{'x_use_unsafe_inc'};
     }
 
@@ -1669,20 +1666,20 @@ sub generate_build_json ($self) {
     $meta->{'name'} or die( "No name for distro?\n" . Dumper($meta) );
     $meta->{'name'} =~ s/\\?'/-/g;    # Acme::Can't
     $meta->{'name'} =~ s/::/-/g;      # Acme::Can't
-    $build_json->{'name'} eq $meta->{'name'} or die( "Bad detection of name?\n" . Dumper( $meta, $build_json ) );
+    $next_json->{'name'} eq $meta->{'name'} or die( "Bad detection of name?\n" . Dumper( $meta, $next_json ) );
     delete $meta->{'name'};
 
     # Validate we detected version correctly.
     $meta->{'version'} or die( "No version for distro?\n" . Dumper($meta) );
-    $build_json->{'version'} eq $meta->{'version'} or die( "Bad detection of version?\n" . Dumper( $meta, $build_json ) );
+    $next_json->{'version'} eq $meta->{'version'} or die( "Bad detection of version?\n" . Dumper( $meta, $next_json ) );
     delete $meta->{'version'};
 
-    if ( $build_json->{'builder'} eq 'next' && %$meta ) {
+    if ( $next_json->{'builder'} eq 'next' && %$meta ) {
         $self->dump_self;
         die("Unparsed information still exists in dist_meta. Please review.");
     }
 
-    File::Slurper::write_text( $self->NEXT_file, Cpanel::JSON::XS->new->pretty->canonical( [1] )->encode($build_json) );
+    File::Slurper::write_text( $self->NEXT_file, Cpanel::JSON::XS->new->pretty->canonical( [1] )->encode($next_json) );
     $self->git->add( $self->NEXT_file );
 
     return;
