@@ -984,32 +984,38 @@ sub update_p5_branch_from_PAUSE ($self) {
 
     $self->generate_build_json;
 
+    $self->generate_readme_md;
+
+    return;
+}
+
+sub generate_readme_md ($self) {
+
     state $readme_map = {
         'Just-Another-Perl-Hacker' => 'lib/Just/Another/Perl/Hacker.pm',
     };
 
-    {    # Generate README.md from the primary module.
+    # Generate README.md from the primary module.
 
-        my $primary_file = $readme_map->{$distro};
-        if ( !$primary_file ) {    # Normally we'd guess it from the primary module name.
-            $self->BUILD_json->{'provides'}->{ $self->BUILD_json->{'primary'} }->{'file'} or die( "Unexpected primary file location not found:\n" . Dumper $self->BUILD_json );
-            $primary_file = $self->BUILD_json->{'provides'}->{ $self->BUILD_json->{'primary'} }->{'file'};
-        }
-
-        my $primary_file_stem = $primary_file;
-        $primary_file_stem =~ s/\.pm$//;
-        $primary_file = -e "$primary_file_stem.pod" ? "$primary_file_stem.pod" : $primary_file;
-
-        my $markdown;
-        my $parser = Pod::Markdown::Github->new;
-        $parser->unaccept_targets(qw( html ));
-        $parser->output_string( \$markdown );
-        $parser->parse_string_document( $self->try_to_read_file($primary_file) );
-        File::Slurper::write_text( 'README.md', $markdown );
-        -f 'README.md' && !-z _ or die("Couldn't generate README.md");
-
-        $git->add('README.md');
+    my $primary_file = $readme_map->{ $self->distro };
+    if ( !$primary_file ) {    # Normally we'd guess it from the primary module name.
+        $self->BUILD_json->{'provides'}->{ $self->BUILD_json->{'primary'} }->{'file'} or die( "Unexpected primary file location not found:\n" . Dumper $self->BUILD_json );
+        $primary_file = $self->BUILD_json->{'provides'}->{ $self->BUILD_json->{'primary'} }->{'file'};
     }
+
+    my $primary_file_stem = $primary_file;
+    $primary_file_stem =~ s/\.pm$//;
+    $primary_file = -e "$primary_file_stem.pod" ? "$primary_file_stem.pod" : $primary_file;
+
+    my $markdown;
+    my $parser = Pod::Markdown::Github->new;
+    $parser->unaccept_targets(qw( html ));
+    $parser->output_string( \$markdown );
+    $parser->parse_string_document( $self->try_to_read_file($primary_file) );
+    File::Slurper::write_text( 'README.md', $markdown );
+    -f 'README.md' && !-z _ or die("Couldn't generate README.md");
+
+    $self->git->add('README.md');
 
     return;
 }
