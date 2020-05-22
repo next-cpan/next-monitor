@@ -205,12 +205,9 @@ sub do_the_do ($self) {
         $self->cleanup_tree;
         $self->update_p5_branch_from_PAUSE;
     }
-    else {
-        # Try to parse the POD
-        my $primary = $self->find_non_next_primary;
+    else {                                     # Build.PL or Makefile.PL
         $self->gather_non_next_provides_from_meta;
-        $self->parse_pod($primary) if $primary;
-
+        $self->parse_non_next_primary_module;
         $self->generate_build_json;
     }
 
@@ -250,6 +247,13 @@ sub gather_non_next_provides_from_meta ($self) {
         $provides->{$module}->{'file'}    = $meta->{'provides'}->{$module}->{'file'};
         $provides->{$module}->{'version'} = $meta->{'provides'}->{$module}->{'version'} // 0;
     }
+}
+
+sub parse_non_next_primary_module ($self) {
+    my $primary = $self->find_non_next_primary or return;
+    $self->parse_pod($primary);
+
+    return;
 }
 
 # This is only done in the event the module isn't next and we need to look around for it.
