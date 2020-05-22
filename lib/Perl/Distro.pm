@@ -190,7 +190,7 @@ sub do_the_do ($self) {
         return;
     }
 
-    $self->fix_special_repos;
+    $self->cleanup_repo_cruft; # Cleanup files from the tarball which have nothing to do with the install.
     $self->determine_installer;
     $self->parse_specail_files_for_license;
 
@@ -410,7 +410,16 @@ sub is_necessary_dep ( $self, $module ) {
     return 0;
 }
 
-sub fix_special_repos ( $self ) {
+# Cleanup repos that have non-standard behaviors.
+# * Unexpected tarball layout ( mv PGPSign/* . )
+# * .pm files are in truly unpredictable locations.
+# * Fix windows cases sensitivity ( Makefile.PL NOT makefile.pl )
+# * Fix the fact authors are undetectable in some cases.
+# * Hard code the license for some older distros which badly specified.
+# * Remove files confirmed to not be relevant to the install.
+# * Remove *.swp files
+
+sub cleanup_repo_cruft ( $self ) {
 
     my $distro = $self->distro;
 
