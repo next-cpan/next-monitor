@@ -202,7 +202,7 @@ sub do_the_do ($self) {
     if ( $self->is_next ) {
         $self->parse_maker_for_scripts;
         $self->parse_builders_for_share;
-        $self->cleanup_tree;
+        $self->standardize_next_tree;
         $self->update_p5_branch_from_PAUSE;
     }
 
@@ -692,7 +692,7 @@ sub _remove_files_by_pattern ( $self, $pattern ) {
     return;
 }
 
-sub cleanup_tree ($self) {
+sub standardize_next_tree ($self) {
     my $git   = $self->git;
     my $files = $self->repo_files;
 
