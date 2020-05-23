@@ -138,36 +138,6 @@ sub is_next ($self) {
     return $self->NEXT_json->{'builder'} eq 'next';
 }
 
-sub unexpected_alien_next_check ($self) {
-
-    # It isn't next so nothing to be worried about.
-    return unless $self->is_next;
-
-    my $distro = $self->distro;
-
-    # It's not an alient module so we're not worried.
-    return unless $distro =~ m/^Alien-/;
-    return if $distro =~ m/Alien-Web-/;    # Static.
-
-    # These modules have been vetted to be safe with next. They're just installing share or something.
-    return if grep { $_ eq $distro } qw{
-      Alien-BWIPP
-      Alien-Build-Plugin-Build-Premake5
-      Alien-Microsoft-Outlook
-      Alien-Packages
-      Alien-Saxon
-      Alien-SeleniumRC
-      Alien-SwaggerUI
-      Alien-VideoLAN-LibVLC
-      Alien-Web
-      Alien-Win32-LZMA
-      Alien-libgeos
-    };
-
-    $self->dump_self;
-    die("Somehow we didn't detect that   $distro   couldn't next.");
-}
-
 sub do_the_do ($self) {
 
     $self->check_if_dirty_and_die;           # right now we're actually just cleaning stuff up.
@@ -177,7 +147,6 @@ sub do_the_do ($self) {
     $self->cleanup_repo_cruft;               # Cleanup files from the tarball which have nothing to do with the install.
 
     $self->determine_installer;              # Determine what our builder will be: next, Build.PL, or Makefile.PL
-    $self->unexpected_alien_next_check;      # Most alien modules aren't next compatible.
 
     $self->parse_specail_files_for_license;  # Try to read special files to guess their license. TODO: move all the license stuff here.
 
